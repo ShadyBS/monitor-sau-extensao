@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Opções do Monitor de Tarefas SAU</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1>Configurações do Monitor de Tarefas SAU</h1>
+
+      <section class="card">
+        <h2>Login Automático</h2>
+        <p>
+          Insira suas credenciais do SAU para login automático. Elas serão
+          armazenadas de forma segura no navegador.
+        </p>
+        <div class="form-group">
+          <label for="username">Usuário:</label>
+          <input type="text" id="username" placeholder="Seu usuário SAU" />
+        </div>
+        <div class="form-group">
+          <label for="password">Senha:</label>
+          <input type="password" id="password" placeholder="Sua senha SAU" />
+        </div>
+        <button id="saveLogin">Salvar Credenciais</button>
+        <p id="loginStatus" class="status-message"></p>
+      </section>
+
+      <section class="card">
+        <h2>Configurações de Notificação</h2>
+        <div class="form-group">
+          <label for="checkInterval"
+            >Intervalo de Verificação (segundos):</label
+          >
+          <input type="number" id="checkInterval" min="10" value="30" />
+        </div>
+        <div class="form-group">
+          <label for="snoozeTime">Lembrar Mais Tarde (minutos):</label>
+          <input type="number" id="snoozeTime" min="1" value="15" />
+        </div>
+        <button id="saveSettings">Salvar Configurações</button>
+        <p id="settingsStatus" class="status-message"></p>
+      </section>
+
+      <section class="card">
+        <h2>Configurações de Log</h2>
+        <div class="form-group">
+          <label for="logLevel">Nível de Log:</label>
+          <select id="logLevel">
+            <option value="ERROR">ERROR</option>
+            <option value="WARN">WARN</option>
+            <option value="INFO">INFO</option>
+            <option value="DEBUG">DEBUG</option>
+            <option value="NONE">NONE (Desativado)</option>
+          </select>
+        </div>
+        <button id="saveLogLevel">Salvar Nível de Log</button>
+        <button id="exportLogs">Exportar Logs</button>
+        <p id="logLevelStatus" class="status-message"></p>
+      </section>
+
+      <section class="card">
+        <h2>Desenvolvimento</h2>
+        <p>
+          Use este botão para limpar todas as tarefas salvas (conhecidas,
+          ignoradas e "snoozed"). Útil para testar notificações novamente.
+        </p>
+        <button id="resetTasks" class="btn-danger">
+          Resetar Memória de Tarefas
+        </button>
+        <p id="resetStatus" class="status-message"></p>
+      </section>
+    </div>
+    <script src="options.js" type="module"></script>
+    <!-- Adicionado type="module" aqui -->
+  </body>
+</html>

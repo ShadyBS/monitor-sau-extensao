@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Monitor SAU</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div class="container">
+      <h1>Monitor SAU</h1>
+      <p id="status-message">Verificando tarefas...</p>
+      <div id="tasks-list">
+        <!-- As tarefas novas serão injetadas aqui -->
+        <p class="no-tasks">Nenhuma tarefa nova encontrada.</p>
+      </div>
+      <div class="actions">
+        <button id="openOptions">Configurações</button>
+        <button id="refreshTasks">Atualizar Agora</button>
+      </div>
+    </div>
+    <script src="popup.js" type="module"></script>
+    <!-- Adicionado type="module" aqui -->
+  </body>
+</html>

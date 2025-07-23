@@ -1,0 +1,27 @@
+# Arquivo para ignorar arquivos e pastas no Git
+
+# Ignorar dependências (devem ser instaladas via npm, yarn, pip, etc.)
+node_modules/
+
+# Ignorar arquivos de ambiente. NUNCA envie senhas ou chaves de API!
+.env
+.env.local
+.env.*.local
+
+# Ignorar arquivos de log
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Pastas de build ou produção
+dist/
+build/
+.out/
+
+# Pasta de miscelania axiliar
+.misc/
+
+# Arquivos de sistema operacional e de editores
+.DS_Store
+.vscode/

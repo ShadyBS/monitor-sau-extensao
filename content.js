@@ -1,0 +1,461 @@
+// Injection Guard: Previne a re-execução do script se ele já foi injetado nesta página.
+// Isso evita erros de "identifier has already been declared" e a duplicação de listeners.
+(function () {
+  if (window.monitorSauHasInjected) {
+    // O script já foi injetado e está em execução. Não faz nada.
+    return;
+  }
+  window.monitorSauHasInjected = true;
+
+  // Define o objeto de API do navegador de forma compatível (Chrome ou Firefox)
+  const browserAPI = globalThis.browser || globalThis.chrome;
+
+  // Verificação de robustez: Garante que as APIs da extensão estão disponíveis.
+  // Se não estiverem, o script não pode funcionar e deve parar.
+  if (!browserAPI || !browserAPI.runtime || !browserAPI.storage) {
+    console.error(
+      "Monitor SAU: APIs da extensão (browserAPI.runtime, browserAPI.storage) não encontradas. " +
+        "O script pode não estar sendo executado no contexto correto de uma extensão. " +
+        "Verifique se o 'manifest.json' tem as permissões corretas (ex: \"storage\") e " +
+        "se o script está sendo injetado corretamente (ex: via 'chrome.scripting.executeScript')."
+    );
+    // Interrompe a execução para evitar mais erros.
+    return;
+  }
+
+  // URLs do SAU
+  const SAU_LOGIN_URL = "https://egov.santos.sp.gov.br/sau/entrar.sau";
+  const SAU_HOME_URL = "https://egov.santos.sp.gov.br/sau/menu/home.sau";
+  const SAU_TASK_SEARCH_URL =
+    "https://egov.santos.sp.gov.br/sau/ajax/pesquisar_Tarefa.sau";
+  const SAU_PREPARAR_PESQUISAR_TAREFA_URL =
+    "https://egov.santos.sp.gov.br/sau/comum/prepararPesquisar_Tarefa.sau";
+
+  // Variável global para armazenar as últimas tarefas vistas nesta sessão do content script.
+  // Isso ajuda a evitar o reprocessamento de tarefas já enviadas ao background script
+  // dentro da mesma sessão da página.
+  let currentSessionTasks = [];
+
+  /**
+   * Lida com o login automático se a página atual for a página de login do SAU.
+   * Tenta preencher e submeter o formulário de login com as credenciais salvas.
+   */
+  async function handleLoginIfNecessary() {
+    // Verifica se a URL atual começa com a URL de login do SAU
+    if (window.location.href.startsWith(SAU_LOGIN_URL)) {
+      console.log(
+        "Página de login detectada. Verificando credenciais para login automático..."
+      );
+      try {
+        // Obtém as credenciais armazenadas no storage da extensão
+        const data = await browserAPI.storage.local.get([
+          "sauUsername",
+          "sauPassword",
+        ]);
+        const username = data.sauUsername;
+        const password = data.sauPassword;
+
+        if (username && password) {
+          const loginForm = document.getElementById("loginForm");
+          if (loginForm) {
+            const usernameInput = document.getElementById("usuario");
+            const passwordInput = document.getElementById("senha");
+            if (usernameInput && passwordInput) {
+              usernameInput.value = username;
+              passwordInput.value = password;
+              loginForm.submit(); // Submete o formulário
+              console.log("Credenciais preenchidas e formulário submetido.");
+            } else {
+              console.warn(
+                "Campos de usuário/senha (IDs: usuario, senha) não encontrados na página de login do SAU."
+              );
+            }
+          } else {
+            console.warn(
+              "Formulário de login (ID: loginForm) não encontrado na página do SAU."
+            );
+          }
+        } else {
+          console.log(
+            "Credenciais não salvas nas opções da extensão. Login automático desativado."
+          );
+        }
+      } catch (error) {
+        console.error("Erro ao tentar login automático:", error);
+      }
+    }
+  }
+
+  /**
+   * Analisa um elemento HTML de tarefa e extrai suas informações relevantes.
+   * @param {HTMLElement} taskHtmlElement - O elemento HTML que representa uma tarefa individual.
+   * @returns {Object|null} Um objeto contendo os detalhes da tarefa ou null se o parsing falhar.
+   */
+  function parseTaskFromHtml(taskHtmlElement) {
+    try {
+      // Seletores CSS para extrair informações da tarefa
+      const numeroElement = taskHtmlElement.querySelector(".numeroTarefaLista");
+      const tituloElement = taskHtmlElement.querySelector(".nomeTarefaLista");
+      const linkElement = taskHtmlElement.querySelector(".acoesTarefaLista a");
+      // Seleciona o td que vem depois de um td com alinhamento à direita e estilo de largura específica
+      const dataEnvioElement = taskHtmlElement.querySelector(
+        'td[align="right"][style*="width: 84px"] + td'
+      );
+      // Seleciona o elemento <b> dentro de um td com alinhamento à direita
+      const posicaoElement = taskHtmlElement.querySelector(
+        'td[align="right"] > b'
+      );
+
+      // Verifica se todos os elementos essenciais foram encontrados
+      if (
+        numeroElement &&
+        tituloElement &&
+        linkElement &&
+        dataEnvioElement &&
+        posicaoElement
+      ) {
+        const numero = numeroElement.textContent.trim();
+        let tituloCompleto = tituloElement.textContent.trim();
+        // Remove os prefixos "Título: " e "Serviço: " para obter apenas o título limpo
+        tituloCompleto = tituloCompleto
+          .replace(/Título:\s*/, "")
+          .replace(/Serviço:\s*/, "")
+          .trim();
+        // Pega apenas a primeira linha do título, caso haja quebras de linha
+        const titulo = tituloCompleto.split("\n")[0].trim();
+
+        const link = linkElement.href;
+        const dataEnvio = dataEnvioElement.textContent.trim();
+        const posicao = posicaoElement.textContent.trim();
+
+        // Cria um ID único para a tarefa combinando número e data de envio
+        const id = `${numero}-${dataEnvio}`;
+
+        return { id, numero, titulo, link, dataEnvio, posicao };
+      }
+    } catch (e) {
+      console.error(
+        "Content Script: Erro ao parsear elemento da tarefa:",
+        e,
+        taskHtmlElement
+      );
+    }
+    return null; // Retorna null se não conseguir parsear a tarefa
+  }
+
+  /**
+   * Processa uma lista de elementos HTML de tarefa, extrai as informações,
+   * filtra as que são novas e as envia para o background script.
+   * @param {NodeListOf<Element>} taskElements - Uma lista de nós de elementos de tarefa.
+   */
+  function processTaskElements(taskElements) {
+    const foundTasks = [];
+    taskElements.forEach((taskElement) => {
+      const task = parseTaskFromHtml(taskElement);
+      if (task) {
+        foundTasks.push(task);
+      }
+    });
+
+    if (foundTasks.length === 0) return; // Nenhuma tarefa encontrada para processar
+
+    console.log(
+      "Content Script: Tarefas encontradas para processamento:",
+      foundTasks
+    );
+
+    // Filtra as tarefas que são realmente novas (não estão em currentSessionTasks)
+    const newTasks = foundTasks.filter(
+      (task) =>
+        !currentSessionTasks.some((existingTask) => existingTask.id === task.id)
+    );
+
+    if (newTasks.length > 0) {
+      console.log("Content Script: Novas tarefas detectadas:", newTasks);
+      // Adiciona as novas tarefas à lista de tarefas da sessão atual
+      currentSessionTasks = [...currentSessionTasks, ...newTasks];
+      // Envia as novas tarefas para o background script para processamento e notificação
+      browserAPI.runtime.sendMessage({
+        action: "newTasksFound",
+        tasks: newTasks,
+      });
+    } else {
+      console.log(
+        "Content Script: Nenhuma nova tarefa detectada nesta verificação."
+      );
+    }
+  }
+
+  /**
+   * Processa o conteúdo HTML recebido de uma requisição AJAX
+   * para extrair tarefas e identificar novas.
+   * @param {string} htmlContent - O fragmento HTML contendo as tarefas.
+   */
+  function processTasksHtml(htmlContent) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlContent, "text/html");
+    const taskElements = doc.querySelectorAll("table.tarefaLista");
+    processTaskElements(taskElements);
+  }
+
+  /**
+   * Procura por tarefas que já existem na página no momento em que o script é carregado.
+   */
+  function scanForExistingTasks() {
+    const taskElements = document.querySelectorAll("table.tarefaLista");
+    if (taskElements.length > 0) {
+      console.log(
+        `Content Script: Encontradas ${taskElements.length} tarefas pré-existentes no DOM. Processando...`
+      );
+      processTaskElements(taskElements);
+    }
+  }
+
+  /**
+   * Configura um MutationObserver para monitorar mudanças no DOM.
+   * Isso serve como um fallback ou complemento à interceptação AJAX,
+   * caso as tarefas sejam injetadas diretamente no DOM sem uma requisição XHR óbvia.
+   */
+  function setupMutationObserver() {
+    // Tenta encontrar o elemento que contém a lista de tarefas, ou monitora o body como fallback
+    const targetNode = document.getElementById("divLista") || document.body;
+    if (!targetNode) {
+      console.warn(
+        "Content Script: Elemento alvo para MutationObserver (divLista) não encontrado. Monitoramento de DOM pode ser limitado."
+      );
+      return;
+    }
+
+    // Configuração do observador: observar mudanças na lista de filhos e em subárvores
+    const config = { childList: true, subtree: true };
+
+    // Callback que será executado quando houver mutações no DOM
+    const callback = function (mutationsList) {
+      // Para simplificar e tornar mais robusto, qualquer mudança relevante no DOM
+      // (como a adição de nós) aciona uma nova verificação completa por tarefas existentes.
+      // A função `scanForExistingTasks` já lida com a filtragem de duplicatas.
+      const hasRelevantChanges = mutationsList.some(
+        (mutation) =>
+          mutation.type === "childList" && mutation.addedNodes.length > 0
+      );
+
+      if (hasRelevantChanges) {
+        console.log(
+          "Content Script: Mudanças no DOM detectadas pelo MutationObserver. Re-escaneando por tarefas..."
+        );
+        scanForExistingTasks();
+      }
+    };
+
+    const observer = new MutationObserver(callback);
+    observer.observe(targetNode, config); // Inicia a observação
+    console.log("Content Script: MutationObserver configurado para divLista.");
+  }
+
+  /**
+   * Injeta a interface de usuário visual para exibir notificações de novas tarefas na página.
+   * @param {Array<Object>} tasks - Um array de objetos de tarefa a serem exibidos na notificação.
+   */
+  function injectNotificationUI(tasks) {
+    // Remove qualquer notificação existente para evitar duplicação
+    const existingNotification = document.getElementById(
+      "sau-notification-container"
+    );
+    if (existingNotification) {
+      existingNotification.remove();
+    }
+
+    const notificationContainer = document.createElement("div");
+    notificationContainer.id = "sau-notification-container";
+    notificationContainer.className = "sau-notification-container";
+
+    // Cria o HTML para cada tarefa na notificação
+    let tasksHtml = tasks
+      .map(
+        (task) => `
+        <div class="sau-notification-item">
+            <p><strong>${task.numero}</strong>: ${task.titulo}</p>
+            <p class="sau-notification-meta">Envio: ${task.dataEnvio} | Posição: ${task.posicao}</p>
+            <div class="sau-notification-actions">
+                <button class="sau-btn-open" data-url="${task.link}">Abrir</button>
+                <button class="sau-btn-ignore" data-id="${task.id}">Ignorar</button>
+                <button class="sau-btn-snooze" data-id="${task.id}">Lembrar Mais Tarde</button>
+            </div>
+        </div>
+    `
+      )
+      .join("");
+
+    // Constrói o HTML completo da notificação
+    notificationContainer.innerHTML = `
+        <div class="sau-notification-header">
+            <h3>Novas Tarefas SAU (${tasks.length})</h3>
+            <button id="sau-notification-close" class="sau-close-btn">&times;</button>
+        </div>
+        <div class="sau-notification-body">
+            ${tasksHtml}
+        </div>
+    `;
+
+    document.body.appendChild(notificationContainer); // Adiciona a notificação ao corpo do documento
+
+    // Adiciona listeners para o botão de fechar a notificação
+    document
+      .getElementById("sau-notification-close")
+      .addEventListener("click", () => {
+        notificationContainer.remove();
+      });
+
+    // Adiciona listeners para os botões de ação dentro de cada item de tarefa na notificação
+    notificationContainer
+      .querySelectorAll(".sau-btn-open")
+      .forEach((button) => {
+        button.addEventListener("click", (e) => {
+          const url = e.target.dataset.url;
+          // Envia uma mensagem para o background script para abrir a URL em uma nova aba
+          browserAPI.runtime.sendMessage({ action: "openTab", url: url });
+          // Remove o item de tarefa da notificação visual
+          e.target.closest(".sau-notification-item").remove();
+          // Se não houver mais itens, remove o container da notificação
+          if (
+            notificationContainer.querySelectorAll(".sau-notification-item")
+              .length === 0
+          ) {
+            notificationContainer.remove();
+          }
+        });
+      });
+
+    notificationContainer
+      .querySelectorAll(".sau-btn-ignore")
+      .forEach((button) => {
+        button.addEventListener("click", (e) => {
+          const taskId = e.target.dataset.id;
+          // Envia uma mensagem para o background script para ignorar esta tarefa
+          browserAPI.runtime.sendMessage({
+            action: "ignoreTask",
+            taskId: taskId,
+          });
+          // Remove o item de tarefa da notificação visual
+          e.target.closest(".sau-notification-item").remove();
+          // Se não houver mais itens, remove o container da notificação
+          if (
+            notificationContainer.querySelectorAll(".sau-notification-item")
+              .length === 0
+          ) {
+            notificationContainer.remove();
+          }
+        });
+      });
+
+    notificationContainer
+      .querySelectorAll(".sau-btn-snooze")
+      .forEach((button) => {
+        button.addEventListener("click", (e) => {
+          const taskId = e.target.dataset.id;
+          // Envia uma mensagem para o background script para "snooze" esta tarefa
+          browserAPI.runtime.sendMessage({
+            action: "snoozeTask",
+            taskId: taskId,
+          });
+          // Remove o item de tarefa da notificação visual
+          e.target.closest(".sau-notification-item").remove();
+          // Se não houver mais itens, remove o container da notificação
+          if (
+            notificationContainer.querySelectorAll(".sau-notification-item")
+              .length === 0
+          ) {
+            notificationContainer.remove();
+          }
+        });
+      });
+  }
+
+  // --- Execução Inicial do Content Script ---
+  (async () => {
+    console.log("Content Script: Inicializando...");
+
+    // Carrega as últimas tarefas conhecidas do storage local para a sessão atual do content script.
+    // Isso é importante para que o content script não notifique sobre tarefas já vistas na mesma sessão.
+    const data = await browserAPI.storage.local.get("lastKnownTasks");
+    currentSessionTasks = data.lastKnownTasks || [];
+    console.log(
+      "Content Script: Tarefas conhecidas na sessão:",
+      currentSessionTasks.length
+    );
+
+    // Lida com a tentativa de login automático se a página atual for a de login
+    await handleLoginIfNecessary();
+
+    // Procura por tarefas que já possam existir no DOM no momento do carregamento.
+    scanForExistingTasks();
+
+    // Adiciona um listener para receber mensagens do script interceptor (que roda no world: MAIN).
+    // Esta é a ponte de comunicação para obter os dados do AJAX.
+    window.addEventListener("message", (event) => {
+      // Validação de segurança: aceitar mensagens apenas da mesma janela e com o tipo esperado.
+      if (
+        event.source === window &&
+        event.data &&
+        event.data.type === "SAU_TASKS_RESPONSE"
+      ) {
+        console.log(
+          "Content Script: Resposta AJAX de tarefas recebida do interceptor."
+        );
+        processTasksHtml(event.data.htmlContent);
+      }
+    });
+
+    // Configura o MutationObserver como um complemento/fallback para detectar mudanças no DOM
+    setupMutationObserver();
+
+    // Adiciona um listener para mensagens enviadas do background script para este content script.
+    // Isso é usado para injetar a UI de notificação visual.
+    browserAPI.runtime.onMessage.addListener(
+      (message, sender, sendResponse) => {
+        // O listener padrão e seguro para comunicação entre background e content scripts.
+        if (message.action === "showNotificationUI") {
+          console.log(
+            "Content Script: Mensagem para mostrar UI de notificação recebida do Background:",
+            message.tasks
+          );
+          // Injeta a UI de notificação visual na página
+          injectNotificationUI(message.tasks);
+          // Opcional: responder ao background que a ação foi concluída.
+          // sendResponse({ status: "UI Injetada com sucesso" });
+        }
+      }
+    );
+
+    // Se o content script for injetado na página de consulta de tarefas,
+    // simula um clique no botão de pesquisa para carregar as tarefas iniciais.
+    if (window.location.href.startsWith(SAU_PREPARAR_PESQUISAR_TAREFA_URL)) {
+      console.log(
+        'Content Script: Página de consulta de tarefas ativa. Tentando simular clique em "Pesquisar" para verificação inicial.'
+      );
+      const searchButton = document.getElementById("btn_pesquisarTarefaForm"); // Botão de pesquisa principal
+      const searchButtonAdvanced = document.getElementById(
+        "btn_pesquisarTarefaFormAvancado"
+      ); // Botão de pesquisa avançada
+
+      if (searchButton) {
+        searchButton.click();
+        console.log("Content Script: Botão de pesquisa principal clicado.");
+      } else if (searchButtonAdvanced) {
+        searchButtonAdvanced.click();
+        console.log("Content Script: Botão de pesquisa avançada clicado.");
+      } else {
+        console.warn(
+          "Content Script: Nenhum botão de pesquisa de tarefas encontrado. A verificação inicial pode não ocorrer automaticamente."
+        );
+      }
+    } else if (window.location.href.startsWith(SAU_HOME_URL)) {
+      // Se o script for injetado na página inicial após o login,
+      // redireciona para a página de consulta de tarefas para iniciar o processo.
+      console.log(
+        "Content Script: Página inicial (home) detectada. Redirecionando para a página de consulta de tarefas..."
+      );
+      window.location.href = SAU_PREPARAR_PESQUISAR_TAREFA_URL;
+    }
+  })();
+})(); // Fecha o IIFE do injection guard

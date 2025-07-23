@@ -1,0 +1,138 @@
+/* Estilos para a notificação visual injetada na página do SAU */
+.sau-notification-container {
+  position: fixed; /* Posição fixa na tela */
+  top: 20px; /* 20px do topo */
+  right: 20px; /* 20px da direita */
+  width: 300px; /* Largura fixa */
+  background-color: #f8f8f8; /* Cor de fundo clara */
+  border: 1px solid #ddd; /* Borda sutil */
+  border-radius: 10px; /* Cantos arredondados */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); /* Sombra para profundidade */
+  z-index: 10000; /* Garante que fique acima da maioria dos elementos da página */
+  font-family: "Inter", sans-serif; /* Fonte consistente */
+  color: #333; /* Cor do texto padrão */
+  overflow: hidden; /* Esconde conteúdo que transborda */
+  animation: slideIn 0.5s forwards; /* Animação de entrada */
+}
+
+/* Animação para a notificação deslizar da direita */
+@keyframes slideIn {
+  from {
+    transform: translateX(100%); /* Começa fora da tela à direita */
+    opacity: 0; /* Começa invisível */
+  }
+  to {
+    transform: translateX(0); /* Desliza para a posição final */
+    opacity: 1; /* Torna-se totalmente visível */
+  }
+}
+
+.sau-notification-header {
+  background-color: #3498db; /* Cor de fundo do cabeçalho (azul) */
+  color: white; /* Cor do texto do cabeçalho */
+  padding: 10px 15px; /* Preenchimento interno */
+  display: flex; /* Usa flexbox para alinhamento */
+  justify-content: space-between; /* Espaça o título e o botão de fechar */
+  align-items: center; /* Alinha verticalmente ao centro */
+  font-size: 1.1em; /* Tamanho da fonte */
+  font-weight: bold; /* Negrito */
+  border-top-left-radius: 8px; /* Cantos arredondados superiores */
+  border-top-right-radius: 8px;
+}
+
+.sau-notification-header h3 {
+  margin: 0; /* Remove margem padrão do h3 */
+  font-size: 1em; /* Tamanho da fonte relativo */
+}
+
+.sau-close-btn {
+  background: none; /* Sem fundo */
+  border: none; /* Sem borda */
+  color: white; /* Cor do ícone de fechar */
+  font-size: 1.5em; /* Tamanho do ícone */
+  cursor: pointer; /* Cursor de ponteiro ao passar o mouse */
+  line-height: 1; /* Altura da linha para centralizar o 'x' */
+  padding: 0 5px; /* Preenchimento */
+  transition: color 0.2s ease; /* Transição suave de cor */
+}
+
+.sau-close-btn:hover {
+  color: #ecf0f1; /* Cor mais clara ao passar o mouse */
+}
+
+.sau-notification-body {
+  padding: 15px; /* Preenchimento interno */
+  max-height: 250px; /* Altura máxima para o corpo da notificação */
+  overflow-y: auto; /* Adiciona scroll vertical se o conteúdo exceder a altura máxima */
+}
+
+.sau-notification-item {
+  background-color: #ffffff; /* Fundo branco para cada item de tarefa */
+  border: 1px solid #e0e0e0; /* Borda sutil */
+  border-radius: 8px; /* Cantos arredondados */
+  padding: 10px; /* Preenchimento interno */
+  margin-bottom: 10px; /* Margem inferior entre os itens */
+  font-size: 0.9em; /* Tamanho da fonte */
+}
+
+.sau-notification-item:last-child {
+  margin-bottom: 0; /* Remove a margem do último item para evitar espaço extra */
+}
+
+.sau-notification-item p {
+  margin: 0 0 5px 0; /* Margens para parágrafos */
+  line-height: 1.2; /* Altura da linha */
+}
+
+.sau-notification-item strong {
+  color: #34495e; /* Cor mais escura para o número da tarefa */
+}
+
+.sau-notification-meta {
+  font-size: 0.8em; /* Tamanho menor para metadados */
+  color: #888; /* Cor mais clara para metadados */
+}
+
+.sau-notification-actions {
+  display: flex; /* Usa flexbox para os botões de ação */
+  gap: 5px; /* Espaçamento entre os botões */
+  margin-top: 10px; /* Margem superior */
+  justify-content: flex-end; /* Alinha os botões à direita */
+}
+
+.sau-notification-actions button {
+  padding: 5px 8px; /* Preenchimento dos botões */
+  border: none; /* Sem borda */
+  border-radius: 5px; /* Cantos arredondados nos botões */
+  cursor: pointer; /* Cursor de ponteiro */
+  font-size: 0.75em; /* Tamanho da fonte dos botões */
+  font-weight: 600; /* Negrito nos botões */
+  transition: background-color 0.2s ease; /* Transição suave de cor de fundo */
+}
+
+.sau-btn-open {
+  background-color: #2ecc71; /* Verde */
+  color: white;
+}
+
+.sau-btn-open:hover {
+  background-color: #27ae60; /* Verde mais escuro ao passar o mouse */
+}
+
+.sau-btn-ignore {
+  background-color: #e74c3c; /* Vermelho */
+  color: white;
+}
+
+.sau-btn-ignore:hover {
+  background-color: #c0392b; /* Vermelho mais escuro ao passar o mouse */
+}
+
+.sau-btn-snooze {
+  background-color: #f39c12; /* Laranja */
+  color: white;
+}
+
+.sau-btn-snooze:hover {
+  background-color: #e67e22; /* Laranja mais escuro ao passar o mouse */
+}
