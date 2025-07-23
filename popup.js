@@ -81,11 +81,39 @@ function displayTasks(tasks) {
     taskElement.className = "task-item";
     taskElement.innerHTML = `
             <p><strong>${task.numero}</strong>: ${task.titulo}</p>
-            <p class="task-meta">Envio: ${task.dataEnvio} | Posição: ${task.posicao}</p>
+            <p class="task-meta">Envio: ${task.dataEnvio} | Posição: ${
+      task.posicao
+    }</p>
             <div class="task-actions">
-                <button data-action="open" data-url="${task.link}">Abrir</button>
-                <button data-action="ignore" data-id="${task.id}">Ignorar</button>
-                <button data-action="snooze" data-id="${task.id}">Lembrar Mais Tarde</button>
+                <button data-action="open" data-url="${task.link}" data-id="${
+      task.id
+    }">Abrir</button>
+                <button data-action="details" data-id="${
+                  task.id
+                }">Detalhes</button>
+                <button data-action="ignore" data-id="${
+                  task.id
+                }">Ignorar</button>
+                <button data-action="snooze" data-id="${
+                  task.id
+                }">Lembrar Mais Tarde</button>
+            </div>
+            <div class="task-details-expanded" id="details-${task.id}">
+                <p><strong>Solicitante:</strong> ${
+                  task.solicitante || "N/A"
+                }</p>
+                <p><strong>Unidade:</strong> ${task.unidade || "N/A"}</p>
+                <p><strong>Descrição:</strong> ${task.descricao || "N/A"}</p>
+                ${
+                  task.enderecos && task.enderecos.length > 0
+                    ? `<p><strong>Endereço(s):</strong> ${task.enderecos
+                        .map((addr) => `<span>${addr}</span>`)
+                        .join("<br>")}</p>`
+                    : ""
+                }
+                <p><strong>Link:</strong> <a href="${
+                  task.link
+                }" target="_blank" rel="noopener noreferrer">Abrir no SAU</a></p>
             </div>
         `;
     tasksList.appendChild(taskElement);
@@ -95,10 +123,28 @@ function displayTasks(tasks) {
       .querySelector('[data-action="open"]')
       .addEventListener("click", (e) => {
         const url = e.target.dataset.url;
-        popupLogger.info(`Botão 'Abrir' clicado para a tarefa: ${task.id}`);
+        const taskId = e.target.dataset.id; // Pega o ID da tarefa
+        popupLogger.info(`Botão 'Abrir' clicado para a tarefa: ${taskId}`);
+
+        // Envia mensagem para o background script para marcar a tarefa como aberta
+        browserAPI.runtime.sendMessage({
+          action: "markTaskAsOpened",
+          taskId: taskId,
+        });
+
         // Abre a URL da tarefa em uma nova aba
         browserAPI.tabs.create({ url: url });
         window.close(); // Fecha o popup após abrir a tarefa
+      });
+
+    taskElement
+      .querySelector('[data-action="details"]')
+      .addEventListener("click", () => {
+        popupLogger.info(
+          `Botão 'Detalhes' clicado para a tarefa: ${task.id}. Alternando visibilidade dos detalhes.`
+        );
+        const detailsDiv = document.getElementById(`details-${task.id}`);
+        detailsDiv.classList.toggle("expanded");
       });
 
     taskElement

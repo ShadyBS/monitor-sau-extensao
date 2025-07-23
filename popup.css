@@ -107,6 +107,16 @@ h1 {
   background-color: #e67e22;
 }
 
+/* Novo estilo para o botão de detalhes */
+.task-actions button[data-action="details"] {
+  background-color: #3498db; /* Azul */
+  color: white;
+}
+
+.task-actions button[data-action="details"]:hover {
+  background-color: #2980b9; /* Azul mais escuro */
+}
+
 .actions {
   display: flex;
   justify-content: space-between;
@@ -141,4 +151,47 @@ h1 {
   text-align: center;
   color: #888;
   padding: 20px;
+}
+
+/* Estilos para a seção de detalhes expansível */
+.task-details-expanded {
+  max-height: 0; /* Começa escondido */
+  overflow: hidden;
+  transition: max-height 0.3s ease-out, padding 0.3s ease-out; /* Transição suave */
+  background-color: #f0f0f0;
+  border-radius: 5px;
+  margin-top: 10px;
+  padding: 0 10px; /* Padding inicial zero */
+}
+
+.task-details-expanded.expanded {
+  max-height: 200px; /* Altura máxima para exibir o conteúdo */
+  padding: 10px; /* Padding quando expandido */
+}
+
+.task-details-expanded p {
+  margin: 5px 0;
+  font-size: 0.9em;
+  color: #555;
+}
+
+.task-details-expanded strong {
+  color: #333;
+}
+
+.task-details-expanded a {
+  color: #3498db;
+  text-decoration: none;
+}
+
+.task-details-expanded a:hover {
+  text-decoration: underline;
+}
+
+/* Media Queries para responsividade (mantidas, mas ajustadas se necessário) */
+@media (max-width: 400px) {
+  .container {
+    width: auto;
+    margin: 10px;
+  }
 }

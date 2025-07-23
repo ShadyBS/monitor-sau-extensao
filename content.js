@@ -36,6 +36,9 @@
   // dentro da mesma sessão da página.
   let currentSessionTasks = [];
 
+  // Variável para armazenar a tarefa atualmente exibida no modal de detalhes da página
+  let currentNotificationModalTask = null;
+
   /**
    * Lida com o login automático se a página atual for a página de login do SAU.
    * Tenta preencher e submeter o formulário de login com as credenciais salvas.
@@ -97,22 +100,82 @@
       const numeroElement = taskHtmlElement.querySelector(".numeroTarefaLista");
       const tituloElement = taskHtmlElement.querySelector(".nomeTarefaLista");
       const linkElement = taskHtmlElement.querySelector(".acoesTarefaLista a");
-      // Seleciona o td que vem depois de um td com alinhamento à direita e estilo de largura específica
-      const dataEnvioElement = taskHtmlElement.querySelector(
-        'td[align="right"][style*="width: 84px"] + td'
+
+      // Encontra a tabela de detalhes dentro do taskHtmlElement
+      const detailTable = taskHtmlElement.querySelector(
+        'table[width="100%"][cellpadding="2"][cellspacing="2"]'
       );
-      // Seleciona o elemento <b> dentro de um td com alinhamento à direita
-      const posicaoElement = taskHtmlElement.querySelector(
-        'td[align="right"] > b'
+
+      if (!detailTable) {
+        console.warn(
+          "Content Script: Tabela de detalhes da tarefa não encontrada."
+        );
+        return null;
+      }
+
+      // Extrai os dados baseados na estrutura da tabela de detalhes
+      let dataEnvio = null;
+      let posicao = null;
+      let solicitante = null;
+      let unidade = null;
+      let descricao = null;
+      let enderecos = [];
+
+      // Função auxiliar para extrair texto de um elemento irmão após um rótulo em negrito
+      const extractValueByLabel = (label, parentElement) => {
+        const row = Array.from(parentElement.querySelectorAll("tr")).find(
+          (tr) =>
+            tr.querySelector('td[align="right"] b') &&
+            tr.querySelector('td[align="right"] b').textContent.trim() === label
+        );
+        return row
+          ? row
+              .querySelector('td[align="right"]')
+              .nextElementSibling.textContent.trim()
+          : null;
+      };
+
+      // Extração de Data de Envio
+      dataEnvio = extractValueByLabel("Data de Envio:", detailTable);
+      console.log("Content Script: Data de Envio extraída:", dataEnvio);
+
+      // Extração de Posição
+      const posicaoElementInTable = Array.from(
+        detailTable.querySelectorAll('td[align="right"]')
+      ).find((td) => td.textContent.includes("Posição:"));
+      posicao = posicaoElementInTable
+        ? posicaoElementInTable.querySelector("b").textContent.trim()
+        : null;
+      console.log("Content Script: Posição extraída:", posicao);
+
+      // Extração de Solicitante
+      solicitante = extractValueByLabel("Solicitante:", detailTable);
+      console.log("Content Script: Solicitante extraído:", solicitante);
+
+      // Extração de Unidade
+      unidade = extractValueByLabel("Unidade:", detailTable);
+      console.log("Content Script: Unidade extraída:", unidade);
+
+      // Extração de Descrição
+      descricao = extractValueByLabel("Descrição:", detailTable);
+      console.log("Content Script: Descrição extraída:", descricao);
+
+      // Extração de Endereços
+      const enderecosListElements = detailTable.querySelectorAll(
+        ".enderecosTarefa li span"
       );
+      enderecos = Array.from(enderecosListElements).map((el) =>
+        el.textContent.trim()
+      );
+      console.log("Content Script: Endereços extraídos:", enderecos);
 
       // Verifica se todos os elementos essenciais foram encontrados
       if (
         numeroElement &&
         tituloElement &&
         linkElement &&
-        dataEnvioElement &&
-        posicaoElement
+        dataEnvio &&
+        posicao
       ) {
         const numero = numeroElement.textContent.trim();
         let tituloCompleto = tituloElement.textContent.trim();
@@ -125,13 +188,24 @@
         const titulo = tituloCompleto.split("\n")[0].trim();
 
         const link = linkElement.href;
-        const dataEnvio = dataEnvioElement.textContent.trim();
-        const posicao = posicaoElement.textContent.trim();
 
         // Cria um ID único para a tarefa combinando número e data de envio
         const id = `${numero}-${dataEnvio}`;
 
-        return { id, numero, titulo, link, dataEnvio, posicao };
+        const parsedTask = {
+          id,
+          numero,
+          titulo,
+          link,
+          dataEnvio,
+          posicao,
+          solicitante,
+          unidade,
+          descricao,
+          enderecos,
+        };
+        console.log("Content Script: Tarefa parseada:", parsedTask); // Log detalhado da tarefa parseada
+        return parsedTask;
       }
     } catch (e) {
       console.error(
@@ -157,12 +231,16 @@
       }
     });
 
-    if (foundTasks.length === 0) return; // Nenhuma tarefa encontrada para processar
+    if (foundTasks.length === 0) {
+      console.log("Content Script: Nenhuma tarefa encontrada para processar.");
+      return; // Nenhuma tarefa encontrada para processar
+    }
 
     console.log(
       "Content Script: Tarefas encontradas para processamento:",
+      foundTasks.length,
       foundTasks
-    );
+    ); // Log detalhado das tarefas encontradas
 
     // Filtra as tarefas que são realmente novas (não estão em currentSessionTasks)
     const newTasks = foundTasks.filter(
@@ -171,14 +249,30 @@
     );
 
     if (newTasks.length > 0) {
-      console.log("Content Script: Novas tarefas detectadas:", newTasks);
+      console.log(
+        "Content Script: Novas tarefas detectadas:",
+        newTasks.length,
+        newTasks
+      ); // Log detalhado das novas tarefas
       // Adiciona as novas tarefas à lista de tarefas da sessão atual
       currentSessionTasks = [...currentSessionTasks, ...newTasks];
       // Envia as novas tarefas para o background script para processamento e notificação
-      browserAPI.runtime.sendMessage({
-        action: "newTasksFound",
-        tasks: newTasks,
-      });
+      browserAPI.runtime
+        .sendMessage({
+          action: "newTasksFound",
+          tasks: newTasks,
+        })
+        .then(() => {
+          console.log(
+            "Content Script: Mensagem 'newTasksFound' enviada com sucesso."
+          );
+        })
+        .catch((error) => {
+          console.error(
+            "Content Script: Erro ao enviar mensagem 'newTasksFound':",
+            error
+          );
+        });
     } else {
       console.log(
         "Content Script: Nenhuma nova tarefa detectada nesta verificação."
@@ -195,6 +289,10 @@
     const parser = new DOMParser();
     const doc = parser.parseFromString(htmlContent, "text/html");
     const taskElements = doc.querySelectorAll("table.tarefaLista");
+    console.log(
+      "Content Script: HTML de tarefas recebido para processamento. Elementos encontrados:",
+      taskElements.length
+    );
     processTaskElements(taskElements);
   }
 
@@ -208,6 +306,10 @@
         `Content Script: Encontradas ${taskElements.length} tarefas pré-existentes no DOM. Processando...`
       );
       processTaskElements(taskElements);
+    } else {
+      console.log(
+        "Content Script: Nenhuma tarefa pré-existente encontrada no DOM."
+      );
     }
   }
 
@@ -275,11 +377,39 @@
         (task) => `
         <div class="sau-notification-item">
             <p><strong>${task.numero}</strong>: ${task.titulo}</p>
-            <p class="sau-notification-meta">Envio: ${task.dataEnvio} | Posição: ${task.posicao}</p>
+            <p class="sau-notification-meta">Envio: ${
+              task.dataEnvio
+            } | Posição: ${task.posicao}</p>
             <div class="sau-notification-actions">
-                <button class="sau-btn-open" data-url="${task.link}">Abrir</button>
-                <button class="sau-btn-ignore" data-id="${task.id}">Ignorar</button>
-                <button class="sau-btn-snooze" data-id="${task.id}">Lembrar Mais Tarde</button>
+                <button class="sau-btn-open" data-url="${task.link}" data-id="${
+          task.id
+        }">Abrir</button>
+                <button class="sau-btn-details" data-id="${
+                  task.id
+                }">Detalhes</button>
+                <button class="sau-btn-ignore" data-id="${
+                  task.id
+                }">Ignorar</button>
+                <button class="sau-btn-snooze" data-id="${
+                  task.id
+                }">Lembrar Mais Tarde</button>
+            </div>
+            <div class="sau-details-expanded" id="sau-details-${task.id}">
+                <p><strong>Solicitante:</strong> ${
+                  task.solicitante || "N/A"
+                }</p>
+                <p><strong>Unidade:</strong> ${task.unidade || "N/A"}</p>
+                <p><strong>Descrição:</strong> ${task.descricao || "N/A"}</p>
+                ${
+                  task.enderecos && task.enderecos.length > 0
+                    ? `<p><strong>Endereço(s):</strong> ${task.enderecos
+                        .map((addr) => `<span>${addr}</span>`)
+                        .join("<br>")}</p>`
+                    : ""
+                }
+                <p><strong>Link:</strong> <a href="${
+                  task.link
+                }" target="_blank" rel="noopener noreferrer">Abrir no SAU</a></p>
             </div>
         </div>
     `
@@ -312,8 +442,13 @@
       .forEach((button) => {
         button.addEventListener("click", (e) => {
           const url = e.target.dataset.url;
-          // Envia uma mensagem para o background script para abrir a URL em uma nova aba
-          browserAPI.runtime.sendMessage({ action: "openTab", url: url });
+          const taskId = e.target.dataset.id; // Pega o ID da tarefa
+          // Envia uma mensagem para o background script para marcar a tarefa como aberta
+          browserAPI.runtime.sendMessage({
+            action: "markTaskAsOpened",
+            taskId: taskId,
+          });
+          browserAPI.runtime.sendMessage({ action: "openTab", url: url }); // Abre a URL
           // Remove o item de tarefa da notificação visual
           e.target.closest(".sau-notification-item").remove();
           // Se não houver mais itens, remove o container da notificação
@@ -322,6 +457,24 @@
               .length === 0
           ) {
             notificationContainer.remove();
+          }
+        });
+      });
+
+    notificationContainer
+      .querySelectorAll(".sau-btn-details")
+      .forEach((button) => {
+        button.addEventListener("click", (e) => {
+          const taskId = e.target.dataset.id;
+          const task = tasks.find((t) => t.id === taskId);
+          if (task) {
+            console.log(
+              `Content Script: Botão 'Detalhes' clicado para a tarefa: ${taskId}. Alternando visibilidade dos detalhes.`
+            );
+            const detailsDiv = document.getElementById(
+              `sau-details-${task.id}`
+            );
+            detailsDiv.classList.toggle("expanded");
           }
         });
       });
@@ -381,7 +534,8 @@
     currentSessionTasks = data.lastKnownTasks || [];
     console.log(
       "Content Script: Tarefas conhecidas na sessão:",
-      currentSessionTasks.length
+      currentSessionTasks.length,
+      currentSessionTasks // Log the actual content of currentSessionTasks
     );
 
     // Lida com a tentativa de login automático se a página atual for a de login

@@ -18,6 +18,7 @@ const browserAPI = globalThis.browser || globalThis.chrome;
 let lastKnownTasks = []; // Armazena as últimas tarefas conhecidas por ID
 let ignoredTasks = {}; // { taskId: true } - Tarefas que o usuário escolheu ignorar
 let snoozedTasks = {}; // { taskId: timestampWhenToNotifyAgain } - Tarefas "lembradas mais tarde"
+let openedTasks = {}; // { taskId: true } - Tarefas que o usuário abriu e não devem mais ser notificadas
 let lastCheckTimestamp = 0; // Último timestamp da verificação de tarefas
 
 /**
@@ -30,18 +31,22 @@ async function loadPersistentData() {
       "lastKnownTasks",
       "ignoredTasks",
       "snoozedTasks",
+      "openedTasks", // Carrega o novo estado
       "lastCheckTimestamp",
     ]);
     lastKnownTasks = data.lastKnownTasks || [];
     ignoredTasks = data.ignoredTasks || {};
     snoozedTasks = data.snoozedTasks || {};
+    openedTasks = data.openedTasks || {}; // Inicializa o novo estado
     lastCheckTimestamp = data.lastCheckTimestamp || 0;
     backgroundLogger.info("Dados persistentes carregados:", {
-      lastKnownTasks,
-      ignoredTasks,
-      snoozedTasks,
+      lastKnownTasks: lastKnownTasks.length, // Log apenas o tamanho para evitar logs muito grandes
+      ignoredTasks: Object.keys(ignoredTasks).length,
+      snoozedTasks: Object.keys(snoozedTasks).length,
+      openedTasks: Object.keys(openedTasks).length, // Log o tamanho do novo estado
       lastCheckTimestamp,
     });
+    backgroundLogger.debug("Conteúdo de lastKnownTasks:", lastKnownTasks); // Log o conteúdo completo para depuração
   } catch (error) {
     backgroundLogger.error("Erro ao carregar dados persistentes:", error);
   }
@@ -49,12 +54,13 @@ async function loadPersistentData() {
 
 /**
  * Atualiza o contador (badge) no ícone da extensão.
- * Exibe o número de tarefas pendentes (não ignoradas ou "snoozed").
+ * Exibe o número de tarefas pendentes (não ignoradas, "snoozed" ou abertas).
  */
 function updateBadge() {
   const pendingTasksCount = lastKnownTasks.filter(
     (task) =>
       !ignoredTasks[task.id] &&
+      !openedTasks[task.id] && // Filtra tarefas abertas
       (!snoozedTasks[task.id] || snoozedTasks[task.id] <= Date.now())
   ).length;
 
@@ -77,6 +83,7 @@ async function savePersistentData() {
       lastKnownTasks: lastKnownTasks,
       ignoredTasks: ignoredTasks,
       snoozedTasks: snoozedTasks,
+      openedTasks: openedTasks, // Salva o novo estado
       lastCheckTimestamp: lastCheckTimestamp,
     });
     backgroundLogger.info("Dados persistentes salvos.");
@@ -134,16 +141,24 @@ browserAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
       break;
     case "manualCheck":
       // Inicia uma verificação manual de tarefas
+      backgroundLogger.info("Verificação manual solicitada.");
       checkAndNotifyNewTasks();
       break;
     case "getLatestTasks":
-      // Retorna as tarefas que não foram ignoradas ou estão prontas para serem "lembradas"
+      // Retorna as tarefas que não foram ignoradas, abertas ou estão prontas para serem "lembradas"
+      const currentPendingTasks = lastKnownTasks.filter(
+        (task) =>
+          !ignoredTasks[task.id] &&
+          !openedTasks[task.id] && // Filtra tarefas abertas
+          (!snoozedTasks[task.id] || snoozedTasks[task.id] <= Date.now())
+      );
+      backgroundLogger.debug(
+        "Retornando últimas tarefas para popup:",
+        currentPendingTasks.length,
+        currentPendingTasks
+      );
       sendResponse({
-        newTasks: lastKnownTasks.filter(
-          (task) =>
-            !ignoredTasks[task.id] &&
-            (!snoozedTasks[task.id] || snoozedTasks[task.id] <= Date.now())
-        ),
+        newTasks: currentPendingTasks,
         message: `Última verificação: ${new Date(
           lastCheckTimestamp
         ).toLocaleTimeString()}`,
@@ -153,6 +168,9 @@ browserAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
     case "ignoreTask":
       // Marca uma tarefa como ignorada e salva o estado
       ignoredTasks[request.taskId] = true;
+      // Remove de openedTasks e snoozedTasks se estiver lá
+      delete openedTasks[request.taskId];
+      delete snoozedTasks[request.taskId];
       savePersistentData();
       updateBadge(); // Atualiza o contador no ícone
       backgroundLogger.info(`Tarefa ${request.taskId} ignorada.`);
@@ -162,6 +180,7 @@ browserAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
         newTasks: lastKnownTasks.filter(
           (task) =>
             !ignoredTasks[task.id] &&
+            !openedTasks[task.id] && // Filtra tarefas abertas
             (!snoozedTasks[task.id] || snoozedTasks[task.id] <= Date.now())
         ),
       });
@@ -171,6 +190,9 @@ browserAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
       browserAPI.storage.local.get("snoozeTime").then((data) => {
         const snoozeMinutes = data.snoozeTime || 15;
         snoozedTasks[request.taskId] = Date.now() + snoozeMinutes * 60 * 1000;
+        // Remove de openedTasks e ignoredTasks se estiver lá
+        delete openedTasks[request.taskId];
+        delete ignoredTasks[request.taskId];
         savePersistentData();
         updateBadge(); // Atualiza o contador no ícone
         backgroundLogger.info(
@@ -182,17 +204,41 @@ browserAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
           newTasks: lastKnownTasks.filter(
             (task) =>
               !ignoredTasks[task.id] &&
+              !openedTasks[task.id] && // Filtra tarefas abertas
               (!snoozedTasks[task.id] || snoozedTasks[task.id] <= Date.now())
           ),
         });
       });
       break;
+    case "markTaskAsOpened": // NOVO CASE: Marcar tarefa como aberta
+      openedTasks[request.taskId] = true;
+      // Remove de ignoredTasks e snoozedTasks se estiver lá
+      delete ignoredTasks[request.taskId];
+      delete snoozedTasks[request.taskId];
+      savePersistentData();
+      updateBadge();
+      backgroundLogger.info(`Tarefa ${request.taskId} marcada como aberta.`);
+      // Notifica o popup para atualizar sua lista
+      browserAPI.runtime.sendMessage({
+        action: "updatePopup",
+        newTasks: lastKnownTasks.filter(
+          (task) =>
+            !ignoredTasks[task.id] &&
+            !openedTasks[task.id] && // Filtra tarefas abertas
+            (!snoozedTasks[task.id] || snoozedTasks[task.id] <= Date.now())
+        ),
+      });
+      break;
     case "newTasksFound":
       // Lida com as novas tarefas encontradas pelo content script
+      backgroundLogger.debug(
+        "Mensagem 'newTasksFound' recebida. Tarefas:",
+        request.tasks
+      );
       handleNewTasks(request.tasks);
       break;
     case "openTab":
-      // Abre uma nova aba com a URL fornecida
+      // Abre uma nova aba com a URL fornecida (não marca como aberta aqui, pois o clique do botão já fará isso)
       browserAPI.tabs.create({ url: request.url });
       backgroundLogger.info(`Abrindo nova aba: ${request.url}`);
       break;
@@ -207,9 +253,12 @@ browserAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
       lastKnownTasks = [];
       ignoredTasks = {};
       snoozedTasks = {};
+      openedTasks = {}; // Reseta o novo estado também
       savePersistentData(); // Salva o estado limpo
       updateBadge(); // Limpa o contador no ícone
       sendResponse({ status: "Memória de tarefas resetada com sucesso." });
+      // Força uma nova verificação para repopular a lista se a página estiver aberta
+      checkAndNotifyNewTasks();
       break;
   }
 });
@@ -241,9 +290,25 @@ async function checkAndNotifyNewTasks() {
     }
   }
 
-  // Se uma aba do SAU logada for encontrada, injeta o content script para verificar tarefas.
-  // O content script será responsável por extrair as tarefas e enviá-las de volta.
+  // Se uma aba do SAU logada for encontrada
   if (sauTab) {
+    // Se a aba encontrada for a página de pesquisa de tarefas, recarrega-a para garantir dados atualizados.
+    // Isso também acionará a reinjeção do content script via webNavigation.onCompleted.
+    if (sauTab.url.startsWith(SAU_PREPARAR_PESQUISAR_TAREFA_URL)) {
+      backgroundLogger.info(`Recarregando aba de tarefas SAU: ${sauTab.url}`);
+      try {
+        await browserAPI.tabs.reload(sauTab.id);
+        // Não precisamos injetar scripts aqui, pois o webNavigation.onCompleted Listener fará isso após o reload.
+        return; // Sai da função, pois o reload vai disparar um novo ciclo de injeção.
+      } catch (error) {
+        backgroundLogger.error(`Erro ao recarregar aba ${sauTab.id}:`, error);
+        // Se o reload falhar, tenta injetar os scripts como fallback.
+        // Isso pode acontecer se a aba foi fechada ou ficou inacessível.
+      }
+    }
+
+    // Se a aba não for a de pesquisa de tarefas (ex: home) ou o reload falhou,
+    // ou se a aba foi recém-criada/navegada para, injeta os scripts.
     try {
       // Injeta o content script principal no contexto ISOLADO (padrão)
       await browserAPI.scripting.executeScript({
@@ -297,18 +362,21 @@ async function performAutomaticLogin() {
         "Credenciais não configuradas. Por favor, acesse as opções da extensão para configurar o login automático.",
     });
     // Abre a página de login para que o usuário possa fazer o login manualmente
-    browserAPI.tabs.create({ url: SAU_LOGIN_URL });
+    browserAPI.tabs.create({ url: SAU_LOGIN_URL, active: true }); // Mantém ativa para intervenção manual
     return;
   }
 
-  // Abre uma nova aba para a página de login e a torna ativa
+  // Abre uma nova aba para a página de login e a torna NÃO ativa
   const loginTab = await browserAPI.tabs.create({
     url: SAU_LOGIN_URL,
-    active: true,
+    active: false, // PRINCIPAL MUDANÇA: Abre em segundo plano
   });
-  backgroundLogger.info(`Tentando login automático na aba ${loginTab.id}.`);
+  backgroundLogger.info(
+    `Tentando login automático na aba ${loginTab.id} (em segundo plano).`
+  );
 
   // Adiciona um listener para quando a página de login estiver completamente carregada
+  // Este listener será removido assim que o script for injetado para evitar múltiplas injeções.
   browserAPI.tabs.onUpdated.addListener(function listener(tabId, changeInfo) {
     if (tabId === loginTab.id && changeInfo.status === "complete") {
       // Remove o listener para evitar que ele seja disparado novamente
@@ -347,17 +415,24 @@ async function performAutomaticLogin() {
           world: "MAIN",
         })
         .then(() => {
-          backgroundLogger.info("Script de preenchimento de login injetado.");
+          backgroundLogger.info(
+            `Script de preenchimento de login injetado na aba ${loginTab.id}.`
+          );
+          // Após a submissão, a página navegará. O webNavigation.onCompleted capturará a próxima página do SAU.
         })
         .catch((error) => {
-          backgroundLogger.error("Erro ao injetar script de login:", error);
+          backgroundLogger.error(
+            `Erro ao injetar script de login na aba ${loginTab.id}:`,
+            error
+          );
           browserAPI.notifications.create({
             type: "basic",
             iconUrl: "icons/icon48.png",
             title: "Monitor SAU: Erro no Login Automático",
             message:
-              "Não foi possível preencher o formulário de login. Por favor, tente fazer o login manualmente.",
+              "Não foi possível preencher o formulário de login em segundo plano. Por favor, tente fazer o login manualmente.",
           });
+          // Se o login falhar em segundo plano, a aba permanecerá em segundo plano.
         });
     }
   });
@@ -371,38 +446,78 @@ async function performAutomaticLogin() {
 async function handleNewTasks(newTasks) {
   backgroundLogger.info(
     "Novas tarefas recebidas do content script:",
-    newTasks.length
+    newTasks.length,
+    newTasks // Log completo das tarefas recebidas
   );
 
   const tasksToNotify = [];
-  const updatedLastKnownTasks = [];
+  // Cria uma cópia profunda de lastKnownTasks para evitar mutações diretas durante a iteração
+  const updatedLastKnownTasks = JSON.parse(JSON.stringify(lastKnownTasks));
 
-  // Filtra as tarefas que são realmente novas e que não foram ignoradas ou "snoozed"
+  // Itera sobre as novas tarefas recebidas
   for (const newTask of newTasks) {
-    // Cria um ID único para a tarefa (número da tarefa + data de envio)
-    const taskId = `${newTask.numero}-${newTask.dataEnvio}`;
-    newTask.id = taskId; // Adiciona o ID à tarefa para facilitar o rastreamento
+    const taskId = newTask.id; // O ID já vem do content script
 
-    // Verifica se a tarefa já era conhecida, ignorada ou "snoozed"
-    const isNew = !lastKnownTasks.some((task) => task.id === taskId);
+    // Verifica se a tarefa já é conhecida em updatedLastKnownTasks
+    const isAlreadyKnownIndex = updatedLastKnownTasks.findIndex(
+      (task) => task.id === taskId
+    );
+    const isAlreadyKnown = isAlreadyKnownIndex !== -1;
+
     const isIgnored = ignoredTasks[taskId];
-    const isSnoozed = snoozedTasks[taskId] && snoozedTasks[taskId] > Date.now(); // Ainda no período de "snooze"
+    const isSnoozed = snoozedTasks[taskId] && snoozedTasks[taskId] > Date.now();
+    const isOpened = openedTasks[taskId]; // Verifica se a tarefa foi aberta
 
-    if (isNew && !isIgnored && !isSnoozed) {
+    backgroundLogger.debug(
+      `Processando tarefa ${taskId}: isAlreadyKnown=${isAlreadyKnown}, isIgnored=${isIgnored}, isSnoozed=${isSnoozed}, isOpened=${isOpened}`
+    );
+
+    if (!isAlreadyKnown) {
+      // Se a tarefa não é conhecida, adiciona-a à lista de tarefas a serem notificadas
+      // e também à lista de tarefas conhecidas.
       tasksToNotify.push(newTask);
-      backgroundLogger.debug(
-        `Tarefa nova para notificar: ${newTask.numero} - ${newTask.titulo}`
-      );
+      updatedLastKnownTasks.push({
+        ...newTask,
+        lastNotifiedTimestamp: Date.now(),
+      }); // Adiciona timestamp
+      backgroundLogger.debug(`Tarefa ${taskId} é nova e será notificada.`);
+    } else {
+      // Se a tarefa já é conhecida, atualiza seus detalhes se for necessário (ex: posição, descrição)
+      // E verifica se deve ser re-notificada
+      const existingTask = updatedLastKnownTasks[isAlreadyKnownIndex];
+      // Atualiza os detalhes da tarefa existente com os novos dados, exceto o ID e o timestamp
+      Object.assign(existingTask, {
+        ...newTask,
+        id: existingTask.id,
+        lastNotifiedTimestamp: existingTask.lastNotifiedTimestamp,
+      });
+
+      // Lógica para re-notificar tarefas (Feature 2)
+      // Será implementada na próxima etapa. Por enquanto, a lógica permanece a mesma:
+      // Não re-notifica se já conhecida, ignorada, snoozed ou aberta.
+      if (!isIgnored && !isSnoozed && !isOpened) {
+        // Se a tarefa conhecida não está ignorada, snoozed ou aberta,
+        // ela continua a ser considerada para o badge.
+        backgroundLogger.debug(
+          `Tarefa ${taskId} já conhecida, não ignorada, não snoozed e não aberta. Será considerada para o badge.`
+        );
+      } else {
+        backgroundLogger.debug(
+          `Tarefa ${taskId} já conhecida e está ignorada, snoozed ou aberta.`
+        );
+      }
     }
-    // Adiciona todas as tarefas encontradas à lista de tarefas conhecidas para a próxima comparação
-    updatedLastKnownTasks.push(newTask);
   }
 
-  lastKnownTasks = updatedLastKnownTasks; // Atualiza a lista de tarefas conhecidas
+  lastKnownTasks = updatedLastKnownTasks; // Atualiza a lista global de tarefas conhecidas
   await savePersistentData(); // Salva o estado atualizado no storage
   updateBadge(); // Atualiza o contador no ícone com as novas tarefas
 
   if (tasksToNotify.length > 0) {
+    backgroundLogger.info(
+      `Disparando notificação para ${tasksToNotify.length} nova(s) tarefa(s).`,
+      tasksToNotify
+    );
     try {
       // Cria uma notificação do navegador para as novas tarefas usando Promises (compatível com Chrome e Firefox)
       const notificationId = await browserAPI.notifications.create({
@@ -475,19 +590,25 @@ browserAPI.notifications.onButtonClicked.addListener(
     if (notificationId) {
       if (buttonIndex === 0) {
         // Botão "Abrir Todas"
-        // Abre uma nova aba para cada tarefa que não foi ignorada ou snoozed
+        // Marca todas as tarefas como abertas e as abre
         lastKnownTasks.forEach((task) => {
           if (
             !ignoredTasks[task.id] &&
+            !openedTasks[task.id] &&
             (!snoozedTasks[task.id] || snoozedTasks[task.id] <= Date.now())
           ) {
+            openedTasks[task.id] = true; // Marca como aberta
             browserAPI.tabs.create({ url: task.link });
           }
         });
+        savePersistentData(); // Salva o estado após marcar como aberta
+        updateBadge(); // Atualiza o badge
         browserAPI.notifications.clear(notificationId); // Limpa a notificação após a ação
         backgroundLogger.info(
           "Todas as tarefas da notificação abertas e notificação limpa."
         );
+        // Notifica o popup para atualizar sua lista
+        browserAPI.runtime.sendMessage({ action: "updatePopup", newTasks: [] });
       } else if (buttonIndex === 1) {
         // Botão "Ignorar Todas"
         // Marca todas as tarefas como ignoradas
