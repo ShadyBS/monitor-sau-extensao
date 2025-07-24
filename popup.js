@@ -39,9 +39,6 @@ browserAPI.runtime.onMessage.addListener(async (request, sender, sendResponse) =
 });
 
 /**
- * Carrega os dados mais recentes das tarefas do background script e os exibe no popup.
- */
-/**
  * Carrega as configurações de exibição de tarefas do storage
  */
 async function getDisplaySettings() {
@@ -70,6 +67,43 @@ async function getDisplaySettings() {
       posicao: true,
       solicitante: false,
       unidade: false,
+    };
+  }
+}
+
+/**
+ * Carrega as configurações de snooze do storage
+ */
+async function getSnoozeSettings() {
+  try {
+    const data = await browserAPI.storage.local.get(["snoozeSettings"]);
+    if (data.snoozeSettings) {
+      return data.snoozeSettings;
+    } else {
+      // Configurações padrão
+      return {
+        options: [
+          { hours: 0, minutes: 15, totalMinutes: 15 },
+          { hours: 0, minutes: 30, totalMinutes: 30 },
+          { hours: 1, minutes: 0, totalMinutes: 60 },
+          { hours: 2, minutes: 0, totalMinutes: 120 },
+          { hours: 4, minutes: 0, totalMinutes: 240 }
+        ],
+        allowCustom: true
+      };
+    }
+  } catch (error) {
+    popupLogger.error("Erro ao carregar configurações de snooze:", error);
+    // Retorna configurações padrão em caso de erro
+    return {
+      options: [
+        { hours: 0, minutes: 15, totalMinutes: 15 },
+        { hours: 0, minutes: 30, totalMinutes: 30 },
+        { hours: 1, minutes: 0, totalMinutes: 60 },
+        { hours: 2, minutes: 0, totalMinutes: 120 },
+        { hours: 4, minutes: 0, totalMinutes: 240 }
+      ],
+      allowCustom: true
     };
   }
 }
@@ -239,23 +273,158 @@ function displayTasks(tasks, displaySettings = null) {
 
     taskElement
       .querySelector('[data-action="snooze"]')
-      .addEventListener("click", (e) => {
+      .addEventListener("click", async (e) => {
         const taskId = e.target.dataset.id;
         popupLogger.info(
           `Botão 'Lembrar Mais Tarde' clicado para a tarefa: ${taskId}`
         );
-        // Envia uma mensagem para o background script para "snooze" esta tarefa
-        browserAPI.runtime.sendMessage({
-          action: "snoozeTask",
-          taskId: taskId,
-        });
-        e.target.closest(".task-item").remove(); // Remove o item da lista no popup
-        // Se não houver mais tarefas, exibe a mensagem de "nenhuma tarefa"
-        if (tasksList.children.length === 0) {
-          tasksList.innerHTML =
-            '<p class="no-tasks">Nenhuma tarefa nova encontrada.</p>';
-          popupLogger.info("Todas as tarefas removidas do popup após snoozar.");
-        }
+        
+        // Mostra o dropdown de opções de snooze
+        await showSnoozeDropdown(e.target, taskId);
       });
   });
 }
+
+/**
+ * Mostra o dropdown de opções de snooze
+ */
+async function showSnoozeDropdown(button, taskId) {
+  // Remove qualquer dropdown existente
+  const existingDropdown = document.querySelector('.snooze-dropdown');
+  if (existingDropdown) {
+    existingDropdown.remove();
+  }
+
+  const snoozeSettings = await getSnoozeSettings();
+  
+  // Cria o dropdown
+  const dropdown = document.createElement('div');
+  dropdown.className = 'snooze-dropdown show';
+  
+  let dropdownHTML = '';
+  
+  // Adiciona as opções pré-configuradas
+  snoozeSettings.options.forEach(option => {
+    const label = formatSnoozeTime(option.hours, option.minutes);
+    dropdownHTML += `<div class="snooze-option" data-minutes="${option.totalMinutes}">${label}</div>`;
+  });
+  
+  // Adiciona opção personalizada se permitida
+  if (snoozeSettings.allowCustom) {
+    dropdownHTML += `
+      <div class="snooze-custom">
+        <div class="snooze-custom-inputs">
+          <input type="number" id="custom-hours" min="0" max="23" value="0" placeholder="0">
+          <label>h</label>
+          <input type="number" id="custom-minutes" min="0" max="59" value="15" placeholder="15">
+          <label>min</label>
+        </div>
+        <div class="snooze-custom-buttons">
+          <button class="btn-primary" onclick="applyCustomSnooze('${taskId}')">Aplicar</button>
+          <button class="btn-secondary" onclick="closeSnoozeDropdown()">Cancelar</button>
+        </div>
+      </div>
+    `;
+  }
+  
+  dropdown.innerHTML = dropdownHTML;
+  
+  // Adiciona event listeners para as opções pré-configuradas
+  dropdown.querySelectorAll('.snooze-option').forEach(option => {
+    option.addEventListener('click', () => {
+      const minutes = parseInt(option.dataset.minutes);
+      applySnooze(taskId, minutes);
+    });
+  });
+  
+  // Posiciona o dropdown
+  button.style.position = 'relative';
+  button.appendChild(dropdown);
+  
+  // Fecha o dropdown ao clicar fora
+  setTimeout(() => {
+    document.addEventListener('click', closeSnoozeDropdownOnOutsideClick);
+  }, 100);
+}
+
+/**
+ * Formata o tempo de snooze para exibição
+ */
+function formatSnoozeTime(hours, minutes) {
+  if (hours === 0) {
+    return `${minutes} minuto${minutes !== 1 ? 's' : ''}`;
+  } else if (minutes === 0) {
+    return `${hours} hora${hours !== 1 ? 's' : ''}`;
+  } else {
+    return `${hours}h ${minutes}min`;
+  }
+}
+
+/**
+ * Aplica o snooze com tempo personalizado
+ */
+function applyCustomSnooze(taskId) {
+  const hours = parseInt(document.getElementById('custom-hours').value) || 0;
+  const minutes = parseInt(document.getElementById('custom-minutes').value) || 0;
+  const totalMinutes = hours * 60 + minutes;
+  
+  if (totalMinutes <= 0) {
+    alert('Por favor, insira um tempo válido.');
+    return;
+  }
+  
+  applySnooze(taskId, totalMinutes);
+}
+
+/**
+ * Aplica o snooze para uma tarefa
+ */
+function applySnooze(taskId, minutes) {
+  popupLogger.info(`Aplicando snooze de ${minutes} minutos para a tarefa: ${taskId}`);
+  
+  // Envia uma mensagem para o background script para "snooze" esta tarefa
+  browserAPI.runtime.sendMessage({
+    action: "snoozeTask",
+    taskId: taskId,
+    snoozeMinutes: minutes
+  });
+  
+  // Remove o item da lista no popup
+  const taskItem = document.querySelector(`[data-id="${taskId}"]`).closest(".task-item");
+  taskItem.remove();
+  
+  // Se não houver mais tarefas, exibe a mensagem de "nenhuma tarefa"
+  const tasksList = document.getElementById("tasks-list");
+  if (tasksList.children.length === 0) {
+    tasksList.innerHTML = '<p class="no-tasks">Nenhuma tarefa nova encontrada.</p>';
+    popupLogger.info("Todas as tarefas removidas do popup após snoozar.");
+  }
+  
+  // Fecha o dropdown
+  closeSnoozeDropdown();
+}
+
+/**
+ * Fecha o dropdown de snooze
+ */
+function closeSnoozeDropdown() {
+  const dropdown = document.querySelector('.snooze-dropdown');
+  if (dropdown) {
+    dropdown.remove();
+  }
+  document.removeEventListener('click', closeSnoozeDropdownOnOutsideClick);
+}
+
+/**
+ * Fecha o dropdown ao clicar fora dele
+ */
+function closeSnoozeDropdownOnOutsideClick(event) {
+  const dropdown = document.querySelector('.snooze-dropdown');
+  if (dropdown && !dropdown.contains(event.target) && !event.target.closest('[data-action="snooze"]')) {
+    closeSnoozeDropdown();
+  }
+}
+
+// Torna as funções globais para serem acessíveis pelo onclick
+window.applyCustomSnooze = applyCustomSnooze;
+window.closeSnoozeDropdown = closeSnoozeDropdown;

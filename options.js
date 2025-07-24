@@ -9,6 +9,8 @@ document.addEventListener("DOMContentLoaded", loadOptions);
 document.getElementById("saveLogin").addEventListener("click", saveLogin);
 document.getElementById("saveSettings").addEventListener("click", saveSettings);
 document.getElementById("saveDisplaySettings").addEventListener("click", saveDisplaySettings);
+document.getElementById("saveSnoozeSettings").addEventListener("click", saveSnoozeSettings);
+document.getElementById("addSnoozeOption").addEventListener("click", addSnoozeOption);
 document.getElementById("saveLogLevel").addEventListener("click", saveLogLevel);
 document.getElementById("exportLogs").addEventListener("click", exportLogs);
 document
@@ -51,7 +53,6 @@ async function saveSettings() {
     document.getElementById("checkInterval").value,
     10
   );
-  const snoozeTime = parseInt(document.getElementById("snoozeTime").value, 10);
 
   if (isNaN(checkInterval) || checkInterval < 10) {
     showStatus(
@@ -61,19 +62,10 @@ async function saveSettings() {
     );
     return;
   }
-  if (isNaN(snoozeTime) || snoozeTime < 1) {
-    showStatus(
-      "settingsStatus",
-      'Tempo de "Lembrar Mais Tarde" inválido (mínimo 1 minuto).',
-      true
-    );
-    return;
-  }
 
   try {
     await browserAPI.storage.local.set({
       checkInterval: checkInterval,
-      snoozeTime: snoozeTime,
     });
     showStatus("settingsStatus", "Configurações salvas com sucesso!");
     optionsLogger.info(
@@ -109,6 +101,101 @@ async function saveDisplaySettings() {
     optionsLogger.error("Erro ao salvar configurações de exibição:", error);
     showStatus("displayStatus", "Erro ao salvar configurações de exibição.", true);
   }
+}
+
+async function saveSnoozeSettings() {
+  try {
+    const snoozeOptions = [];
+    const optionItems = document.querySelectorAll('.snooze-option-item');
+    
+    optionItems.forEach(item => {
+      const hours = parseInt(item.querySelector('.hours-input').value) || 0;
+      const minutes = parseInt(item.querySelector('.minutes-input').value) || 0;
+      
+      if (hours > 0 || minutes > 0) {
+        snoozeOptions.push({
+          hours: hours,
+          minutes: minutes,
+          totalMinutes: hours * 60 + minutes
+        });
+      }
+    });
+
+    const allowCustomSnooze = document.getElementById("allowCustomSnooze").checked;
+
+    const snoozeSettings = {
+      options: snoozeOptions,
+      allowCustom: allowCustomSnooze
+    };
+
+    await browserAPI.storage.local.set({
+      snoozeSettings: snoozeSettings,
+    });
+    
+    showStatus("snoozeSettingsStatus", "Configurações de 'Lembrar Mais Tarde' salvas com sucesso!");
+    optionsLogger.info("Configurações de snooze salvas:", snoozeSettings);
+  } catch (error) {
+    optionsLogger.error("Erro ao salvar configurações de snooze:", error);
+    showStatus("snoozeSettingsStatus", "Erro ao salvar configurações de snooze.", true);
+  }
+}
+
+function addSnoozeOption() {
+  const container = document.getElementById("snooze-options-container");
+  const optionDiv = document.createElement("div");
+  optionDiv.className = "snooze-option-item";
+  
+  optionDiv.innerHTML = `
+    <span class="snooze-option-label">Opção:</span>
+    <input type="number" class="hours-input" min="0" max="23" value="0" placeholder="0">
+    <label>horas</label>
+    <input type="number" class="minutes-input" min="0" max="59" value="15" placeholder="15">
+    <label>minutos</label>
+    <button type="button" class="remove-btn" onclick="removeSnoozeOption(this)">Remover</button>
+  `;
+  
+  container.appendChild(optionDiv);
+}
+
+function removeSnoozeOption(button) {
+  button.closest('.snooze-option-item').remove();
+}
+
+// Torna a função global para ser acessível pelo onclick
+window.removeSnoozeOption = removeSnoozeOption;
+
+function loadSnoozeOptions(snoozeSettings) {
+  const container = document.getElementById("snooze-options-container");
+  container.innerHTML = "";
+  
+  // Configurações padrão se não existirem
+  const defaultOptions = snoozeSettings?.options || [
+    { hours: 0, minutes: 15 },
+    { hours: 0, minutes: 30 },
+    { hours: 1, minutes: 0 },
+    { hours: 2, minutes: 0 },
+    { hours: 4, minutes: 0 }
+  ];
+  
+  defaultOptions.forEach(option => {
+    const optionDiv = document.createElement("div");
+    optionDiv.className = "snooze-option-item";
+    
+    optionDiv.innerHTML = `
+      <span class="snooze-option-label">Opção:</span>
+      <input type="number" class="hours-input" min="0" max="23" value="${option.hours}" placeholder="0">
+      <label>horas</label>
+      <input type="number" class="minutes-input" min="0" max="59" value="${option.minutes}" placeholder="15">
+      <label>minutos</label>
+      <button type="button" class="remove-btn" onclick="removeSnoozeOption(this)">Remover</button>
+    `;
+    
+    container.appendChild(optionDiv);
+  });
+  
+  // Configura o checkbox de permitir customização
+  const allowCustom = snoozeSettings?.allowCustom !== false; // padrão true
+  document.getElementById("allowCustomSnooze").checked = allowCustom;
 }
 
 async function saveLogLevel() {
@@ -205,9 +292,9 @@ async function loadOptions() {
       "sauUsername",
       "sauPassword",
       "checkInterval",
-      "snoozeTime",
       "logLevel",
       "taskDisplaySettings",
+      "snoozeSettings",
     ]);
 
     if (data.sauUsername) {
@@ -218,9 +305,6 @@ async function loadOptions() {
     }
     if (data.checkInterval) {
       document.getElementById("checkInterval").value = data.checkInterval;
-    }
-    if (data.snoozeTime) {
-      document.getElementById("snoozeTime").value = data.snoozeTime;
     }
     if (data.logLevel !== undefined) {
       const logLevelSelect = document.getElementById("logLevel");
@@ -246,6 +330,9 @@ async function loadOptions() {
       document.getElementById("header-solicitante").checked = false;
       document.getElementById("header-unidade").checked = false;
     }
+
+    // Carrega configurações de snooze
+    loadSnoozeOptions(data.snoozeSettings);
 
     optionsLogger.info("Opções carregadas na página de configurações.");
   } catch (error) {

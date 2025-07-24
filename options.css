@@ -149,3 +149,65 @@ h3 {
 .btn-danger:hover {
   background-color: var(--danger-hover) !important;
 }
+
+/* Estilo para botão secundário */
+.btn-secondary {
+  background-color: var(--text-muted) !important;
+  color: white !important;
+  padding: var(--spacing-sm) var(--spacing-md) !important;
+  font-size: var(--font-size-base) !important;
+  width: auto !important;
+  margin-bottom: var(--spacing-md);
+}
+
+.btn-secondary:hover {
+  background-color: var(--text-secondary) !important;
+}
+
+/* Estilos para configurações de snooze */
+.snooze-option-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+  padding: var(--spacing-md);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background-color: var(--bg-primary);
+}
+
+.snooze-option-item input[type="number"] {
+  width: 80px !important;
+  padding: var(--spacing-xs) var(--spacing-sm) !important;
+  margin: 0 !important;
+}
+
+.snooze-option-item select {
+  width: auto !important;
+  padding: var(--spacing-xs) var(--spacing-sm) !important;
+  border: 1px solid var(--border-input);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-base);
+}
+
+.snooze-option-item .remove-btn {
+  background-color: var(--danger-color) !important;
+  color: white !important;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-xs) var(--spacing-sm) !important;
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  width: auto !important;
+  margin: 0 !important;
+}
+
+.snooze-option-item .remove-btn:hover {
+  background-color: var(--danger-hover) !important;
+}
+
+.snooze-option-label {
+  font-weight: 600;
+  color: var(--text-secondary);
+  min-width: 60px;
+}

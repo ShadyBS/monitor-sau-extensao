@@ -8,11 +8,18 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - Interface na página de opções para selecionar quais informações aparecem no cabeçalho vs detalhes
 - Sistema de variáveis CSS centralizado para melhor manutenibilidade
 - Classes utilitárias CSS para componentes comuns
+- Sistema avançado de "Lembrar Mais Tarde" com múltiplas opções de tempo
+- Dropdown expansível no botão "Lembrar Mais Tarde" com opções pré-configuradas
+- Opção de tempo personalizado com inputs separados para horas e minutos
+- Configuração de opções de snooze na página de configurações
+- Possibilidade de adicionar/remover opções de tempo personalizadas
 
 ### Changed
 - Popup agora exibe informações das tarefas baseado nas configurações do usuário
 - CSS migrado para usar variáveis CSS centralizadas
 - Melhor organização e consistência visual em todos os componentes
+- Sistema de "Lembrar Mais Tarde" agora permite configuração por tarefa individual
+- Interface do snooze substituída por dropdown com múltiplas opções
 
 [1.0] - 2025-07-23
 Adicionado

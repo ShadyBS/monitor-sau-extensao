@@ -36,12 +36,35 @@
           >
           <input type="number" id="checkInterval" min="10" value="30" />
         </div>
-        <div class="form-group">
-          <label for="snoozeTime">Lembrar Mais Tarde (minutos):</label>
-          <input type="number" id="snoozeTime" min="1" value="15" />
-        </div>
         <button id="saveSettings">Salvar Configurações</button>
         <p id="settingsStatus" class="status-message"></p>
+      </section>
+
+      <section class="card">
+        <h2>Configurações de "Lembrar Mais Tarde"</h2>
+        <p>
+          Configure as opções de tempo que aparecerão no dropdown quando o usuário clicar em "Lembrar Mais Tarde".
+        </p>
+        
+        <h3>Opções Pré-configuradas</h3>
+        <div id="snooze-options-container">
+          <!-- Opções serão carregadas dinamicamente -->
+        </div>
+        
+        <div class="form-group">
+          <button type="button" id="addSnoozeOption" class="btn-secondary">+ Adicionar Nova Opção</button>
+        </div>
+        
+        <h3>Configurações Gerais</h3>
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="allowCustomSnooze" checked>
+            Permitir tempo personalizado (usuário pode inserir tempo customizado)
+          </label>
+        </div>
+        
+        <button id="saveSnoozeSettings">Salvar Configurações de "Lembrar Mais Tarde"</button>
+        <p id="snoozeSettingsStatus" class="status-message"></p>
       </section>
 
       <section class="card">

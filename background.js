@@ -188,7 +188,7 @@ browserAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
     case "snoozeTask":
       // Marca uma tarefa para ser lembrada mais tarde e salva o estado
       browserAPI.storage.local.get("snoozeTime").then((data) => {
-        const snoozeMinutes = data.snoozeTime || 15;
+        const snoozeMinutes = request.snoozeMinutes || 15;
         snoozedTasks[request.taskId] = Date.now() + snoozeMinutes * 60 * 1000;
         // Remove de openedTasks e ignoredTasks se estiver lá
         delete openedTasks[request.taskId];
