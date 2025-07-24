@@ -11,9 +11,19 @@ const browserAPI = globalThis.browser || globalThis.chrome;
 document.addEventListener("DOMContentLoaded", initializePopup);
 
 // Adiciona um listener de clique para abrir a página de opções
-document.getElementById("openOptions").addEventListener("click", () => {
+document.getElementById("openOptions").addEventListener("click", async () => {
   popupLogger.info('Botão "Configurações" clicado. Abrindo página de opções.');
-  browserAPI.runtime.openOptionsPage();
+  try {
+    await browserAPI.runtime.openOptionsPage();
+  } catch (error) {
+    popupLogger.error('Erro ao abrir página de opções:', error);
+    // Fallback: abre em nova aba
+    try {
+      await browserAPI.tabs.create({ url: browserAPI.runtime.getURL('options.html') });
+    } catch (fallbackError) {
+      popupLogger.error('Erro no fallback para abrir opções:', fallbackError);
+    }
+  }
 });
 
 // Adiciona um listener de clique para forçar uma atualização manual de tarefas
@@ -112,8 +122,18 @@ async function getSnoozeSettings() {
 
 async function loadPopupData() {
   popupLogger.info("Carregando dados iniciais do popup...");
-  // Solicita ao background script as últimas tarefas e o status
-  browserAPI.runtime.sendMessage({ action: "getLatestTasks" }, async (response) => {
+  try {
+    // Solicita ao background script as últimas tarefas e o status usando Promise
+    const response = await new Promise((resolve, reject) => {
+      browserAPI.runtime.sendMessage({ action: "getLatestTasks" }, (response) => {
+        if (browserAPI.runtime.lastError) {
+          reject(browserAPI.runtime.lastError);
+        } else {
+          resolve(response);
+        }
+      });
+    });
+
     if (response) {
       popupLogger.debug("Dados de tarefas recebidos do background:", response);
       const displaySettings = await getDisplaySettings();
@@ -127,7 +147,11 @@ async function loadPopupData() {
       document.getElementById("status-message").textContent =
         "Nenhuma tarefa nova.";
     }
-  });
+  } catch (error) {
+    popupLogger.error("Erro ao carregar dados do popup:", error);
+    document.getElementById("status-message").textContent =
+      "Erro ao carregar dados. Tente atualizar.";
+  }
 }
 
 /**

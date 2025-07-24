@@ -3,6 +3,15 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 ## [Unreleased]
 
+### Fixed
+- Correção do botão de configurações que não estava funcionando devido a erro de conexão
+- Implementado tratamento de erro robusto para comunicação entre popup e background script
+- Corrigido problema de "Could not establish connection. Receiving end does not exist" 
+- Melhorada função `loadPopupData()` para usar Promise em vez de callback
+- Adicionado fallback para abertura da página de opções em nova aba caso `openOptionsPage()` falhe
+- Implementado tratamento de erro em todas as mensagens `runtime.sendMessage()` para evitar erros quando popup não está aberto
+- Corrigido problema onde tarefas não apareciam no popup apesar da badge mostrar contador
+
 ## [1.1.0] - 2025-07-24
 
 ### Added

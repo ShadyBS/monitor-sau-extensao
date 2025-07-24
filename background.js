@@ -229,15 +229,19 @@ browserAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
       updateBadge(); // Atualiza o contador no ícone
       backgroundLogger.info(`Tarefa ${request.taskId} ignorada.`);
       // Notifica o popup para atualizar sua lista
-      browserAPI.runtime.sendMessage({
-        action: "updatePopup",
-        newTasks: lastKnownTasks.filter(
-          (task) =>
-            !ignoredTasks[task.id] &&
-            !openedTasks[task.id] && // Filtra tarefas abertas
-            (!snoozedTasks[task.id] || snoozedTasks[task.id] <= Date.now())
-        ),
-      });
+      try {
+        browserAPI.runtime.sendMessage({
+          action: "updatePopup",
+          newTasks: lastKnownTasks.filter(
+            (task) =>
+              !ignoredTasks[task.id] &&
+              !openedTasks[task.id] && // Filtra tarefas abertas
+              (!snoozedTasks[task.id] || snoozedTasks[task.id] <= Date.now())
+          ),
+        });
+      } catch (error) {
+        backgroundLogger.debug("Popup não está aberto para receber atualização:", error.message);
+      }
       break;
     case "snoozeTask":
       // Marca uma tarefa para ser lembrada mais tarde e salva o estado
@@ -253,15 +257,19 @@ browserAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
           `Tarefa ${request.taskId} snoozed por ${snoozeMinutes} minutos.`
         );
         // Notifica o popup para atualizar sua lista
-        browserAPI.runtime.sendMessage({
-          action: "updatePopup",
-          newTasks: lastKnownTasks.filter(
-            (task) =>
-              !ignoredTasks[task.id] &&
-              !openedTasks[task.id] && // Filtra tarefas abertas
-              (!snoozedTasks[task.id] || snoozedTasks[task.id] <= Date.now())
-          ),
-        });
+        try {
+          browserAPI.runtime.sendMessage({
+            action: "updatePopup",
+            newTasks: lastKnownTasks.filter(
+              (task) =>
+                !ignoredTasks[task.id] &&
+                !openedTasks[task.id] && // Filtra tarefas abertas
+                (!snoozedTasks[task.id] || snoozedTasks[task.id] <= Date.now())
+            ),
+          });
+        } catch (error) {
+          backgroundLogger.debug("Popup não está aberto para receber atualização:", error.message);
+        }
       });
       break;
     case "markTaskAsOpened": // NOVO CASE: Marcar tarefa como aberta
@@ -273,15 +281,19 @@ browserAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
       updateBadge();
       backgroundLogger.info(`Tarefa ${request.taskId} marcada como aberta.`);
       // Notifica o popup para atualizar sua lista
-      browserAPI.runtime.sendMessage({
-        action: "updatePopup",
-        newTasks: lastKnownTasks.filter(
-          (task) =>
-            !ignoredTasks[task.id] &&
-            !openedTasks[task.id] && // Filtra tarefas abertas
-            (!snoozedTasks[task.id] || snoozedTasks[task.id] <= Date.now())
-        ),
-      });
+      try {
+        browserAPI.runtime.sendMessage({
+          action: "updatePopup",
+          newTasks: lastKnownTasks.filter(
+            (task) =>
+              !ignoredTasks[task.id] &&
+              !openedTasks[task.id] && // Filtra tarefas abertas
+              (!snoozedTasks[task.id] || snoozedTasks[task.id] <= Date.now())
+          ),
+        });
+      } catch (error) {
+        backgroundLogger.debug("Popup não está aberto para receber atualização:", error.message);
+      }
       break;
     case "newTasksFound":
       // Lida com as novas tarefas encontradas pelo content script
@@ -598,11 +610,16 @@ async function handleNewTasks(newTasks) {
     }
 
     // Envia uma mensagem para o popup (se aberto) para que ele possa atualizar sua lista de tarefas
-    browserAPI.runtime.sendMessage({
-      action: "updatePopup",
-      newTasks: tasksToNotify,
-      message: `Novas tarefas encontradas: ${tasksToNotify.length}`,
-    });
+    try {
+      browserAPI.runtime.sendMessage({
+        action: "updatePopup",
+        newTasks: tasksToNotify,
+        message: `Novas tarefas encontradas: ${tasksToNotify.length}`,
+      });
+    } catch (error) {
+      // Popup pode não estar aberto, isso é normal
+      backgroundLogger.debug("Popup não está aberto para receber atualização:", error.message);
+    }
 
     // Tenta enviar uma mensagem para a aba ativa do SAU para exibir a UI de notificação visual
     const [activeSauTab] = await browserAPI.tabs.query({
@@ -629,13 +646,17 @@ async function handleNewTasks(newTasks) {
   } else {
     backgroundLogger.info("Nenhuma tarefa nova para notificar.");
     // Se não houver tarefas novas, ainda assim atualiza o popup para indicar que a verificação ocorreu
-    browserAPI.runtime.sendMessage({
-      action: "updatePopup",
-      newTasks: [], // Nenhuma tarefa nova
-      message: `Nenhuma tarefa nova. Última verificação: ${new Date(
-        lastCheckTimestamp
-      ).toLocaleTimeString()}`,
-    });
+    try {
+      browserAPI.runtime.sendMessage({
+        action: "updatePopup",
+        newTasks: [], // Nenhuma tarefa nova
+        message: `Nenhuma tarefa nova. Última verificação: ${new Date(
+          lastCheckTimestamp
+        ).toLocaleTimeString()}`,
+      });
+    } catch (error) {
+      backgroundLogger.debug("Popup não está aberto para receber atualização:", error.message);
+    }
   }
 }
 
@@ -669,7 +690,11 @@ browserAPI.notifications.onButtonClicked.addListener(
           "Todas as tarefas da notificação abertas e notificação limpa."
         );
         // Notifica o popup para atualizar sua lista
-        browserAPI.runtime.sendMessage({ action: "updatePopup", newTasks: [] });
+        try {
+          browserAPI.runtime.sendMessage({ action: "updatePopup", newTasks: [] });
+        } catch (error) {
+          backgroundLogger.debug("Popup não está aberto para receber atualização:", error.message);
+        }
       } else if (buttonIndex === 1) {
         // Botão "Ignorar Todas"
         // Marca todas as tarefas como ignoradas
@@ -682,7 +707,11 @@ browserAPI.notifications.onButtonClicked.addListener(
           "Todas as tarefas da notificação ignoradas e notificação limpa."
         );
         // Notifica o popup para limpar a lista de tarefas
-        browserAPI.runtime.sendMessage({ action: "updatePopup", newTasks: [] });
+        try {
+          browserAPI.runtime.sendMessage({ action: "updatePopup", newTasks: [] });
+        } catch (error) {
+          backgroundLogger.debug("Popup não está aberto para receber atualização:", error.message);
+        }
       }
     }
   }
