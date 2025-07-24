@@ -4,7 +4,15 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 ## [Unreleased]
 
 ### Added
-- Primeiro release oficial da extensão
+- **Primeiro Release Oficial**: Lançamento da versão 1.1.0 com sistema completo de ajuda para novos usuários
+- **Sistema de Ajuda Abrangente**: Interface completa de onboarding e suporte
+- **Compatibilidade Total**: Suporte completo para Chrome e Firefox
+- **Pipeline de CI/CD**: Automação completa de build, teste e release
+- **Documentação Completa**: Guias detalhados para usuários e desenvolvedores
+
+### Changed
+- **Experiência do Usuário**: Completamente redesenhada para novos usuários
+- **Arquitetura Modular**: Sistema extensível e bem documentado
 
 ## [1.1.0] - 2025-01-24
 
