@@ -41,6 +41,7 @@ Esta é uma **extensão para navegador** (Chrome e Firefox) com estrutura espec�
 ├── background.js              # Service Worker principal
 ├── content.js                 # Script injetado nas páginas
 ├── interceptor.js             # Interceptador de requisições
+├── sanitizer.js               # Utilitários de segurança e sanitização
 ├── popup.html/js/css          # Interface do popup
 ├── options.html/js/css        # Página de configurações
 ├── notification-ui.css        # Estilos para notificações visuais
@@ -52,6 +53,8 @@ Esta é uma **extensão para navegador** (Chrome e Firefox) com estrutura espec�
 ├── CHANGELOG.md               # Histórico de mudanças
 ├── README.md                  # Documentação principal
 ├── SCRIPTS.md                 # Documentação dos scripts
+├── SECURITY-FIXES.md          # Guia de correções de segurança
+├── SECURITY-AUDIT-SUMMARY.md  # Relatório de auditoria de segurança
 ├── LICENSE                    # Licença MIT
 └── agents.md                  # Este guia
 ```
@@ -85,7 +88,7 @@ Adote as seguintes práticas específicas para extensões:
 
 - **APIs de Extensão:** Use `(globalThis.browser || globalThis.chrome)` para compatibilidade
 - **Logging:** Use o sistema `logger.js` em vez de `console.log`
-- **Segurança:** Evite `eval()`, `innerHTML` sem sanitização
+- **Segurança:** Use `sanitizer.js` para manipulação segura do DOM, evite `eval()` e `innerHTML`
 - **Performance:** Minimize o tamanho dos arquivos
 - **Manifests:** Mantenha sincronizados `manifest.json` e `manifest-firefox.json`
 
@@ -100,11 +103,44 @@ import { logger } from './logger.js';
 const myLogger = logger('[MyModule]');
 myLogger.info('Operação realizada com sucesso');
 
+// ✅ Correto - manipulação segura do DOM
+import { createSafeElement, sanitizeTaskData } from './sanitizer.js';
+const safeElement = createSafeElement('div', 'Texto seguro', { class: 'task-item' });
+
 // ❌ Incorreto - apenas Chrome
 chrome.storage.local.set({ key: value });
 
 // ❌ Incorreto - logging direto
 console.log('Debug info');
+
+// ❌ Incorreto - vulnerável a XSS
+element.innerHTML = userInput;
+```
+
+**Práticas de Segurança Obrigatórias:**
+```javascript
+// ✅ Use sanitizer.js para manipulação do DOM
+import { createSafeElement, sanitizeTaskData, safelyPopulateContainer } from './sanitizer.js';
+
+// ✅ Sempre sanitize dados de entrada
+const task = sanitizeTaskData(rawTaskData);
+
+// ✅ Use validação de origem em mensagens
+window.addEventListener("message", (event) => {
+  if (event.origin !== window.location.origin) {
+    console.warn("Mensagem de origem não confiável rejeitada");
+    return;
+  }
+  // Processar mensagem...
+});
+
+// ✅ Valide URLs antes de usar
+try {
+  new URL(taskLink); // Valida formato da URL
+} catch (error) {
+  logger.warn(`URL inválida: ${taskLink}`);
+  taskLink = '#'; // Fallback seguro
+}
 ```
 
 ### Passo 4: Testar com Scripts
@@ -194,6 +230,9 @@ Antes de submeter código, verifique:
 - [ ] Logging usando `logger.js`
 - [ ] APIs compatíveis (`browserAPI`)
 - [ ] Sem `console.log` em produção
+- [ ] Manipulação segura do DOM usando `sanitizer.js`
+- [ ] Validação de origem em mensagens entre contextos
+- [ ] Sanitização de dados de entrada
 - [ ] Validações de segurança passam
 - [ ] Build gera ZIPs válidos
 
@@ -348,6 +387,6 @@ git commit -m "docs(agents): adicionar instruções para novo script de deploy"
 
 **Lembre-se:** Este guia é um documento vivo. Sua precisão e utilidade dependem de mantê-lo atualizado com a evolução do projeto. A qualidade do código e a eficiência da equipe dependem de seguir e manter estas diretrizes.
 
-**Última atualização:** 2025-01-23 - Adicionados scripts de automação e fluxos específicos para extensões de navegador.
+**Última atualização:** 2025-01-23 - Implementadas correções críticas de segurança, adicionado sistema de sanitização e atualizadas práticas de desenvolvimento seguro.
 
 Obrigado por sua contribuição!
