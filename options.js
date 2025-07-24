@@ -53,6 +53,11 @@ async function saveSettings() {
     document.getElementById("checkInterval").value,
     10
   );
+  const enableRenotification = document.getElementById("enableRenotification").checked;
+  const renotificationInterval = parseInt(
+    document.getElementById("renotificationInterval").value,
+    10
+  );
 
   if (isNaN(checkInterval) || checkInterval < 10) {
     showStatus(
@@ -63,9 +68,20 @@ async function saveSettings() {
     return;
   }
 
+  if (enableRenotification && (isNaN(renotificationInterval) || renotificationInterval < 1)) {
+    showStatus(
+      "settingsStatus",
+      "Intervalo de renotificação inválido (mínimo 1 minuto).",
+      true
+    );
+    return;
+  }
+
   try {
     await browserAPI.storage.local.set({
       checkInterval: checkInterval,
+      enableRenotification: enableRenotification,
+      renotificationInterval: renotificationInterval,
     });
     showStatus("settingsStatus", "Configurações salvas com sucesso!");
     optionsLogger.info(
@@ -292,6 +308,8 @@ async function loadOptions() {
       "sauUsername",
       "sauPassword",
       "checkInterval",
+      "enableRenotification",
+      "renotificationInterval",
       "logLevel",
       "taskDisplaySettings",
       "snoozeSettings",
@@ -306,6 +324,11 @@ async function loadOptions() {
     if (data.checkInterval) {
       document.getElementById("checkInterval").value = data.checkInterval;
     }
+    
+    // Carrega configurações de renotificação
+    document.getElementById("enableRenotification").checked = data.enableRenotification || false;
+    document.getElementById("renotificationInterval").value = data.renotificationInterval || 30;
+    
     if (data.logLevel !== undefined) {
       const logLevelSelect = document.getElementById("logLevel");
       const levelName = Object.keys(LOG_LEVELS).find(

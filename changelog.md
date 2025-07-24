@@ -4,12 +4,17 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 ## [Unreleased]
 
 ### Added
+- **Sistema de Renotificação de Tarefas Pendentes**: Nova funcionalidade que permite renotificar o usuário sobre tarefas que permanecem pendentes após um período configurável
+- Configuração de renotificação na página de opções com checkbox para ativar/desativar
+- Campo configurável para intervalo de renotificação em minutos (padrão: 30 minutos)
+- Controle de timestamps de notificação para rastrear quando cada tarefa foi notificada pela última vez
+- Lógica inteligente que só renotifica tarefas que já foram notificadas anteriormente (não renotifica tarefas que nunca foram vistas)
 - Configuração personalizável de exibição de tarefas no popup
 - Interface na página de opções para selecionar quais informações aparecem no cabeçalho vs detalhes
 - Sistema de variáveis CSS centralizado para melhor manutenibilidade
 - Classes utilitárias CSS para componentes comuns
 - Sistema avançado de "Lembrar Mais Tarde" com múltiplas opções de tempo
-- Dropdown expansível no botão "Lembrar Mais Tarde" com opções pré-configuradas
+- Dropdown expansível no botão "Lembrar Mais Tarde" com opç��es pré-configuradas
 - Opção de tempo personalizado com inputs separados para horas e minutos
 - Configuração de opções de snooze na página de configurações
 - Possibilidade de adicionar/remover opções de tempo personalizadas
@@ -21,12 +26,21 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - Templates para issues e pull requests
 
 ### Changed
+- Sistema de notificações agora suporta renotificação automática de tarefas pendentes
+- Melhor controle de estado das tarefas com timestamps de notificação persistentes
 - Popup agora exibe informações das tarefas baseado nas configurações do usuário
 - CSS migrado para usar variáveis CSS centralizadas
 - Melhor organização e consistência visual em todos os componentes
 - Sistema de "Lembrar Mais Tarde" agora permite configuração por tarefa individual
 - Interface do snooze substituída por dropdown com múltiplas opções
 - Processo de build e release completamente automatizado
+
+### Technical Details
+- Adicionada variável global `taskNotificationTimestamps` para controlar renotificações
+- Nova função `checkIfShouldRenotify()` que verifica se uma tarefa deve ser renotificada
+- Atualizada função `handleNewTasks()` para incluir lógica de renotificação
+- Configurações de renotificação persistidas no `chrome.storage.local`
+- Sistema de reset de memória agora também limpa timestamps de notificação
 
 [1.0] - 2025-07-23
 Adicionado

@@ -36,6 +36,22 @@
           >
           <input type="number" id="checkInterval" min="10" value="30" />
         </div>
+        
+        <h3>Renotificação de Tarefas Pendentes</h3>
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="enableRenotification">
+            Ativar renotificação para tarefas pendentes
+          </label>
+        </div>
+        <div class="form-group">
+          <label for="renotificationInterval"
+            >Intervalo de Renotificação (minutos):</label
+          >
+          <input type="number" id="renotificationInterval" min="1" value="30" />
+          <small>Tempo para renotificar sobre tarefas pendentes que não tiveram ação</small>
+        </div>
+        
         <button id="saveSettings">Salvar Configurações</button>
         <p id="settingsStatus" class="status-message"></p>
       </section>

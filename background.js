@@ -20,6 +20,7 @@ let ignoredTasks = {}; // { taskId: true } - Tarefas que o usuário escolheu ign
 let snoozedTasks = {}; // { taskId: timestampWhenToNotifyAgain } - Tarefas "lembradas mais tarde"
 let openedTasks = {}; // { taskId: true } - Tarefas que o usuário abriu e não devem mais ser notificadas
 let lastCheckTimestamp = 0; // Último timestamp da verificação de tarefas
+let taskNotificationTimestamps = {}; // { taskId: lastNotificationTimestamp } - Controla renotificações
 
 /**
  * Carrega os dados persistentes do armazenamento local do Chrome.
@@ -33,17 +34,20 @@ async function loadPersistentData() {
       "snoozedTasks",
       "openedTasks", // Carrega o novo estado
       "lastCheckTimestamp",
+      "taskNotificationTimestamps", // Carrega timestamps de notificação
     ]);
     lastKnownTasks = data.lastKnownTasks || [];
     ignoredTasks = data.ignoredTasks || {};
     snoozedTasks = data.snoozedTasks || {};
     openedTasks = data.openedTasks || {}; // Inicializa o novo estado
     lastCheckTimestamp = data.lastCheckTimestamp || 0;
+    taskNotificationTimestamps = data.taskNotificationTimestamps || {}; // Inicializa timestamps
     backgroundLogger.info("Dados persistentes carregados:", {
       lastKnownTasks: lastKnownTasks.length, // Log apenas o tamanho para evitar logs muito grandes
       ignoredTasks: Object.keys(ignoredTasks).length,
       snoozedTasks: Object.keys(snoozedTasks).length,
       openedTasks: Object.keys(openedTasks).length, // Log o tamanho do novo estado
+      taskNotificationTimestamps: Object.keys(taskNotificationTimestamps).length,
       lastCheckTimestamp,
     });
     backgroundLogger.debug("Conteúdo de lastKnownTasks:", lastKnownTasks); // Log o conteúdo completo para depuração
@@ -85,10 +89,60 @@ async function savePersistentData() {
       snoozedTasks: snoozedTasks,
       openedTasks: openedTasks, // Salva o novo estado
       lastCheckTimestamp: lastCheckTimestamp,
+      taskNotificationTimestamps: taskNotificationTimestamps, // Salva timestamps de notificação
     });
     backgroundLogger.info("Dados persistentes salvos.");
   } catch (error) {
     backgroundLogger.error("Erro ao salvar dados persistentes:", error);
+  }
+}
+
+/**
+ * Verifica se uma tarefa deve ser renotificada baseado nas configurações de renotificação.
+ * @param {string} taskId - ID da tarefa a ser verificada
+ * @returns {Promise<boolean>} - True se deve renotificar, false caso contrário
+ */
+async function checkIfShouldRenotify(taskId) {
+  try {
+    const settings = await browserAPI.storage.local.get([
+      "enableRenotification",
+      "renotificationInterval",
+    ]);
+    
+    const enableRenotification = settings.enableRenotification || false;
+    const renotificationInterval = settings.renotificationInterval || 30; // padrão 30 minutos
+    
+    // Se renotificação está desabilitada, não renotifica
+    if (!enableRenotification) {
+      return false;
+    }
+    
+    const lastNotificationTime = taskNotificationTimestamps[taskId];
+    
+    // Se nunca foi notificada, não renotifica (só notifica tarefas novas)
+    if (!lastNotificationTime) {
+      return false;
+    }
+    
+    const now = Date.now();
+    const timeSinceLastNotification = now - lastNotificationTime;
+    const renotificationIntervalMs = renotificationInterval * 60 * 1000; // converte para ms
+    
+    // Renotifica se passou o tempo configurado desde a última notificação
+    const shouldRenotify = timeSinceLastNotification >= renotificationIntervalMs;
+    
+    backgroundLogger.debug(
+      `Verificação de renotificação para tarefa ${taskId}: ` +
+      `enableRenotification=${enableRenotification}, ` +
+      `timeSinceLastNotification=${Math.round(timeSinceLastNotification / 60000)}min, ` +
+      `renotificationInterval=${renotificationInterval}min, ` +
+      `shouldRenotify=${shouldRenotify}`
+    );
+    
+    return shouldRenotify;
+  } catch (error) {
+    backgroundLogger.error("Erro ao verificar renotificação:", error);
+    return false;
   }
 }
 
@@ -254,6 +308,7 @@ browserAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
       ignoredTasks = {};
       snoozedTasks = {};
       openedTasks = {}; // Reseta o novo estado também
+      taskNotificationTimestamps = {}; // Reseta timestamps de notificação
       savePersistentData(); // Salva o estado limpo
       updateBadge(); // Limpa o contador no ícone
       sendResponse({ status: "Memória de tarefas resetada com sucesso." });
@@ -476,10 +531,12 @@ async function handleNewTasks(newTasks) {
       // Se a tarefa não é conhecida, adiciona-a à lista de tarefas a serem notificadas
       // e também à lista de tarefas conhecidas.
       tasksToNotify.push(newTask);
+      const now = Date.now();
       updatedLastKnownTasks.push({
         ...newTask,
-        lastNotifiedTimestamp: Date.now(),
+        lastNotifiedTimestamp: now,
       }); // Adiciona timestamp
+      taskNotificationTimestamps[taskId] = now; // Registra timestamp de notificação
       backgroundLogger.debug(`Tarefa ${taskId} é nova e será notificada.`);
     } else {
       // Se a tarefa já é conhecida, atualiza seus detalhes se for necessário (ex: posição, descrição)
@@ -492,15 +549,19 @@ async function handleNewTasks(newTasks) {
         lastNotifiedTimestamp: existingTask.lastNotifiedTimestamp,
       });
 
-      // Lógica para re-notificar tarefas (Feature 2)
-      // Será implementada na próxima etapa. Por enquanto, a lógica permanece a mesma:
-      // Não re-notifica se já conhecida, ignorada, snoozed ou aberta.
+      // Lógica para re-notificar tarefas pendentes
       if (!isIgnored && !isSnoozed && !isOpened) {
-        // Se a tarefa conhecida não está ignorada, snoozed ou aberta,
-        // ela continua a ser considerada para o badge.
-        backgroundLogger.debug(
-          `Tarefa ${taskId} já conhecida, não ignorada, não snoozed e não aberta. Será considerada para o badge.`
-        );
+        // Verifica se deve renotificar esta tarefa
+        const shouldRenotify = await checkIfShouldRenotify(taskId);
+        if (shouldRenotify) {
+          tasksToNotify.push(newTask);
+          taskNotificationTimestamps[taskId] = Date.now(); // Atualiza timestamp da renotificação
+          backgroundLogger.debug(`Tarefa ${taskId} será renotificada.`);
+        } else {
+          backgroundLogger.debug(
+            `Tarefa ${taskId} já conhecida, não ignorada, não snoozed e não aberta. Será considerada para o badge.`
+          );
+        }
       } else {
         backgroundLogger.debug(
           `Tarefa ${taskId} já conhecida e está ignorada, snoozed ou aberta.`
