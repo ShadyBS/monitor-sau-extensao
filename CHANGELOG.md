@@ -3,14 +3,27 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 ## [Unreleased]
 
+## [1.1.1] - 2025-01-24
+
 ### Fixed
-- Correção do botão de configurações que não estava funcionando devido a erro de conexão
-- Implementado tratamento de erro robusto para comunicação entre popup e background script
-- Corrigido problema de "Could not establish connection. Receiving end does not exist" 
-- Melhorada função `loadPopupData()` para usar Promise em vez de callback
-- Adicionado fallback para abertura da página de opções em nova aba caso `openOptionsPage()` falhe
+- **Correção Crítica do Popup**: Botão de configurações não funcionava devido a erro de conexão
+- **Comunicação Robusta**: Implementado tratamento de erro robusto para comunicação entre popup e background script
+- **Erro de Conexão**: Corrigido problema "Could not establish connection. Receiving end does not exist"
+- **Carregamento de Dados**: Melhorada função `loadPopupData()` para usar Promise em vez de callback
+- **Fallback de Opções**: Adicionado fallback para abertura da página de opções em nova aba caso `openOptionsPage()` falhe
+- **Event Listeners**: Corrigido problema crítico onde event listeners dos botões principais não eram configurados corretamente
+- **Inicialização do DOM**: Reorganizada inicialização do popup para garantir que DOM esteja carregado antes de configurar event listeners
+- **Tarefas no Popup**: Corrigido problema onde tarefas não apareciam no popup apesar da badge mostrar contador
+- **Build da Extensão**: Corrigido script de build que não incluía arquivos críticos no ZIP (sanitizer.js, tooltip-system.js, help.*)
+- **Arquivos Essenciais**: Adicionados arquivos essenciais à lista de sourceFiles no script de build
+- **Instalação via ZIP**: Resolvido problema onde extensão funcionava "sem pacote" mas falhava quando instalada via ZIP
+
+### Technical Details
+- Movidos todos os event listeners para dentro da função `initializePopup()` para execução após DOM ready
+- Criada função `setupMainEventListeners()` para configurar botões principais de forma organizada
 - Implementado tratamento de erro em todas as mensagens `runtime.sendMessage()` para evitar erros quando popup não está aberto
-- Corrigido problema onde tarefas não apareciam no popup apesar da badge mostrar contador
+- Adicionados `sanitizer.js`, `tooltip-system.js` e arquivos de ajuda (`help.*`) ao script de build
+- Resolvido erro de módulos não encontrados quando extensão é instalada via ZIP empacotado
 
 ## [1.1.0] - 2025-07-24
 
