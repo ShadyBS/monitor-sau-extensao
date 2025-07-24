@@ -1,0 +1,3 @@
+- Corrigido script de build que não incluía arquivos críticos no ZIP (sanitizer.js, tooltip-system.js, help.*)
+- Adicionados arquivos essenciais à lista de sourceFiles no script de build
+- Resolvido problema onde extensão funcionava "sem pacote" mas falhava quando instalada via ZIP

@@ -1,3 +1,0 @@
-- Corrigido problema crítico onde event listeners dos botões principais não eram configurados corretamente
-- Reorganizada inicialização do popup para garantir que DOM esteja carregado antes de configurar event listeners
-- Movidos todos os event listeners para dentro da função `initializePopup()` para execução após DOM ready
