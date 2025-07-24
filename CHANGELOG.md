@@ -3,6 +3,8 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 ## [Unreleased]
 
+## [1.1.0] - 2025-07-24
+
 ### Added
 - **Primeiro Release Oficial**: Lançamento da versão 1.1.0 com sistema completo de ajuda para novos usuários
 - **Sistema de Ajuda Abrangente**: Interface completa de onboarding e suporte
