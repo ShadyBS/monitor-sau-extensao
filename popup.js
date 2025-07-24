@@ -25,14 +25,15 @@ document.getElementById("refreshTasks").addEventListener("click", () => {
 });
 
 // Adiciona um listener para mensagens recebidas do background script
-browserAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
+browserAPI.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
   popupLogger.debug("Mensagem recebida no popup:", request);
   // Se a mensagem for para atualizar o popup
   if (request.action === "updatePopup") {
     popupLogger.info(
       "Mensagem de atualização de popup recebida. Exibindo tarefas."
     );
-    displayTasks(request.newTasks); // Atualiza a exibição das tarefas
+    const displaySettings = await getDisplaySettings();
+    displayTasks(request.newTasks, displaySettings); // Atualiza a exibição das tarefas
     document.getElementById("status-message").textContent = request.message; // Atualiza a mensagem de status
   }
 });
@@ -40,13 +41,47 @@ browserAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
 /**
  * Carrega os dados mais recentes das tarefas do background script e os exibe no popup.
  */
+/**
+ * Carrega as configurações de exibição de tarefas do storage
+ */
+async function getDisplaySettings() {
+  try {
+    const data = await browserAPI.storage.local.get(["taskDisplaySettings"]);
+    if (data.taskDisplaySettings && data.taskDisplaySettings.headerFields) {
+      return data.taskDisplaySettings.headerFields;
+    } else {
+      // Configurações padrão
+      return {
+        numero: true,
+        titulo: true,
+        dataEnvio: true,
+        posicao: true,
+        solicitante: false,
+        unidade: false,
+      };
+    }
+  } catch (error) {
+    popupLogger.error("Erro ao carregar configurações de exibição:", error);
+    // Retorna configurações padrão em caso de erro
+    return {
+      numero: true,
+      titulo: true,
+      dataEnvio: true,
+      posicao: true,
+      solicitante: false,
+      unidade: false,
+    };
+  }
+}
+
 async function loadPopupData() {
   popupLogger.info("Carregando dados iniciais do popup...");
   // Solicita ao background script as últimas tarefas e o status
-  browserAPI.runtime.sendMessage({ action: "getLatestTasks" }, (response) => {
+  browserAPI.runtime.sendMessage({ action: "getLatestTasks" }, async (response) => {
     if (response) {
       popupLogger.debug("Dados de tarefas recebidos do background:", response);
-      displayTasks(response.newTasks);
+      const displaySettings = await getDisplaySettings();
+      displayTasks(response.newTasks, displaySettings);
       document.getElementById("status-message").textContent =
         response.message ||
         "Última verificação: " +
@@ -62,8 +97,9 @@ async function loadPopupData() {
 /**
  * Exibe a lista de tarefas no popup.
  * @param {Array<Object>} tasks - Um array de objetos de tarefa a serem exibidos.
+ * @param {Object} displaySettings - Configurações de exibição das tarefas.
  */
-function displayTasks(tasks) {
+function displayTasks(tasks, displaySettings = null) {
   const tasksList = document.getElementById("tasks-list");
   tasksList.innerHTML = ""; // Limpa a lista existente antes de adicionar novas tarefas
 
@@ -75,45 +111,80 @@ function displayTasks(tasks) {
     return;
   }
 
+  // Se não há configurações, usa as padrão
+  if (!displaySettings) {
+    displaySettings = {
+      numero: true,
+      titulo: true,
+      dataEnvio: true,
+      posicao: true,
+      solicitante: false,
+      unidade: false,
+    };
+  }
+
   // Itera sobre as tarefas e cria elementos HTML para cada uma
   tasks.forEach((task) => {
     const taskElement = document.createElement("div");
     taskElement.className = "task-item";
+    
+    // Constrói o cabeçalho da tarefa baseado nas configurações
+    let headerHTML = `<p><strong>${task.numero}</strong>: ${task.titulo}</p>`;
+    
+    // Constrói a linha de metadados do cabeçalho
+    let metaItems = [];
+    if (displaySettings.dataEnvio) {
+      metaItems.push(`Envio: ${task.dataEnvio}`);
+    }
+    if (displaySettings.posicao) {
+      metaItems.push(`Posição: ${task.posicao}`);
+    }
+    if (displaySettings.solicitante && task.solicitante) {
+      metaItems.push(`Solicitante: ${task.solicitante}`);
+    }
+    if (displaySettings.unidade && task.unidade) {
+      metaItems.push(`Unidade: ${task.unidade}`);
+    }
+    
+    if (metaItems.length > 0) {
+      headerHTML += `<p class="task-meta">${metaItems.join(' | ')}</p>`;
+    }
+
+    // Constrói os detalhes expandidos (informações que não estão no cabeçalho)
+    let detailsHTML = '';
+    
+    if (!displaySettings.solicitante) {
+      detailsHTML += `<p><strong>Solicitante:</strong> ${task.solicitante || "N/A"}</p>`;
+    }
+    if (!displaySettings.unidade) {
+      detailsHTML += `<p><strong>Unidade:</strong> ${task.unidade || "N/A"}</p>`;
+    }
+    if (!displaySettings.dataEnvio) {
+      detailsHTML += `<p><strong>Data de Envio:</strong> ${task.dataEnvio || "N/A"}</p>`;
+    }
+    if (!displaySettings.posicao) {
+      detailsHTML += `<p><strong>Posição:</strong> ${task.posicao || "N/A"}</p>`;
+    }
+    
+    // Sempre mostra descrição, endereços e link nos detalhes
+    detailsHTML += `<p><strong>Descrição:</strong> ${task.descricao || "N/A"}</p>`;
+    if (task.enderecos && task.enderecos.length > 0) {
+      detailsHTML += `<p><strong>Endereço(s):</strong> ${task.enderecos
+        .map((addr) => `<span>${addr}</span>`)
+        .join("<br>")}</p>`;
+    }
+    detailsHTML += `<p><strong>Link:</strong> <a href="${task.link}" target="_blank" rel="noopener noreferrer">Abrir no SAU</a></p>`;
+
     taskElement.innerHTML = `
-            <p><strong>${task.numero}</strong>: ${task.titulo}</p>
-            <p class="task-meta">Envio: ${task.dataEnvio} | Posição: ${
-      task.posicao
-    }</p>
+            ${headerHTML}
             <div class="task-actions">
-                <button data-action="open" data-url="${task.link}" data-id="${
-      task.id
-    }">Abrir</button>
-                <button data-action="details" data-id="${
-                  task.id
-                }">Detalhes</button>
-                <button data-action="ignore" data-id="${
-                  task.id
-                }">Ignorar</button>
-                <button data-action="snooze" data-id="${
-                  task.id
-                }">Lembrar Mais Tarde</button>
+                <button data-action="open" data-url="${task.link}" data-id="${task.id}">Abrir</button>
+                <button data-action="details" data-id="${task.id}">Detalhes</button>
+                <button data-action="ignore" data-id="${task.id}">Ignorar</button>
+                <button data-action="snooze" data-id="${task.id}">Lembrar Mais Tarde</button>
             </div>
             <div class="task-details-expanded" id="details-${task.id}">
-                <p><strong>Solicitante:</strong> ${
-                  task.solicitante || "N/A"
-                }</p>
-                <p><strong>Unidade:</strong> ${task.unidade || "N/A"}</p>
-                <p><strong>Descrição:</strong> ${task.descricao || "N/A"}</p>
-                ${
-                  task.enderecos && task.enderecos.length > 0
-                    ? `<p><strong>Endereço(s):</strong> ${task.enderecos
-                        .map((addr) => `<span>${addr}</span>`)
-                        .join("<br>")}</p>`
-                    : ""
-                }
-                <p><strong>Link:</strong> <a href="${
-                  task.link
-                }" target="_blank" rel="noopener noreferrer">Abrir no SAU</a></p>
+                ${detailsHTML}
             </div>
         `;
     tasksList.appendChild(taskElement);

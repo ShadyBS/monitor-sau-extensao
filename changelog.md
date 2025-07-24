@@ -1,6 +1,19 @@
 Changelog do Monitor de Tarefas SAU
 Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
+## [Unreleased]
+
+### Added
+- Configuração personalizável de exibição de tarefas no popup
+- Interface na página de opções para selecionar quais informações aparecem no cabeçalho vs detalhes
+- Sistema de variáveis CSS centralizado para melhor manutenibilidade
+- Classes utilitárias CSS para componentes comuns
+
+### Changed
+- Popup agora exibe informações das tarefas baseado nas configurações do usuário
+- CSS migrado para usar variáveis CSS centralizadas
+- Melhor organização e consistência visual em todos os componentes
+
 [1.0] - 2025-07-23
 Adicionado
 Estrutura inicial do projeto da extensão.

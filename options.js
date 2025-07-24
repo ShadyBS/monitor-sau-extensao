@@ -8,6 +8,7 @@ document.addEventListener("DOMContentLoaded", loadOptions);
 
 document.getElementById("saveLogin").addEventListener("click", saveLogin);
 document.getElementById("saveSettings").addEventListener("click", saveSettings);
+document.getElementById("saveDisplaySettings").addEventListener("click", saveDisplaySettings);
 document.getElementById("saveLogLevel").addEventListener("click", saveLogLevel);
 document.getElementById("exportLogs").addEventListener("click", exportLogs);
 document
@@ -82,6 +83,31 @@ async function saveSettings() {
   } catch (error) {
     optionsLogger.error("Erro ao salvar configurações:", error);
     showStatus("settingsStatus", "Erro ao salvar configurações.", true);
+  }
+}
+
+async function saveDisplaySettings() {
+  try {
+    const displaySettings = {
+      headerFields: {
+        numero: true, // sempre visível
+        titulo: true, // sempre visível
+        dataEnvio: document.getElementById("header-dataEnvio").checked,
+        posicao: document.getElementById("header-posicao").checked,
+        solicitante: document.getElementById("header-solicitante").checked,
+        unidade: document.getElementById("header-unidade").checked,
+      }
+    };
+
+    await browserAPI.storage.local.set({
+      taskDisplaySettings: displaySettings,
+    });
+    
+    showStatus("displayStatus", "Configurações de exibição salvas com sucesso!");
+    optionsLogger.info("Configurações de exibição de tarefas salvas:", displaySettings);
+  } catch (error) {
+    optionsLogger.error("Erro ao salvar configurações de exibição:", error);
+    showStatus("displayStatus", "Erro ao salvar configurações de exibição.", true);
   }
 }
 
@@ -181,6 +207,7 @@ async function loadOptions() {
       "checkInterval",
       "snoozeTime",
       "logLevel",
+      "taskDisplaySettings",
     ]);
 
     if (data.sauUsername) {
@@ -204,6 +231,22 @@ async function loadOptions() {
         logLevelSelect.value = levelName;
       }
     }
+
+    // Carrega configurações de exibição de tarefas
+    if (data.taskDisplaySettings && data.taskDisplaySettings.headerFields) {
+      const headerFields = data.taskDisplaySettings.headerFields;
+      document.getElementById("header-dataEnvio").checked = headerFields.dataEnvio || false;
+      document.getElementById("header-posicao").checked = headerFields.posicao || false;
+      document.getElementById("header-solicitante").checked = headerFields.solicitante || false;
+      document.getElementById("header-unidade").checked = headerFields.unidade || false;
+    } else {
+      // Configurações padrão: mostrar data de envio e posição no cabeçalho
+      document.getElementById("header-dataEnvio").checked = true;
+      document.getElementById("header-posicao").checked = true;
+      document.getElementById("header-solicitante").checked = false;
+      document.getElementById("header-unidade").checked = false;
+    }
+
     optionsLogger.info("Opções carregadas na página de configurações.");
   } catch (error) {
     optionsLogger.error("Erro ao carregar opções:", error);

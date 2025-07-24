@@ -45,6 +45,58 @@
       </section>
 
       <section class="card">
+        <h2>Exibição de Tarefas</h2>
+        <p>
+          Configure quais informações devem aparecer no cabeçalho das tarefas e quais devem aparecer apenas nos detalhes expandidos.
+        </p>
+        
+        <h3>Informações do Cabeçalho</h3>
+        <p>Selecione as informações que devem aparecer sempre visíveis:</p>
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="header-numero" checked disabled>
+            Número da Tarefa (sempre visível)
+          </label>
+        </div>
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="header-titulo" checked disabled>
+            Título da Tarefa (sempre visível)
+          </label>
+        </div>
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="header-dataEnvio">
+            Data de Envio
+          </label>
+        </div>
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="header-posicao">
+            Posição na Fila
+          </label>
+        </div>
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="header-solicitante">
+            Solicitante
+          </label>
+        </div>
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="header-unidade">
+            Unidade
+          </label>
+        </div>
+        
+        <h3>Informações dos Detalhes</h3>
+        <p>As informações não selecionadas acima aparecerão apenas nos detalhes expandidos.</p>
+        
+        <button id="saveDisplaySettings">Salvar Configurações de Exibição</button>
+        <p id="displayStatus" class="status-message"></p>
+      </section>
+
+      <section class="card">
         <h2>Configurações de Log</h2>
         <div class="form-group">
           <label for="logLevel">Nível de Log:</label>
