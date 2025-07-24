@@ -314,14 +314,14 @@ async function showSnoozeDropdown(button, taskId) {
     dropdownHTML += `
       <div class="snooze-custom">
         <div class="snooze-custom-inputs">
-          <input type="number" id="custom-hours" min="0" max="23" value="0" placeholder="0">
+          <input type="number" id="custom-hours-${taskId}" min="0" max="23" value="0" placeholder="0">
           <label>h</label>
-          <input type="number" id="custom-minutes" min="0" max="59" value="15" placeholder="15">
+          <input type="number" id="custom-minutes-${taskId}" min="0" max="59" value="15" placeholder="15">
           <label>min</label>
         </div>
         <div class="snooze-custom-buttons">
-          <button class="btn-primary" onclick="applyCustomSnooze('${taskId}')">Aplicar</button>
-          <button class="btn-secondary" onclick="closeSnoozeDropdown()">Cancelar</button>
+          <button class="btn-primary" data-action="apply-custom" data-task-id="${taskId}">Aplicar</button>
+          <button class="btn-secondary" data-action="cancel-custom">Cancelar</button>
         </div>
       </div>
     `;
@@ -336,6 +336,22 @@ async function showSnoozeDropdown(button, taskId) {
       applySnooze(taskId, minutes);
     });
   });
+  
+  // Adiciona event listeners para os botões customizados
+  const applyButton = dropdown.querySelector('[data-action="apply-custom"]');
+  if (applyButton) {
+    applyButton.addEventListener('click', () => {
+      const currentTaskId = applyButton.dataset.taskId;
+      applyCustomSnooze(currentTaskId);
+    });
+  }
+  
+  const cancelButton = dropdown.querySelector('[data-action="cancel-custom"]');
+  if (cancelButton) {
+    cancelButton.addEventListener('click', () => {
+      closeSnoozeDropdown();
+    });
+  }
   
   // Adiciona o dropdown ao body para evitar problemas de overflow
   document.body.appendChild(dropdown);
@@ -385,8 +401,17 @@ function formatSnoozeTime(hours, minutes) {
  * Aplica o snooze com tempo personalizado
  */
 function applyCustomSnooze(taskId) {
-  const hours = parseInt(document.getElementById('custom-hours').value) || 0;
-  const minutes = parseInt(document.getElementById('custom-minutes').value) || 0;
+  const hoursInput = document.getElementById(`custom-hours-${taskId}`);
+  const minutesInput = document.getElementById(`custom-minutes-${taskId}`);
+  
+  if (!hoursInput || !minutesInput) {
+    popupLogger.error(`Inputs de tempo personalizado não encontrados para tarefa ${taskId}`);
+    alert('Erro interno: campos de tempo não encontrados.');
+    return;
+  }
+  
+  const hours = parseInt(hoursInput.value) || 0;
+  const minutes = parseInt(minutesInput.value) || 0;
   const totalMinutes = hours * 60 + minutes;
   
   if (totalMinutes <= 0) {
@@ -394,6 +419,7 @@ function applyCustomSnooze(taskId) {
     return;
   }
   
+  popupLogger.info(`Aplicando snooze personalizado: ${hours}h ${minutes}min (${totalMinutes} minutos) para tarefa ${taskId}`);
   applySnooze(taskId, totalMinutes);
 }
 
