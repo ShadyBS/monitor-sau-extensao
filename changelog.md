@@ -4,6 +4,11 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 ## [Unreleased]
 
 ### Added
+- **Instruções para Agentes de IA**: Criado arquivo `AI_PROMPT_INSTRUCTIONS.md` com diretrizes obrigatórias para todos os prompts de IA
+- Guia completo de práticas de código, segurança e fluxo de trabalho baseado no `agents.md`
+- Instruções específicas para Conventional Commits e atualização automática do CHANGELOG
+- Checklist pré-commit obrigatório para agentes de IA
+- Diretrizes de compatibilidade Chrome/Firefox e uso dos sistemas de logging e sanitização
 - **Sistema de Renotificação de Tarefas Pendentes**: Nova funcionalidade que permite renotificar o usuário sobre tarefas que permanecem pendentes após um período configurável
 - Configuração de renotificação na página de opções com checkbox para ativar/desativar
 - Campo configurável para intervalo de renotificação em minutos (padrão: 30 minutos)
