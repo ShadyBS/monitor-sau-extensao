@@ -547,12 +547,41 @@
     // Adiciona um listener para receber mensagens do script interceptor (que roda no world: MAIN).
     // Esta é a ponte de comunicação para obter os dados do AJAX.
     window.addEventListener("message", (event) => {
-      // Validação de segurança: aceitar mensagens apenas da mesma janela e com o tipo esperado.
-      if (
-        event.source === window &&
-        event.data &&
-        event.data.type === "SAU_TASKS_RESPONSE"
-      ) {
+      // Validação de segurança aprimorada
+      if (event.source !== window) {
+        console.warn("Content Script: Mensagem de fonte não confiável rejeitada");
+        return;
+      }
+      
+      if (event.origin !== window.location.origin) {
+        console.warn("Content Script: Mensagem de origem incorreta rejeitada:", event.origin);
+        return;
+      }
+      
+      if (!event.data || typeof event.data !== 'object') {
+        console.warn("Content Script: Dados de mensagem inválidos rejeitados");
+        return;
+      }
+      
+      if (event.data.type === "SAU_TASKS_RESPONSE") {
+        // Validação adicional do conteúdo
+        if (typeof event.data.htmlContent !== 'string') {
+          console.warn("Content Script: Conteúdo HTML inválido rejeitado");
+          return;
+        }
+        
+        // Validação de tamanho (limite de 5MB para prevenir ataques de DoS)
+        if (event.data.htmlContent.length > 5 * 1024 * 1024) {
+          console.warn("Content Script: Conteúdo HTML muito grande rejeitado");
+          return;
+        }
+        
+        // Validação de timestamp (mensagens não podem ser muito antigas - 30 segundos)
+        if (event.data.timestamp && (Date.now() - event.data.timestamp > 30000)) {
+          console.warn("Content Script: Mensagem muito antiga rejeitada");
+          return;
+        }
+        
         console.log(
           "Content Script: Resposta AJAX de tarefas recebida do interceptor."
         );

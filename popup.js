@@ -1,5 +1,6 @@
 // Importa o logger e o instancia para o contexto do popup
 import { logger } from "./logger.js";
+import { createSafeTaskElement, sanitizeTaskData, safelyPopulateContainer, createSafeElement, setSafeTextContent } from "./sanitizer.js";
 const popupLogger = logger("[Popup]");
 
 // Define o objeto de API do navegador de forma compatível (Chrome ou Firefox)
@@ -135,12 +136,14 @@ async function loadPopupData() {
  */
 function displayTasks(tasks, displaySettings = null) {
   const tasksList = document.getElementById("tasks-list");
-  tasksList.innerHTML = ""; // Limpa a lista existente antes de adicionar novas tarefas
+  
+  // Limpa a lista existente de forma segura
+  safelyPopulateContainer(tasksList, []);
 
   // Se não houver tarefas, exibe uma mensagem
   if (tasks.length === 0) {
-    tasksList.innerHTML =
-      '<p class="no-tasks">Nenhuma tarefa nova encontrada.</p>';
+    const noTasksP = createSafeElement('p', 'Nenhuma tarefa nova encontrada.', { class: 'no-tasks' });
+    tasksList.appendChild(noTasksP);
     popupLogger.info("Nenhuma tarefa para exibir no popup.");
     return;
   }
@@ -157,70 +160,17 @@ function displayTasks(tasks, displaySettings = null) {
     };
   }
 
-  // Itera sobre as tarefas e cria elementos HTML para cada uma
+  // Itera sobre as tarefas e cria elementos HTML para cada uma de forma segura
   tasks.forEach((task) => {
-    const taskElement = document.createElement("div");
-    taskElement.className = "task-item";
-    
-    // Constrói o cabeçalho da tarefa baseado nas configurações
-    let headerHTML = `<p><strong>${task.numero}</strong>: ${task.titulo}</p>`;
-    
-    // Constrói a linha de metadados do cabeçalho
-    let metaItems = [];
-    if (displaySettings.dataEnvio) {
-      metaItems.push(`Envio: ${task.dataEnvio}`);
-    }
-    if (displaySettings.posicao) {
-      metaItems.push(`Posição: ${task.posicao}`);
-    }
-    if (displaySettings.solicitante && task.solicitante) {
-      metaItems.push(`Solicitante: ${task.solicitante}`);
-    }
-    if (displaySettings.unidade && task.unidade) {
-      metaItems.push(`Unidade: ${task.unidade}`);
+    // Sanitiza os dados da tarefa
+    const sanitizedTask = sanitizeTaskData(task);
+    if (!sanitizedTask) {
+      popupLogger.warn(`Tarefa inválida ignorada: ${task?.id || 'unknown'}`);
+      return;
     }
     
-    if (metaItems.length > 0) {
-      headerHTML += `<p class="task-meta">${metaItems.join(' | ')}</p>`;
-    }
-
-    // Constrói os detalhes expandidos (informações que não estão no cabeçalho)
-    let detailsHTML = '';
-    
-    if (!displaySettings.solicitante) {
-      detailsHTML += `<p><strong>Solicitante:</strong> ${task.solicitante || "N/A"}</p>`;
-    }
-    if (!displaySettings.unidade) {
-      detailsHTML += `<p><strong>Unidade:</strong> ${task.unidade || "N/A"}</p>`;
-    }
-    if (!displaySettings.dataEnvio) {
-      detailsHTML += `<p><strong>Data de Envio:</strong> ${task.dataEnvio || "N/A"}</p>`;
-    }
-    if (!displaySettings.posicao) {
-      detailsHTML += `<p><strong>Posição:</strong> ${task.posicao || "N/A"}</p>`;
-    }
-    
-    // Sempre mostra descrição, endereços e link nos detalhes
-    detailsHTML += `<p><strong>Descrição:</strong> ${task.descricao || "N/A"}</p>`;
-    if (task.enderecos && task.enderecos.length > 0) {
-      detailsHTML += `<p><strong>Endereço(s):</strong> ${task.enderecos
-        .map((addr) => `<span>${addr}</span>`)
-        .join("<br>")}</p>`;
-    }
-    detailsHTML += `<p><strong>Link:</strong> <a href="${task.link}" target="_blank" rel="noopener noreferrer">Abrir no SAU</a></p>`;
-
-    taskElement.innerHTML = `
-            ${headerHTML}
-            <div class="task-actions">
-                <button data-action="open" data-url="${task.link}" data-id="${task.id}">Abrir</button>
-                <button data-action="details" data-id="${task.id}">Detalhes</button>
-                <button data-action="ignore" data-id="${task.id}">Ignorar</button>
-                <button data-action="snooze" data-id="${task.id}">Lembrar Mais Tarde</button>
-            </div>
-            <div class="task-details-expanded" id="details-${task.id}">
-                ${detailsHTML}
-            </div>
-        `;
+    // Cria o elemento da tarefa de forma segura
+    const taskElement = createSafeTaskElement(sanitizedTask, displaySettings);
     tasksList.appendChild(taskElement);
 
     // Adiciona event listeners para os botões de ação de cada tarefa
@@ -265,8 +215,8 @@ function displayTasks(tasks, displaySettings = null) {
         e.target.closest(".task-item").remove(); // Remove o item da lista no popup
         // Se não houver mais tarefas, exibe a mensagem de "nenhuma tarefa"
         if (tasksList.children.length === 0) {
-          tasksList.innerHTML =
-            '<p class="no-tasks">Nenhuma tarefa nova encontrada.</p>';
+          const noTasksP = createSafeElement('p', 'Nenhuma tarefa nova encontrada.', { class: 'no-tasks' });
+          tasksList.appendChild(noTasksP);
           popupLogger.info("Todas as tarefas removidas do popup após ignorar.");
         }
       });
@@ -443,7 +393,8 @@ function applySnooze(taskId, minutes) {
   // Se não houver mais tarefas, exibe a mensagem de "nenhuma tarefa"
   const tasksList = document.getElementById("tasks-list");
   if (tasksList.children.length === 0) {
-    tasksList.innerHTML = '<p class="no-tasks">Nenhuma tarefa nova encontrada.</p>';
+    const noTasksP = createSafeElement('p', 'Nenhuma tarefa nova encontrada.', { class: 'no-tasks' });
+    tasksList.appendChild(noTasksP);
     popupLogger.info("Todas as tarefas removidas do popup após snoozar.");
   }
   

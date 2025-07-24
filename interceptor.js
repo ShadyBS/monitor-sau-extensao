@@ -25,12 +25,14 @@
         if (this.status === 200) {
           // Envia a resposta para o content script através de um evento de window.
           // Esta é a ponte de comunicação entre o 'MAIN world' e o 'ISOLATED world'.
+          // Usa origin específica em vez de "*" para segurança
           window.postMessage(
             {
               type: "SAU_TASKS_RESPONSE",
               htmlContent: this.responseText,
+              timestamp: Date.now(), // Adiciona timestamp para validação
             },
-            "*"
+            window.location.origin
           );
         }
       });
