@@ -12,7 +12,7 @@ const browserAPI = globalThis.browser || globalThis.chrome;
 
 // Allowed HTML tags and attributes for safe rendering
 const ALLOWED_TAGS = ['p', 'span', 'strong', 'em', 'br', 'div', 'button', 'label', 'input'];
-const ALLOWED_ATTRIBUTES = ['class', 'data-id', 'data-action', 'data-url', 'type', 'min', 'max', 'value', 'placeholder'];
+const ALLOWED_ATTRIBUTES = ['class', 'id', 'data-id', 'data-action', 'data-url', 'type', 'min', 'max', 'value', 'placeholder'];
 
 /**
  * Sanitizes HTML content by removing dangerous elements and attributes
@@ -160,7 +160,7 @@ export function createSafeTaskElement(task, displaySettings = {}) {
     // Create details container
     const detailsDiv = createSafeElement('div', '', {
         class: 'task-details-expanded',
-        'data-id': `details-${task.id}`
+        id: `details-${task.id}`
     });
     
     // Add detail fields

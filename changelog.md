@@ -3,6 +3,11 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 ## [Unreleased]
 
+### Fixed
+- Correção do botão "Detalhes" na popup que não estava funcionando devido a inconsistência entre ID criado e ID buscado
+- Elemento de detalhes agora usa atributo `id` em vez de `data-id` para compatibilidade com `getElementById()`
+- Adicionado atributo `id` à lista de atributos permitidos no sistema de sanitização
+
 ### Added
 - **Instruções para Agentes de IA**: Criado arquivo `AI_PROMPT_INSTRUCTIONS.md` com diretrizes obrigatórias para todos os prompts de IA
 - Guia completo de práticas de código, segurança e fluxo de trabalho baseado no `agents.md`
