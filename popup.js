@@ -10,46 +10,6 @@ const browserAPI = globalThis.browser || globalThis.chrome;
 // Adiciona um listener para quando o DOM estiver completamente carregado
 document.addEventListener("DOMContentLoaded", initializePopup);
 
-// Adiciona um listener de clique para abrir a página de opções
-document.getElementById("openOptions").addEventListener("click", async () => {
-  popupLogger.info('Botão "Configurações" clicado. Abrindo página de opções.');
-  try {
-    await browserAPI.runtime.openOptionsPage();
-  } catch (error) {
-    popupLogger.error('Erro ao abrir página de opções:', error);
-    // Fallback: abre em nova aba
-    try {
-      await browserAPI.tabs.create({ url: browserAPI.runtime.getURL('options.html') });
-    } catch (fallbackError) {
-      popupLogger.error('Erro no fallback para abrir opções:', fallbackError);
-    }
-  }
-});
-
-// Adiciona um listener de clique para forçar uma atualização manual de tarefas
-document.getElementById("refreshTasks").addEventListener("click", () => {
-  document.getElementById("status-message").textContent = "Atualizando...";
-  popupLogger.info(
-    'Botão "Atualizar Agora" clicado. Solicitando verificação manual.'
-  );
-  // Envia uma mensagem para o background script para iniciar uma verificação manual
-  browserAPI.runtime.sendMessage({ action: "manualCheck" });
-});
-
-// Adiciona um listener para mensagens recebidas do background script
-browserAPI.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
-  popupLogger.debug("Mensagem recebida no popup:", request);
-  // Se a mensagem for para atualizar o popup
-  if (request.action === "updatePopup") {
-    popupLogger.info(
-      "Mensagem de atualização de popup recebida. Exibindo tarefas."
-    );
-    const displaySettings = await getDisplaySettings();
-    displayTasks(request.newTasks, displaySettings); // Atualiza a exibição das tarefas
-    document.getElementById("status-message").textContent = request.message; // Atualiza a mensagem de status
-  }
-});
-
 /**
  * Carrega as configurações de exibição de tarefas do storage
  */
@@ -454,6 +414,9 @@ function closeSnoozeDropdownOnOutsideClick(event) {
 async function initializePopup() {
   popupLogger.info("Inicializando popup...");
   
+  // Configura event listeners dos botões principais
+  setupMainEventListeners();
+  
   // Carrega dados do popup
   await loadPopupData();
   
@@ -462,6 +425,57 @@ async function initializePopup() {
   
   // Verifica se deve mostrar ajuda para novos usuários
   await checkFirstTimeUser();
+}
+
+/**
+ * Configura os event listeners dos botões principais
+ */
+function setupMainEventListeners() {
+  // Adiciona um listener de clique para abrir a página de opções
+  const openOptionsButton = document.getElementById("openOptions");
+  if (openOptionsButton) {
+    openOptionsButton.addEventListener("click", async () => {
+      popupLogger.info('Botão "Configurações" clicado. Abrindo página de opções.');
+      try {
+        await browserAPI.runtime.openOptionsPage();
+      } catch (error) {
+        popupLogger.error('Erro ao abrir página de opções:', error);
+        // Fallback: abre em nova aba
+        try {
+          await browserAPI.tabs.create({ url: browserAPI.runtime.getURL('options.html') });
+        } catch (fallbackError) {
+          popupLogger.error('Erro no fallback para abrir opções:', fallbackError);
+        }
+      }
+    });
+  }
+
+  // Adiciona um listener de clique para forçar uma atualização manual de tarefas
+  const refreshTasksButton = document.getElementById("refreshTasks");
+  if (refreshTasksButton) {
+    refreshTasksButton.addEventListener("click", () => {
+      document.getElementById("status-message").textContent = "Atualizando...";
+      popupLogger.info(
+        'Botão "Atualizar Agora" clicado. Solicitando verificação manual.'
+      );
+      // Envia uma mensagem para o background script para iniciar uma verificação manual
+      browserAPI.runtime.sendMessage({ action: "manualCheck" });
+    });
+  }
+
+  // Adiciona um listener para mensagens recebidas do background script
+  browserAPI.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
+    popupLogger.debug("Mensagem recebida no popup:", request);
+    // Se a mensagem for para atualizar o popup
+    if (request.action === "updatePopup") {
+      popupLogger.info(
+        "Mensagem de atualização de popup recebida. Exibindo tarefas."
+      );
+      const displaySettings = await getDisplaySettings();
+      displayTasks(request.newTasks, displaySettings); // Atualiza a exibição das tarefas
+      document.getElementById("status-message").textContent = request.message; // Atualiza a mensagem de status
+    }
+  });
 }
 
 /**
