@@ -192,18 +192,17 @@ h1 {
 
 /* Estilos para dropdown de snooze no popup */
 .snooze-dropdown {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
+  position: fixed;
   background-color: var(--bg-primary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
-  box-shadow: var(--shadow-medium);
-  z-index: 1000;
-  max-height: 300px;
+  box-shadow: var(--shadow-heavy);
+  z-index: 10001;
+  max-height: 200px;
+  min-width: 180px;
   overflow-y: auto;
   display: none;
+  color: var(--text-primary);
 }
 
 .snooze-dropdown.show {
@@ -216,10 +215,13 @@ h1 {
   border-bottom: 1px solid var(--border-light);
   transition: background-color var(--transition-normal);
   font-size: var(--font-size-sm);
+  color: var(--text-primary);
+  background-color: var(--bg-primary);
 }
 
 .snooze-option:hover {
   background-color: var(--bg-secondary);
+  color: var(--text-primary);
 }
 
 .snooze-option:last-child {
@@ -229,6 +231,8 @@ h1 {
 .snooze-custom {
   padding: var(--spacing-md);
   border-top: 1px solid var(--border-color);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
 }
 
 .snooze-custom-inputs {
@@ -245,6 +249,8 @@ h1 {
   font-size: var(--font-size-sm);
   border: 1px solid var(--border-input);
   border-radius: var(--radius-sm);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
 }
 
 .snooze-custom-inputs label {
@@ -264,6 +270,30 @@ h1 {
   font-size: var(--font-size-xs) !important;
   width: auto !important;
   margin: 0 !important;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.snooze-custom-buttons .btn-primary {
+  background-color: var(--primary-color);
+  color: white;
+  border-color: var(--primary-color);
+}
+
+.snooze-custom-buttons .btn-primary:hover {
+  background-color: var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+
+.snooze-custom-buttons .btn-secondary {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+.snooze-custom-buttons .btn-secondary:hover {
+  background-color: var(--border-color);
 }
 
 /* Media Queries para responsividade */

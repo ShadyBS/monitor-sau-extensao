@@ -337,9 +337,30 @@ async function showSnoozeDropdown(button, taskId) {
     });
   });
   
-  // Posiciona o dropdown
-  button.style.position = 'relative';
-  button.appendChild(dropdown);
+  // Adiciona o dropdown ao body para evitar problemas de overflow
+  document.body.appendChild(dropdown);
+  
+  // Posiciona o dropdown próximo ao botão
+  const buttonRect = button.getBoundingClientRect();
+  const dropdownRect = dropdown.getBoundingClientRect();
+  
+  // Calcula a posição ideal
+  let top = buttonRect.bottom + 5; // 5px abaixo do botão
+  let left = buttonRect.left;
+  
+  // Verifica se o dropdown sairia da tela pela direita
+  if (left + dropdownRect.width > window.innerWidth) {
+    left = buttonRect.right - dropdownRect.width;
+  }
+  
+  // Verifica se o dropdown sairia da tela por baixo
+  if (top + dropdownRect.height > window.innerHeight) {
+    top = buttonRect.top - dropdownRect.height - 5; // 5px acima do botão
+  }
+  
+  // Aplica a posição
+  dropdown.style.top = `${top}px`;
+  dropdown.style.left = `${left}px`;
   
   // Fecha o dropdown ao clicar fora
   setTimeout(() => {
