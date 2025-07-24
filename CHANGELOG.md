@@ -3,6 +3,9 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 ## [Unreleased]
 
+### Added
+- Primeiro release oficial da extensão
+
 ## [1.1.0] - 2025-01-24
 
 ### Added
