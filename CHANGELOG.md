@@ -3,6 +3,8 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 ## [Unreleased]
 
+## [1.1.0] - 2025-01-24
+
 ### Added
 - **Sistema de Ajuda Completo para Novos Usuários**: Implementado sistema abrangente de ajuda e onboarding
 - **Página de Ajuda Completa** (`help.html`): Guia detalhado com seções organizadas (Primeiros Passos, Configurações, Funcionalidades, Solução de Problemas, FAQ)
@@ -24,6 +26,12 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - **Navegação Aprimorada**: Ícones adicionados aos botões principais para melhor identificação
 - **Sistema de Ajuda Contextual**: Ajuda específica baseada no contexto e estado do usuário
 
+### Fixed
+- **Case Sensitivity no CI/CD**: Corrigido problema com arquivo `CHANGELOG.md` que causava falha no pipeline Linux
+- Correção do botão "Detalhes" na popup que não estava funcionando devido a inconsistência entre ID criado e ID buscado
+- Elemento de detalhes agora usa atributo `id` em vez de `data-id` para compatibilidade com `getElementById()`
+- Adicionado atributo `id` à lista de atributos permitidos no sistema de sanitização
+
 ### Technical Details
 - **Arquitetura Modular**: Sistema de tooltips como módulo independente e reutilizável
 - **Compatibilidade Mantida**: Todos os novos recursos seguem padrões Chrome/Firefox
@@ -31,11 +39,6 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - **Performance Otimizada**: Carregamento lazy de recursos de ajuda quando necessário
 - **Persistência de Estado**: Preferências de ajuda salvas no storage local
 - **Acessibilidade**: Suporte a navegação por teclado e leitores de tela
-
-### Fixed
-- Correção do botão "Detalhes" na popup que não estava funcionando devido a inconsistência entre ID criado e ID buscado
-- Elemento de detalhes agora usa atributo `id` em vez de `data-id` para compatibilidade com `getElementById()`
-- Adicionado atributo `id` à lista de atributos permitidos no sistema de sanitização
 
 ### Added
 - **Instruções para Agentes de IA**: Criado arquivo `AI_PROMPT_INSTRUCTIONS.md` com diretrizes obrigatórias para todos os prompts de IA
