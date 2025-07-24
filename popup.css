@@ -1,47 +1,49 @@
+@import url('./css-variables.css');
+
 body {
-  font-family: "Inter", sans-serif;
+  font-family: var(--font-family);
   margin: 0;
   padding: 0;
-  width: 350px;
-  background-color: #f4f7f6;
-  color: #333;
+  width: var(--popup-width);
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
 }
 
 .container {
-  padding: 15px;
-  background-color: #ffffff;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  padding: var(--spacing-lg);
+  background-color: var(--bg-primary);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-medium);
 }
 
 h1 {
-  color: #2c3e50;
+  color: var(--text-heading);
   text-align: center;
-  margin-bottom: 15px;
-  font-size: 1.5em;
+  margin-bottom: var(--spacing-lg);
+  font-size: var(--font-size-heading);
   font-weight: bold;
 }
 
 #status-message {
   text-align: center;
-  margin-bottom: 15px;
-  font-size: 0.9em;
-  color: #666;
+  margin-bottom: var(--spacing-lg);
+  font-size: var(--font-size-base);
+  color: var(--text-light);
 }
 
 #tasks-list {
-  max-height: 300px; /* Limita a altura e adiciona scroll se necessário */
+  max-height: var(--tasks-list-max-height);
   overflow-y: auto;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 10px;
-  margin-bottom: 15px;
-  background-color: #fdfdfd;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-lg);
+  background-color: var(--bg-tertiary);
 }
 
 .task-item {
-  border-bottom: 1px solid #eee;
-  padding: 10px 0;
+  border-bottom: 1px solid var(--border-light);
+  padding: var(--spacing-md) 0;
 }
 
 .task-item:last-child {
@@ -49,138 +51,137 @@ h1 {
 }
 
 .task-item p {
-  margin: 0 0 5px 0;
-  font-size: 0.95em;
+  margin: 0 0 var(--spacing-xs) 0;
+  font-size: var(--font-size-md);
   line-height: 1.3;
 }
 
 .task-item strong {
-  color: #34495e;
+  color: var(--text-subheading);
 }
 
 .task-meta {
-  font-size: 0.8em;
-  color: #888;
+  font-size: var(--font-size-sm);
+  color: var(--text-muted);
 }
 
 .task-actions {
   display: flex;
-  gap: 8px;
-  margin-top: 10px;
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-md);
   justify-content: flex-end;
 }
 
 .task-actions button {
-  padding: 6px 10px;
+  padding: 6px var(--spacing-md);
   border: none;
   border-radius: 6px;
   cursor: pointer;
   font-size: 0.85em;
   font-weight: 600;
-  transition: background-color 0.2s ease;
+  transition: background-color var(--transition-normal);
 }
 
 .task-actions button[data-action="open"] {
-  background-color: #2ecc71;
+  background-color: var(--success-color);
   color: white;
 }
 
 .task-actions button[data-action="open"]:hover {
-  background-color: #27ae60;
+  background-color: var(--success-hover);
 }
 
 .task-actions button[data-action="ignore"] {
-  background-color: #e74c3c;
+  background-color: var(--danger-color);
   color: white;
 }
 
 .task-actions button[data-action="ignore"]:hover {
-  background-color: #c0392b;
+  background-color: var(--danger-hover);
 }
 
 .task-actions button[data-action="snooze"] {
-  background-color: #f39c12;
+  background-color: var(--warning-color);
   color: white;
 }
 
 .task-actions button[data-action="snooze"]:hover {
-  background-color: #e67e22;
+  background-color: var(--warning-hover);
 }
 
-/* Novo estilo para o botão de detalhes */
 .task-actions button[data-action="details"] {
-  background-color: #3498db; /* Azul */
+  background-color: var(--primary-color);
   color: white;
 }
 
 .task-actions button[data-action="details"]:hover {
-  background-color: #2980b9; /* Azul mais escuro */
+  background-color: var(--primary-hover);
 }
 
 .actions {
   display: flex;
   justify-content: space-between;
-  margin-top: 15px;
+  margin-top: var(--spacing-lg);
 }
 
 .actions button {
   flex-grow: 1;
-  margin: 0 5px;
-  padding: 10px 15px;
-  background-color: #3498db;
+  margin: 0 var(--spacing-xs);
+  padding: var(--spacing-md) var(--spacing-lg);
+  background-color: var(--primary-color);
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  font-size: 0.95em;
+  font-size: var(--font-size-md);
   font-weight: bold;
-  transition: background-color 0.3s ease, transform 0.1s ease;
+  transition: background-color var(--transition-slow), transform var(--transition-fast);
 }
 
 .actions button:hover {
-  background-color: #2980b9;
+  background-color: var(--primary-hover);
   transform: translateY(-1px);
 }
 
 .actions button:active {
-  background-color: #2c3e50;
+  background-color: var(--primary-active);
   transform: translateY(0);
 }
 
 .no-tasks {
   text-align: center;
-  color: #888;
-  padding: 20px;
+  color: var(--text-muted);
+  padding: var(--spacing-xl);
 }
 
 /* Estilos para a seção de detalhes expansível */
 .task-details-expanded {
-  max-height: 0; /* Começa escondido */
+  max-height: 0;
   overflow: hidden;
-  transition: max-height 0.3s ease-out, padding 0.3s ease-out; /* Transição suave */
-  background-color: #f0f0f0;
-  border-radius: 5px;
-  margin-top: 10px;
-  padding: 0 10px; /* Padding inicial zero */
+  transition: max-height var(--transition-expand), padding var(--transition-expand);
+  background-color: var(--bg-expanded);
+  border-radius: var(--radius-sm);
+  margin-top: var(--spacing-md);
+  padding: 0 var(--spacing-md);
 }
 
 .task-details-expanded.expanded {
-  max-height: 200px; /* Altura máxima para exibir o conteúdo */
-  padding: 10px; /* Padding quando expandido */
+  max-height: var(--details-max-height);
+  padding: var(--spacing-md);
 }
 
 .task-details-expanded p {
-  margin: 5px 0;
-  font-size: 0.9em;
-  color: #555;
+  margin: var(--spacing-xs) 0;
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
 }
 
 .task-details-expanded strong {
-  color: #333;
+  color: var(--text-primary);
 }
 
 .task-details-expanded a {
-  color: #3498db;
+  color: var(--primary-color);
   text-decoration: none;
 }
 
@@ -188,10 +189,10 @@ h1 {
   text-decoration: underline;
 }
 
-/* Media Queries para responsividade (mantidas, mas ajustadas se necessário) */
+/* Media Queries para responsividade */
 @media (max-width: 400px) {
   .container {
     width: auto;
-    margin: 10px;
+    margin: var(--spacing-md);
   }
 }
