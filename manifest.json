@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Monitor de Tarefas SAU",
-  "version": "1.0",
+  "version": "1.0.1",
   "description": "Notifica sobre novas tarefas no Sistema de Atendimento ao Usuário (SAU).",
   "icons": {
     "16": "icons/icon16.png",
@@ -28,5 +28,7 @@
     "scripting",
     "webNavigation"
   ],
-  "host_permissions": ["https://egov.santos.sp.gov.br/sau/*"]
+  "host_permissions": [
+    "https://egov.santos.sp.gov.br/sau/*"
+  ]
 }

@@ -1,0 +1,38 @@
+{
+  "name": "monitor-sau-extensao",
+  "version": "1.0.1",
+  "description": "Monitor de Tarefas SAU - Extensão para Chrome e Firefox",
+  "scripts": {
+    "build": "node scripts/build.js",
+    "build:chrome": "node scripts/build.js --browser=chrome",
+    "build:firefox": "node scripts/build.js --browser=firefox",
+    "release": "node scripts/release.js",
+    "version:patch": "node scripts/version.js patch",
+    "version:minor": "node scripts/version.js minor",
+    "version:major": "node scripts/version.js major",
+    "clean": "node scripts/clean.js",
+    "validate": "node scripts/validate.js"
+  },
+  "devDependencies": {
+    "archiver": "^6.0.1",
+    "semver": "^7.5.4"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yourusername/monitor-sau-extensao.git"
+  },
+  "keywords": [
+    "browser-extension",
+    "chrome-extension",
+    "firefox-addon",
+    "sau",
+    "monitor",
+    "tasks"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/yourusername/monitor-sau-extensao/issues"
+  },
+  "homepage": "https://github.com/yourusername/monitor-sau-extensao#readme"
+}

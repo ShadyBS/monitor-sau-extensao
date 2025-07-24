@@ -1,268 +1,353 @@
-# Guia para Agentes de IA
+# Guia para Agentes de IA - Monitor SAU Extension
 
-Olá, agente! Este documento é o seu guia principal para entender e contribuir com este projeto. Seguir estas diretrizes garantirá que suas contribuições sejam consistentes, de alta qualidade e bem integradas ao trabalho da equipe humana.
+Olá, agente! Este documento é o seu guia principal para entender e contribuir com este projeto de extensão para navegador. Seguir estas diretrizes garantirá que suas contribuições sejam consistentes, de alta qualidade e bem integradas ao trabalho da equipe humana.
+
+> **⚠️ IMPORTANTE:** Este documento deve ser mantido atualizado sempre que a estrutura do projeto, fluxos de trabalho ou ferramentas mudarem. Ao fazer modificações significativas no projeto, verifique se este guia precisa ser atualizado.
 
 ## Índice
 
 1. [Objetivo Principal](#1-objetivo-principal)
 2. [Estrutura do Projeto](#2-estrutura-do-projeto)
 3. [Fluxo de Trabalho de Modificação](#3-fluxo-de-trabalho-de-modificação)
-4. [Revisão de Código](#4-revisão-de-código)
-5. [Documentação e Comentários](#5-documentação-e-comentários)
-6. [Resolução de Conflitos](#6-resolução-de-conflitos)
+4. [Scripts e Automação](#4-scripts-e-automação)
+5. [Revisão de Código](#5-revisão-de-código)
+6. [Documentação e Comentários](#6-documentação-e-comentários)
 7. [Debugging e Troubleshooting](#7-debugging-e-troubleshooting)
 8. [Princípios Gerais](#8-princípios-gerais)
 9. [Recursos Úteis](#9-recursos-úteis)
 10. [Resumo do Fluxo](#10-resumo-do-fluxo)
+11. [Manutenção deste Documento](#11-manutenção-deste-documento)
 
 ## 1. Objetivo Principal
 
-Seu objetivo é auxiliar no desenvolvimento e manutenção deste software, escrevendo código limpo, eficiente e bem documentado, além de seguir as práticas estabelecidas neste guia. Você deve atuar como um membro produtivo da equipe de engenharia.
+Seu objetivo é auxiliar no desenvolvimento e manutenção da **Monitor SAU Extension**, uma extensão para navegador que monitora tarefas no Sistema de Atendimento ao Usuário (SAU). Você deve escrever código limpo, eficiente e bem documentado, seguindo as práticas estabelecidas neste guia e atuando como um membro produtivo da equipe de engenharia.
 
 ## 2. Estrutura do Projeto
 
-Para navegar e fazer modificações de forma eficaz, é crucial que você entenda a organização dos arquivos e diretórios.
+Esta é uma **extensão para navegador** (Chrome e Firefox) com estrutura específica para Manifest V3. Entenda a organização dos arquivos:
 
 ```
-├── .github/         # Workflows de CI/CD e templates de PR/Issue
-├── dist/            # Arquivos de build (não modifique diretamente)
-├── public/          # Arquivos estáticos (imagens, fontes, etc.)
-├── src/             # Código-fonte da aplicação
-│   ├── assets/      # Ativos específicos da aplicação (CSS, imagens)
-│   ├── components/  # Componentes de UI reutilizáveis
-│   ├── services/    # Lógica de negócio, chamadas de API
-│   ├── utils/       # Funções utilitárias genéricas
-│   ├── views/       # Páginas ou views principais da aplicação
-│   └── main.js      # Ponto de entrada da aplicação
-├── tests/           # Testes automatizados
-│   ├── unit/        # Testes unitários
-│   └── e2e/         # Testes end-to-end
-├── .eslintrc.json   # Configurações do ESLint (padrão de código)
-├── .gitignore       # Arquivos e pastas ignorados pelo Git
-├── CHANGELOG.md     # Histórico de mudanças visíveis para o usuário
-├── package.json     # Dependências e scripts do projeto
-├── README.md        # Documentação principal do projeto
-└── agents.md        # Seu guia de diretrizes (este arquivo)
+├── .github/                    # CI/CD e templates
+│   ├── workflows/             # GitHub Actions
+│   └── ISSUE_TEMPLATE/        # Templates para issues
+├── .dist/                     # Arquivos de build (gerado automaticamente)
+├── scripts/                   # Scripts de automação
+│   ├── build.js              # Build para Chrome/Firefox
+│   ├── version.js            # Gerenciamento de versões
+│   ├── release.js            # Release automatizado
+│   ├── validate.js           # Validações de qualidade
+│   └── clean.js              # Limpeza de arquivos
+├── icons/                     # Ícones da extensão (16px, 48px, 128px)
+├── background.js              # Service Worker principal
+├── content.js                 # Script injetado nas páginas
+├── interceptor.js             # Interceptador de requisições
+├── popup.html/js/css          # Interface do popup
+├── options.html/js/css        # Página de configurações
+├── notification-ui.css        # Estilos para notificações visuais
+├── css-variables.css          # Variáveis CSS centralizadas
+├── logger.js                  # Sistema de logging
+├── manifest.json              # Manifest para Chrome
+├── manifest-firefox.json      # Manifest para Firefox
+├── package.json               # Dependências e scripts NPM
+├── CHANGELOG.md               # Histórico de mudanças
+├── README.md                  # Documentação principal
+├── SCRIPTS.md                 # Documentação dos scripts
+├── LICENSE                    # Licença MIT
+└── agents.md                  # Este guia
 ```
 
-**Regra de Ouro:** Sempre analise os arquivos existentes no diretório em que você está trabalhando para entender e replicar os padrões e a arquitetura local.
+**Regras Importantes:**
+- **NÃO modifique** arquivos em `.dist/` - são gerados automaticamente
+- **Sempre analise** os arquivos existentes para entender padrões
+- **Use o sistema de logging** (`logger.js`) em vez de `console.log`
+- **Mantenha compatibilidade** entre Chrome e Firefox
 
 ## 3. Fluxo de Trabalho de Modificação
 
-Siga estes passos para cada tarefa ou modificação que realizar.
-
 ### Passo 1: Entender a Tarefa
 
-Analise cuidadosamente a solicitação. Se houver ambiguidade, peça esclarecimentos antes de começar a codificar.
+Analise cuidadosamente a solicitaç��o. Para extensões de navegador, considere:
+- Compatibilidade entre Chrome e Firefox
+- Limitações do Manifest V3
+- Permissões necessárias
+- Impacto na performance
 
-### Passo 2: Codificar a Solução
+### Passo 2: Validar Ambiente
 
-Implemente a funcionalidade ou correção solicitada. Adote as seguintes boas práticas:
-
-- **Estilo de Código:** Siga rigorosamente as regras definidas no arquivo `.eslintrc.json`. Use o formatador de código (como Prettier) configurado no projeto.
-- **Clareza e Simplicidade:** Escreva um código legível e de fácil manutenção. Prefira soluções claras a soluções excessivamente complexas.
-- **Não Repita Código (DRY):** Crie funções ou componentes reutilizáveis sempre que identificar lógica duplicada.
-- **Testes:** Para novas funcionalidades, crie testes unitários correspondentes no diretório `tests/unit/`. Para correções de bugs, adicione um teste que falharia sem a sua correção e passaria com ela.
-
-### Passo 3: Atualizar o CHANGELOG
-
-O arquivo `CHANGELOG.md` segue o padrão Keep a Changelog.
-
-Antes de finalizar seu trabalho, você **deve** adicionar uma entrada na seção `[Unreleased]`.
-
-- Use `Added` para novas funcionalidades.
-- Use `Changed` para alterações em funcionalidades existentes.
-- Use `Fixed` para correções de bugs.
-- Use `Removed` para funcionalidades removidas.
-
-**Exemplo de atualização no `CHANGELOG.md`:**
-
-```markdown
-## [Unreleased]
-
-### Fixed
-
-- Corrigido o cálculo de impostos no checkout que não considerava descontos.
-
-### Added
-
-- Adicionado login social com a conta do Google.
+Antes de começar, execute:
+```bash
+npm run validate  # Verifica qualidade e segurança
 ```
 
-### Passo 4: Gerar Mensagens de Commit
+### Passo 3: Codificar a Solução
 
-Suas mensagens de commit **devem** seguir o padrão **Conventional Commits**. Isso é essencial para a automação do versionamento e a clareza do histórico.
+Adote as seguintes práticas específicas para extensões:
 
-**Formato:** `tipo(escopo): descrição curta`
+- **APIs de Extensão:** Use `(globalThis.browser || globalThis.chrome)` para compatibilidade
+- **Logging:** Use o sistema `logger.js` em vez de `console.log`
+- **Segurança:** Evite `eval()`, `innerHTML` sem sanitização
+- **Performance:** Minimize o tamanho dos arquivos
+- **Manifests:** Mantenha sincronizados `manifest.json` e `manifest-firefox.json`
 
-- **`tipo`**:
+**Exemplo de código compatível:**
+```javascript
+// ✅ Correto - compatível com Chrome e Firefox
+const browserAPI = globalThis.browser || globalThis.chrome;
+await browserAPI.storage.local.set({ key: value });
 
-  - `feat`: Uma nova funcionalidade (corresponde a `Added` no CHANGELOG).
-  - `fix`: Uma correção de bug (corresponde a `Fixed` no CHANGELOG).
-  - `docs`: Alterações apenas na documentação.
-  - `style`: Alterações de formatação, sem impacto no código.
-  - `refactor`: Refatoração de código que não corrige bug nem adiciona funcionalidade.
-  - `test`: Adição ou correção de testes.
-  - `chore`: Manutenção do build, dependências, etc.
+// ✅ Correto - usando sistema de logging
+import { logger } from './logger.js';
+const myLogger = logger('[MyModule]');
+myLogger.info('Operação realizada com sucesso');
 
-- **`escopo`** (opcional): O módulo/componente afetado (ex: `auth`, `payment`, `ui`).
+// ❌ Incorreto - apenas Chrome
+chrome.storage.local.set({ key: value });
 
-- **`descrição`**: Um resumo conciso da mudança, em letra minúscula.
-
-**Exemplos de boas mensagens de commit:**
-
-```
-feat(auth): adicionar funcionalidade de login com google
-fix(api): corrigir tratamento de erro para status 500
-docs(readme): atualizar instruções de instalação
-refactor(services): otimizar consulta de dados do usuário
-test(components): adicionar testes para o componente de modal
-chore(deps): atualizar versão do vue para 3.2.1
+// ❌ Incorreto - logging direto
+console.log('Debug info');
 ```
 
-## 4. Revisão de Código
+### Passo 4: Testar com Scripts
 
-A revisão de código é fundamental para manter a qualidade e consistência do projeto.
+Use os scripts automatizados:
+```bash
+npm run build          # Build para ambos navegadores
+npm run build:chrome   # Build apenas Chrome
+npm run build:firefox  # Build apenas Firefox
+npm run validate       # Validar qualidade
+```
 
-### Autoavaliação
+### Passo 5: Atualizar Documentação
 
-Antes de submeter qualquer código, faça uma autoavaliação:
+- **CHANGELOG.md:** Adicione entrada na seção `[Unreleased]`
+- **README.md:** Atualize se necessário
+- **Comentários:** Documente código complexo
+- **agents.md:** Atualize se mudou estrutura/fluxos
 
-- **Funcionalidade:** O código faz exatamente o que foi solicitado?
-- **Legibilidade:** Outro desenvolvedor conseguiria entender facilmente?
-- **Performance:** Existem gargalos óbvios ou ineficiências?
-- **Segurança:** O código está protegido contra vulnerabilidades comuns?
-- **Testes:** A cobertura de testes é adequada?
+### Passo 6: Versionamento e Commit
 
-### Revisão Colaborativa
+```bash
+# Para mudanças pequenas (bugfixes)
+npm run version:patch
 
-- Sempre solicite revisão de outros agentes ou membros da equipe
-- Seja receptivo a feedback e sugestões de melhoria
-- Forneça feedback construtivo quando revisar código de outros
-- Use comentários específicos e sugestões práticas
+# Para novas funcionalidades
+npm run version:minor
 
-## 5. Documentação e Comentários
+# Para mudanças breaking
+npm run version:major
 
-### Comentários no Código
+# Commit seguindo Conventional Commits
+git add .
+git commit -m "feat(popup): adicionar dropdown de snooze configurável"
+```
 
-- **Quando comentar:** Explique o "porquê", não o "como"
-- **Funções complexas:** Documente algoritmos não triviais
-- **APIs públicas:** Use JSDoc para documentar interfaces públicas
-- **Decisões de design:** Explique escolhas arquiteturais importantes
+## 4. Scripts e Automação
 
-**Exemplo de boa documentação:**
+Este projeto possui scripts robustos para automação. **Use-os sempre:**
+
+### Scripts de Build
+```bash
+npm run build          # Build completo (Chrome + Firefox)
+npm run build:chrome   # Apenas Chrome
+npm run build:firefox  # Apenas Firefox
+npm run clean          # Limpar arquivos temporários
+```
+
+### Scripts de Qualidade
+```bash
+npm run validate       # Validações completas
+npm run validate -- --fix  # Corrigir problemas automaticamente
+```
+
+### Scripts de Versionamento
+```bash
+npm run version:patch  # 1.0.0 → 1.0.1
+npm run version:minor  # 1.0.0 → 1.1.0
+npm run version:major  # 1.0.0 → 2.0.0
+node scripts/version.js info  # Mostrar versões atuais
+```
+
+### Scripts de Release
+```bash
+npm run release        # Release completo no GitHub
+npm run release -- -y  # Release sem confirmação
+```
+
+**Importante:** Os scripts incluem validações de segurança e verificações de qualidade. Não os contorne.
+
+## 5. Revisão de Código
+
+### Autoavaliação Específica para Extensões
+
+Antes de submeter código, verifique:
+
+- **Compatibilidade:** Funciona em Chrome E Firefox?
+- **Permissões:** Usa apenas permissões necessárias?
+- **Performance:** Não bloqueia a UI do navegador?
+- **Segurança:** Não introduz vulnerabilidades?
+- **Manifests:** Estão sincronizados?
+- **Build:** Scripts de build passam sem erros?
+
+### Checklist de Extensão
+- [ ] Testado em Chrome e Firefox
+- [ ] Manifests sincronizados
+- [ ] Logging usando `logger.js`
+- [ ] APIs compatíveis (`browserAPI`)
+- [ ] Sem `console.log` em produção
+- [ ] Validações de segurança passam
+- [ ] Build gera ZIPs válidos
+
+## 6. Documentação e Comentários
+
+### Comentários Específicos para Extensões
 
 ```javascript
 /**
- * Calcula o desconto aplicável baseado no histórico do cliente
- * Usa algoritmo de fidelidade que considera compras dos últimos 12 meses
- * @param {Object} customer - Dados do cliente
- * @param {number} orderValue - Valor do pedido atual
- * @returns {number} Percentual de desconto (0-100)
+ * Injeta content script na aba ativa do SAU
+ * Compatível com Manifest V3 (Chrome/Firefox)
+ * @param {number} tabId - ID da aba
+ * @param {string} scriptPath - Caminho do script
  */
-function calculateLoyaltyDiscount(customer, orderValue) {
-  // Implementação...
+async function injectScript(tabId, scriptPath) {
+  const browserAPI = globalThis.browser || globalThis.chrome;
+  
+  try {
+    await browserAPI.scripting.executeScript({
+      target: { tabId },
+      files: [scriptPath]
+    });
+  } catch (error) {
+    // Aba pode ter sido fechada ou não ter permissão
+    logger.warn(`Falha ao injetar script: ${error.message}`);
+  }
 }
 ```
 
-### Manutenção da Documentação
+### Documentação de APIs
 
-- Mantenha o README.md atualizado com mudanças significativas
-- Atualize comentários quando modificar o código
-- Documente APIs e interfaces públicas
-- Inclua exemplos de uso quando apropriado
-
-## 6. Resolução de Conflitos
-
-### Conflitos de Merge
-
-Quando encontrar conflitos de merge:
-
-1. **Analise cuidadosamente** as diferenças entre as versões
-2. **Comunique-se** com outros desenvolvedores se necessário
-3. **Teste thoroughly** após resolver conflitos
-4. **Documente** decisões complexas de resolução
-
-### Dependências entre Tarefas
-
-- **Identifique dependências** antes de começar a trabalhar
-- **Coordene** com outros agentes trabalhando em tarefas relacionadas
-- **Use branches** apropriadas para isolar trabalho em progresso
-- **Comunique** mudanças que podem afetar outras tarefas
+Para funções que interagem com APIs de extensão, documente:
+- Permissões necessárias
+- Compatibilidade de navegadores
+- Tratamento de erros
+- Limitações do Manifest V3
 
 ## 7. Debugging e Troubleshooting
 
-### Estratégias de Debug
+### Ferramentas Específicas
 
-- **Logs estruturados:** Use console.log/console.error de forma estratégica
-- **Ferramentas de debug:** Aproveite debuggers do navegador/IDE
-- **Testes isolados:** Crie testes específicos para reproduzir bugs
-- **Documentação de bugs:** Registre passos para reprodução
+- **Chrome DevTools:** `chrome://extensions/` → Developer mode
+- **Firefox DevTools:** `about:debugging` → This Firefox
+- **Logs da Extensão:** Use `npm run validate` para verificar problemas
+- **Build Debug:** Execute scripts com `DEBUG=1 npm run build`
 
-### Resolução de Problemas
+### Problemas Comuns
 
-- **Analise logs** de erro cuidadosamente
-- **Reproduza** o problema de forma consistente
-- **Isole** a causa raiz antes de implementar correções
-- **Valide** que a correção resolve o problema sem criar novos
+1. **Manifest V3 Limitations:**
+   - Service Workers em vez de background pages
+   - Sem `eval()` ou código inline
+   - APIs assíncronas obrigatórias
+
+2. **Compatibilidade Chrome/Firefox:**
+   - Use `browserAPI` wrapper
+   - Teste em ambos navegadores
+   - Verifique diferenças de API
+
+3. **Permissões:**
+   - Declare todas as permissões necessárias
+   - Use `host_permissions` para sites específicos
+   - Evite permissões amplas como `<all_urls>`
 
 ## 8. Princípios Gerais
 
-1. **Autonomia com Responsabilidade:** Você tem autonomia para tomar decisões de implementação, mas é responsável por seguir as diretrizes e garantir a qualidade do seu código.
-2. **Segurança em Primeiro Lugar:** Esteja atento a possíveis vulnerabilidades de segurança (XSS, CSRF, etc.) e escreva código defensivo.
-3. **Comunicação é Chave:** Ao criar um Pull Request (PR), forneça uma descrição clara das alterações realizadas. Se uma tarefa for muito complexa, divida-a em commits menores e lógicos.
-4. **Qualidade sobre Velocidade:** Prefira código bem feito a código rápido. A manutenibilidade é crucial.
-5. **Aprendizado Contínuo:** Mantenha-se atualizado com as melhores práticas e tecnologias do projeto.
+1. **Compatibilidade Primeiro:** Sempre considere Chrome E Firefox
+2. **Segurança Rigorosa:** Extensões têm acesso privilegiado
+3. **Performance Crítica:** Não impacte a experiência do usuário
+4. **Automação Obrigatória:** Use os scripts fornecidos
+5. **Documentação Viva:** Mantenha documentos atualizados
 
 ## 9. Recursos Úteis
 
-### Documentação Oficial
+### Documentação de Extensões
+- [Chrome Extension Manifest V3](https://developer.chrome.com/docs/extensions/mv3/)
+- [Firefox WebExtensions](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions)
+- [Browser Extension APIs](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API)
 
-- [Conventional Commits](https://www.conventionalcommits.org/) - Padrão para mensagens de commit
-- [Keep a Changelog](https://keepachangelog.com/) - Formato para CHANGELOG.md
-- [ESLint](https://eslint.org/) - Ferramenta de linting para JavaScript
-- [Prettier](https://prettier.io/) - Formatador de código
-- [Jest](https://jestjs.io/) - Framework de testes JavaScript
+### Ferramentas do Projeto
+- [Conventional Commits](https://www.conventionalcommits.org/)
+- [Keep a Changelog](https://keepachangelog.com/)
+- [Semantic Versioning](https://semver.org/)
+- [GitHub CLI](https://cli.github.com/)
 
-### Ferramentas de Desenvolvimento
-
-- **Git:** Sistema de controle de versão
-- **Node.js:** Runtime JavaScript
-- **npm/yarn:** Gerenciadores de pacotes
-- **VS Code:** Editor recomendado com extensões úteis
-
-### Boas Práticas
-
-- [Clean Code](https://blog.cleancoder.com/) - Princípios de código limpo
-- [SOLID Principles](https://en.wikipedia.org/wiki/SOLID) - Princípios de design de software
-- [JavaScript Best Practices](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide) - Guia MDN
+### Validação e Qualidade
+- Scripts de validação personalizados
+- GitHub Actions para CI/CD
+- Verificações de segurança automatizadas
 
 ## 10. Resumo do Fluxo
 
 ### Para Cada Tarefa
 
-1. **Analisar** a tarefa e suas dependências
-2. **Planejar** a implementação
-3. **Codificar** a solução seguindo as boas práticas
-4. **Documentar** código complexo com comentários
-5. **Escrever/Atualizar** os testes
-6. **Fazer autoavaliação** do código
-7. **Atualizar** o `CHANGELOG.md`
-8. **Commitar** usando Conventional Commits
-9. **Solicitar revisão** de código
-10. **Submeter** Pull Request com descrição clara
+1. **Validar ambiente:** `npm run validate`
+2. **Analisar** compatibilidade Chrome/Firefox
+3. **Codificar** usando padrões da extensão
+4. **Testar** com `npm run build`
+5. **Documentar** mudanças no CHANGELOG
+6. **Versionar** com scripts NPM
+7. **Commitar** usando Conventional Commits
+8. **Revisar** checklist de extensão
+9. **Release** com `npm run release`
 
-### Checklist Pré-Commit
+### Checklist Pré-Commit para Extensões
 
-- [ ] Código segue padrões do ESLint
-- [ ] Testes passam e cobertura é adequada
-- [ ] Documentação está atualizada
-- [ ] CHANGELOG.md foi atualizado
+- [ ] `npm run validate` passa sem erros
+- [ ] Testado em Chrome e Firefox
+- [ ] Manifests sincronizados
+- [ ] CHANGELOG.md atualizado
+- [ ] Logging usando `logger.js`
+- [ ] APIs compatíveis (`browserAPI`)
 - [ ] Commit message segue Conventional Commits
-- [ ] Autoavaliação foi realizada
+- [ ] Build gera ZIPs válidos
+- [ ] Documentação atualizada se necessário
+
+## 11. Manutenção deste Documento
+
+### Quando Atualizar
+
+Este documento **DEVE** ser atualizado quando:
+
+- ✅ **Estrutura do projeto muda** (novos diretórios, arquivos importantes)
+- ✅ **Novos scripts são adicionados** ou modificados
+- ✅ **Fluxo de trabalho muda** (novos passos, ferramentas)
+- ✅ **Novas ferramentas são introduzidas** (linters, validators)
+- ✅ **Padrões de código mudam** (convenções, APIs)
+- ✅ **Processo de release muda** (versionamento, CI/CD)
+
+### Como Atualizar
+
+1. **Identifique a mudança:** O que mudou no projeto?
+2. **Localize seções afetadas:** Quais partes do guia precisam atualização?
+3. **Atualize o conteúdo:** Mantenha consistência e clareza
+4. **Teste as instruções:** Verifique se os exemplos funcionam
+5. **Commit a mudança:** Use `docs(agents): atualizar guia com [mudança]`
+
+### Responsabilidade
+
+- **Desenvolvedores:** Ao fazer mudanças estruturais, verifique se este guia precisa atualização
+- **Agentes IA:** Ao encontrar inconsistências, sinalize ou corrija
+- **Revisores:** Incluam verificação deste documento em reviews significativos
+
+### Exemplo de Atualização
+
+```bash
+# Após adicionar novo script ou ferramenta
+git add agents.md
+git commit -m "docs(agents): adicionar instruções para novo script de deploy"
+```
 
 ---
 
-**Lembre-se:** A qualidade do código é responsabilidade de todos. Sua adesão a estas diretrizes é vital para o sucesso do projeto e para manter um ambiente de desenvolvimento produtivo e colaborativo.
+**Lembre-se:** Este guia é um documento vivo. Sua precisão e utilidade dependem de mantê-lo atualizado com a evolução do projeto. A qualidade do código e a eficiência da equipe dependem de seguir e manter estas diretrizes.
+
+**Última atualização:** 2025-01-23 - Adicionados scripts de automação e fluxos específicos para extensões de navegador.
 
 Obrigado por sua contribuição!

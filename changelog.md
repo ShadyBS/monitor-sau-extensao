@@ -13,6 +13,12 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - Opção de tempo personalizado com inputs separados para horas e minutos
 - Configuração de opções de snooze na página de configurações
 - Possibilidade de adicionar/remover opções de tempo personalizadas
+- Scripts automatizados de build para Chrome e Firefox
+- Sistema de versionamento automático com SemVer
+- Scripts de release automatizado para GitHub
+- Validações de segurança e qualidade de código
+- Pipeline de CI/CD com GitHub Actions
+- Templates para issues e pull requests
 
 ### Changed
 - Popup agora exibe informações das tarefas baseado nas configurações do usuário
@@ -20,6 +26,7 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - Melhor organização e consistência visual em todos os componentes
 - Sistema de "Lembrar Mais Tarde" agora permite configuração por tarefa individual
 - Interface do snooze substituída por dropdown com múltiplas opções
+- Processo de build e release completamente automatizado
 
 [1.0] - 2025-07-23
 Adicionado
