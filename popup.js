@@ -1,13 +1,14 @@
 // Importa o logger e o instancia para o contexto do popup
 import { logger } from "./logger.js";
 import { createSafeTaskElement, sanitizeTaskData, safelyPopulateContainer, createSafeElement, setSafeTextContent } from "./sanitizer.js";
+import { tooltipSystem } from "./tooltip-system.js";
 const popupLogger = logger("[Popup]");
 
 // Define o objeto de API do navegador de forma compatível (Chrome ou Firefox)
 const browserAPI = globalThis.browser || globalThis.chrome;
 
 // Adiciona um listener para quando o DOM estiver completamente carregado
-document.addEventListener("DOMContentLoaded", loadPopupData);
+document.addEventListener("DOMContentLoaded", initializePopup);
 
 // Adiciona um listener de clique para abrir a página de opções
 document.getElementById("openOptions").addEventListener("click", () => {
@@ -423,6 +424,330 @@ function closeSnoozeDropdownOnOutsideClick(event) {
   }
 }
 
+/**
+ * Inicializa o popup com todas as funcionalidades
+ */
+async function initializePopup() {
+  popupLogger.info("Inicializando popup...");
+  
+  // Carrega dados do popup
+  await loadPopupData();
+  
+  // Configura sistema de ajuda
+  setupHelpSystem();
+  
+  // Verifica se deve mostrar ajuda para novos usuários
+  await checkFirstTimeUser();
+}
+
+/**
+ * Configura o sistema de ajuda do popup
+ */
+function setupHelpSystem() {
+  // Botão principal de ajuda
+  const helpButton = document.getElementById('helpButton');
+  if (helpButton) {
+    helpButton.addEventListener('click', openHelpPage);
+    
+    // Adiciona tooltip ao botão de ajuda
+    tooltipSystem.addTooltip(helpButton, {
+      title: '🎯 Central de Ajuda',
+      content: 'Clique para abrir o guia completo da extensão com tutoriais, configurações e solução de problemas.',
+      tip: 'Ideal para novos usuários ou quando precisar de ajuda específica',
+      position: 'bottom',
+      trigger: 'hover'
+    });
+  }
+  
+  // Adiciona tooltips aos botões principais
+  const configButton = document.getElementById('openOptions');
+  if (configButton) {
+    tooltipSystem.addTooltip(configButton, {
+      title: '⚙️ Configurações',
+      content: 'Configure suas credenciais do SAU, intervalos de verificação, opções de notificação e personalização da interface.',
+      position: 'top',
+      trigger: 'hover'
+    });
+  }
+  
+  const refreshButton = document.getElementById('refreshTasks');
+  if (refreshButton) {
+    tooltipSystem.addTooltip(refreshButton, {
+      title: '🔄 Atualizar Agora',
+      content: 'Força uma verificação imediata por novas tarefas no SAU, ignorando o intervalo configurado.',
+      position: 'top',
+      trigger: 'hover'
+    });
+  }
+  
+  // Configura botões da ajuda contextual
+  const startTourButton = document.getElementById('startQuickTour');
+  if (startTourButton) {
+    startTourButton.addEventListener('click', startQuickTour);
+  }
+  
+  const dismissHelpButton = document.getElementById('dismissFirstTimeHelp');
+  if (dismissHelpButton) {
+    dismissHelpButton.addEventListener('click', dismissFirstTimeHelp);
+  }
+}
+
+/**
+ * Verifica se é a primeira vez do usuário
+ */
+async function checkFirstTimeUser() {
+  try {
+    const data = await browserAPI.storage.local.get([
+      'helpTourCompleted', 
+      'firstTimeUser', 
+      'helpDismissed',
+      'username' // Verifica se já configurou credenciais
+    ]);
+    
+    // Se é primeira vez, não fez tour, não dispensou ajuda e não tem credenciais
+    const isFirstTime = data.firstTimeUser !== false;
+    const hasCredentials = data.username && data.username.trim() !== '';
+    const tourCompleted = data.helpTourCompleted === true;
+    const helpDismissed = data.helpDismissed === true;
+    
+    if (isFirstTime && !hasCredentials && !tourCompleted && !helpDismissed) {
+      showFirstTimeHelp();
+    }
+  } catch (error) {
+    popupLogger.error("Erro ao verificar status de primeiro uso:", error);
+  }
+}
+
+/**
+ * Mostra ajuda para novos usuários
+ */
+function showFirstTimeHelp() {
+  const helpElement = document.getElementById('firstTimeHelp');
+  if (helpElement) {
+    helpElement.style.display = 'block';
+    popupLogger.info("Ajuda para novos usuários exibida");
+  }
+}
+
+/**
+ * Inicia tour rápido
+ */
+async function startQuickTour() {
+  popupLogger.info("Iniciando tour rápido do popup");
+  
+  // Esconde a ajuda contextual
+  dismissFirstTimeHelp();
+  
+  // Define passos do tour rápido
+  const tourSteps = [
+    {
+      element: '.popup-header h1',
+      title: '🚀 Monitor SAU',
+      content: 'Esta é a interface principal da extensão. Aqui você vê suas tarefas novas e pode gerenciá-las.',
+      position: 'bottom'
+    },
+    {
+      element: '#helpButton',
+      title: '❓ Botão de Ajuda',
+      content: 'Clique aqui sempre que precisar de ajuda. Abre um guia completo com todas as funcionalidades.',
+      position: 'bottom'
+    },
+    {
+      element: '#status-message',
+      title: '📊 Status da Extensão',
+      content: 'Aqui você vê o status atual: se está verificando tarefas, quando foi a última verificação, etc.',
+      position: 'bottom'
+    },
+    {
+      element: '#tasks-list',
+      title: '📋 Lista de Tarefas',
+      content: 'Suas tarefas novas aparecem aqui. Você pode abrir, ignorar, ver detalhes ou adiar cada tarefa.',
+      position: 'top'
+    },
+    {
+      element: '#openOptions',
+      title: '⚙️ Configurações',
+      content: 'IMPORTANTE: Configure suas credenciais do SAU aqui para a extensão funcionar.',
+      position: 'top'
+    },
+    {
+      element: '#refreshTasks',
+      title: '🔄 Atualizar',
+      content: 'Use este botão para verificar tarefas imediatamente, sem esperar o intervalo automático.',
+      position: 'top'
+    }
+  ];
+  
+  // Inicia o tour usando o sistema de tooltips
+  runQuickTour(tourSteps);
+}
+
+/**
+ * Executa o tour rápido
+ */
+function runQuickTour(steps) {
+  let currentStep = 0;
+  
+  function showStep(stepIndex) {
+    if (stepIndex >= steps.length) {
+      completeTour();
+      return;
+    }
+    
+    const step = steps[stepIndex];
+    const element = document.querySelector(step.element);
+    
+    if (!element) {
+      popupLogger.warn(`Elemento não encontrado para o passo ${stepIndex}: ${step.element}`);
+      showStep(stepIndex + 1);
+      return;
+    }
+    
+    // Remove tooltip anterior
+    tooltipSystem.hideTooltip();
+    
+    // Cria tooltip especial para o tour
+    const tourTooltip = {
+      title: step.title,
+      content: step.content + `<br><br><div style="text-align: center; margin-top: 10px;">
+        ${stepIndex > 0 ? '<button onclick="tourPrev()" style="margin-right: 8px; padding: 4px 8px; border: none; border-radius: 4px; background: #ccc; cursor: pointer;">← Anterior</button>' : ''}
+        <button onclick="tourSkip()" style="margin-right: 8px; padding: 4px 8px; border: none; border-radius: 4px; background: #f44336; color: white; cursor: pointer;">Pular</button>
+        <button onclick="tourNext()" style="padding: 4px 8px; border: none; border-radius: 4px; background: #2196f3; color: white; cursor: pointer;">
+          ${stepIndex === steps.length - 1 ? 'Finalizar' : 'Próximo →'}
+        </button>
+        <br><small style="color: #666; margin-top: 5px; display: block;">${stepIndex + 1} de ${steps.length}</small>
+      </div>`,
+      position: step.position,
+      trigger: 'manual'
+    };
+    
+    tooltipSystem.addTooltip(element, tourTooltip);
+    tooltipSystem.showTooltip(element);
+  }
+  
+  // Funções de controle do tour
+  window.tourNext = () => {
+    currentStep++;
+    showStep(currentStep);
+  };
+  
+  window.tourPrev = () => {
+    if (currentStep > 0) {
+      currentStep--;
+      showStep(currentStep);
+    }
+  };
+  
+  window.tourSkip = () => {
+    completeTour();
+  };
+  
+  function completeTour() {
+    tooltipSystem.hideTooltip();
+    markTourCompleted();
+    showTourCompletedMessage();
+    
+    // Limpa funções globais
+    delete window.tourNext;
+    delete window.tourPrev;
+    delete window.tourSkip;
+  }
+  
+  // Inicia o tour
+  showStep(0);
+}
+
+/**
+ * Marca o tour como completado
+ */
+async function markTourCompleted() {
+  try {
+    await browserAPI.storage.local.set({ 
+      helpTourCompleted: true,
+      firstTimeUser: false,
+      helpTourCompletedAt: new Date().toISOString()
+    });
+    popupLogger.info("Tour rápido marcado como completado");
+  } catch (error) {
+    popupLogger.error("Erro ao marcar tour como completado:", error);
+  }
+}
+
+/**
+ * Mostra mensagem de tour completado
+ */
+function showTourCompletedMessage() {
+  // Cria elemento de notificação
+  const notification = document.createElement('div');
+  notification.style.cssText = `
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    background: #4caf50;
+    color: white;
+    padding: 12px 16px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 10000;
+    font-size: 14px;
+    animation: slideInRight 0.3s ease;
+  `;
+  
+  notification.innerHTML = `
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span>🎉</span>
+      <span>Tour completado! Agora configure suas credenciais.</span>
+      <button onclick="this.parentElement.parentElement.remove()" style="background: none; border: none; color: white; cursor: pointer; font-size: 16px; margin-left: 8px;">×</button>
+    </div>
+  `;
+  
+  document.body.appendChild(notification);
+  
+  // Remove automaticamente após 5 segundos
+  setTimeout(() => {
+    if (notification.parentNode) {
+      notification.remove();
+    }
+  }, 5000);
+}
+
+/**
+ * Dispensa a ajuda para novos usuários
+ */
+async function dismissFirstTimeHelp() {
+  const helpElement = document.getElementById('firstTimeHelp');
+  if (helpElement) {
+    helpElement.style.display = 'none';
+  }
+  
+  try {
+    await browserAPI.storage.local.set({ 
+      helpDismissed: true,
+      firstTimeUser: false 
+    });
+    popupLogger.info("Ajuda para novos usuários dispensada");
+  } catch (error) {
+    popupLogger.error("Erro ao dispensar ajuda:", error);
+  }
+}
+
+/**
+ * Abre a página de ajuda completa
+ */
+function openHelpPage() {
+  popupLogger.info("Abrindo página de ajuda");
+  
+  // Abre a página de ajuda em uma nova aba
+  browserAPI.tabs.create({ 
+    url: browserAPI.runtime.getURL('help.html')
+  });
+  
+  // Fecha o popup
+  window.close();
+}
+
 // Torna as funções globais para serem acessíveis pelo onclick
 window.applyCustomSnooze = applyCustomSnooze;
 window.closeSnoozeDropdown = closeSnoozeDropdown;
+window.startQuickTour = startQuickTour;
+window.dismissFirstTimeHelp = dismissFirstTimeHelp;

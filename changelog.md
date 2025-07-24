@@ -3,6 +3,35 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 ## [Unreleased]
 
+### Added
+- **Sistema de Ajuda Completo para Novos Usuários**: Implementado sistema abrangente de ajuda e onboarding
+- **Página de Ajuda Completa** (`help.html`): Guia detalhado com seções organizadas (Primeiros Passos, Configurações, Funcionalidades, Solução de Problemas, FAQ)
+- **Sistema de Tooltips Avançado** (`tooltip-system.js`): Sistema modular para tooltips informativos e ajuda contextual
+- **Tour Guiado Interativo**: Tour passo-a-passo para novos usuários com navegação entre etapas
+- **Ajuda Contextual no Popup**: Mensagem de boas-vindas para novos usuários com botões de ação
+- **Botões de Ajuda Integrados**: Botão de ajuda principal no popup com tooltips informativos
+- **Detecção de Primeiro Uso**: Sistema inteligente que detecta novos usuários e oferece ajuda automaticamente
+- **Tour Rápido do Popup**: Tour específico da interface principal com explicações de cada elemento
+- **Sistema de Navegação por Abas**: Interface organizada na página de ajuda com navegação fluida
+- **Tooltips Informativos**: Tooltips em botões principais explicando suas funcionalidades
+- **Animações e Transições**: Interface moderna com animações suaves e feedback visual
+- **Responsividade Completa**: Design adaptativo para diferentes tamanhos de tela
+- **Integração com Sistema de Logging**: Todas as ações de ajuda são registradas para diagnóstico
+
+### Changed
+- **Interface do Popup Modernizada**: Header reorganizado com botão de ajuda integrado
+- **Melhor Experiência para Novos Usuários**: Fluxo de onboarding mais intuitivo e informativo
+- **Navegação Aprimorada**: Ícones adicionados aos botões principais para melhor identificação
+- **Sistema de Ajuda Contextual**: Ajuda específica baseada no contexto e estado do usuário
+
+### Technical Details
+- **Arquitetura Modular**: Sistema de tooltips como módulo independente e reutilizável
+- **Compatibilidade Mantida**: Todos os novos recursos seguem padrões Chrome/Firefox
+- **Segurança Preservada**: Sistema de sanitização aplicado a todos os novos elementos
+- **Performance Otimizada**: Carregamento lazy de recursos de ajuda quando necessário
+- **Persistência de Estado**: Preferências de ajuda salvas no storage local
+- **Acessibilidade**: Suporte a navegação por teclado e leitores de tela
+
 ### Fixed
 - Correção do botão "Detalhes" na popup que não estava funcionando devido a inconsistência entre ID criado e ID buscado
 - Elemento de detalhes agora usa atributo `id` em vez de `data-id` para compatibilidade com `getElementById()`

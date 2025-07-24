@@ -16,12 +16,122 @@ body {
   box-shadow: var(--shadow-medium);
 }
 
+/* Header do popup */
+.popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-lg);
+}
+
 h1 {
   color: var(--text-heading);
-  text-align: center;
-  margin-bottom: var(--spacing-lg);
+  margin: 0;
   font-size: var(--font-size-heading);
   font-weight: bold;
+  flex: 1;
+}
+
+.header-actions {
+  display: flex;
+  gap: var(--spacing-xs);
+}
+
+/* Botões de ajuda */
+.help-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: bold;
+  margin-left: var(--spacing-xs);
+  transition: all var(--transition-normal);
+  vertical-align: middle;
+}
+
+.help-button:hover {
+  background-color: var(--primary-hover);
+  transform: scale(1.1);
+}
+
+.help-button:active {
+  transform: scale(0.95);
+}
+
+.help-button.large {
+  width: 24px;
+  height: 24px;
+  font-size: 14px;
+}
+
+/* Ajuda contextual */
+.contextual-help {
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  margin: var(--spacing-md) 0;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  animation: slideDown 0.3s ease-in-out;
+}
+
+.contextual-help-title {
+  font-weight: bold;
+  color: var(--text-primary);
+  margin-bottom: var(--spacing-xs);
+  display: flex;
+  align-items: center;
+}
+
+.contextual-help-icon {
+  color: var(--primary-color);
+  margin-right: var(--spacing-xs);
+}
+
+.contextual-help p {
+  margin: var(--spacing-xs) 0;
+  line-height: 1.4;
+}
+
+/* Botões pequenos */
+.btn-primary.small,
+.btn-secondary.small {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: var(--font-size-xs);
+  border-radius: var(--radius-sm);
+  margin-right: var(--spacing-xs);
+}
+
+.btn-primary.small {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: background-color var(--transition-normal);
+}
+
+.btn-primary.small:hover {
+  background-color: var(--primary-hover);
+}
+
+.btn-secondary.small {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  transition: background-color var(--transition-normal);
+}
+
+.btn-secondary.small:hover {
+  background-color: var(--border-color);
 }
 
 #status-message {
@@ -294,6 +404,29 @@ h1 {
 
 .snooze-custom-buttons .btn-secondary:hover {
   background-color: var(--border-color);
+}
+
+/* Animações */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    max-height: 200px;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* Media Queries para responsividade */

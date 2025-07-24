@@ -8,15 +8,36 @@
   </head>
   <body>
     <div class="container">
-      <h1>Monitor SAU</h1>
+      <header class="popup-header">
+        <h1>Monitor SAU</h1>
+        <div class="header-actions">
+          <button id="helpButton" class="help-button large" title="Ajuda e Tutorial">?</button>
+        </div>
+      </header>
+      
       <p id="status-message">Verificando tarefas...</p>
+      
       <div id="tasks-list">
         <!-- As tarefas novas serão injetadas aqui -->
         <p class="no-tasks">Nenhuma tarefa nova encontrada.</p>
       </div>
+      
       <div class="actions">
-        <button id="openOptions">Configurações</button>
-        <button id="refreshTasks">Atualizar Agora</button>
+        <button id="openOptions">⚙️ Configurações</button>
+        <button id="refreshTasks">🔄 Atualizar Agora</button>
+      </div>
+      
+      <!-- Ajuda contextual para novos usuários -->
+      <div id="firstTimeHelp" class="contextual-help" style="display: none;">
+        <div class="contextual-help-title">
+          <span class="contextual-help-icon">🎯</span>
+          Primeira vez usando a extensão?
+        </div>
+        <p>Configure suas credenciais do SAU nas <strong>Configurações</strong> para começar a monitorar suas tarefas automaticamente.</p>
+        <div style="margin-top: 8px;">
+          <button id="startQuickTour" class="btn-primary small">🚀 Tour Rápido</button>
+          <button id="dismissFirstTimeHelp" class="btn-secondary small">✖️ Dispensar</button>
+        </div>
       </div>
     </div>
 
