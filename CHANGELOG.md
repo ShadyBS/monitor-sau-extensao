@@ -3,6 +3,8 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 ## [Unreleased]
 
+## [1.1.1] - 2025-07-24
+
 ### Fixed
 - Release v1.1.1 com correções críticas de popup e build da extensão
 
