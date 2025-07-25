@@ -230,20 +230,43 @@ class ReleaseManager {
       const releaseNotesFile = path.join(this.distDir, 'release-notes.md');
       await fs.writeFile(releaseNotesFile, releaseNotes, 'utf8');
       
-      // Cria release
-      let command = `gh release create v${version} --title "v${version}" --notes-file "${releaseNotesFile}"`;
-      
-      // Adiciona arquivos ZIP
-      for (const zipFile of zipFiles) {
-        command += ` "${zipFile.zipPath}"`;
+      // Verifica se o release já existe
+      let releaseExists = false;
+      try {
+        execSync(`gh release view v${version}`, { stdio: 'ignore' });
+        releaseExists = true;
+        console.log('ℹ️  Release já existe, atualizando...');
+      } catch (error) {
+        // Release não existe, será criado
       }
       
-      execSync(command, { stdio: 'inherit' });
+      if (releaseExists) {
+        // Atualiza release existente apenas com assets
+        console.log('📎 Adicionando assets ao release existente...');
+        for (const zipFile of zipFiles) {
+          try {
+            execSync(`gh release upload v${version} "${zipFile.zipPath}" --clobber`, { stdio: 'inherit' });
+          } catch (error) {
+            console.warn(`⚠️  Falha ao fazer upload de ${zipFile.zipName}: ${error.message}`);
+          }
+        }
+      } else {
+        // Cria novo release
+        console.log('🆕 Criando novo release...');
+        
+        // Primeiro cria o release sem assets para permitir que GitHub Actions também faça upload
+        let command = `gh release create v${version} --title "v${version}" --notes-file "${releaseNotesFile}"`;
+        execSync(command, { stdio: 'inherit' });
+        
+        // Opcionalmente adiciona os assets (GitHub Actions pode fazer isso também)
+        console.log('📎 Assets serão adicionados pelo GitHub Actions...');
+        console.log('   (ou execute: gh release upload v' + version + ' <arquivo>)');
+      }
       
       // Remove arquivo temporário
       await fs.unlink(releaseNotesFile);
       
-      console.log('✅ Release criado no GitHub');
+      console.log('✅ Release processado no GitHub');
       
     } catch (error) {
       throw new ReleaseError(

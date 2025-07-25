@@ -3,6 +3,19 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 ## [Unreleased]
 
+### Fixed
+- **GitHub Actions Release**: Corrigido erro "Resource not accessible by integration" ao fazer upload de assets
+- **Permissões de Workflow**: Adicionadas permissões `contents: write` para GitHub Actions
+- **Release Automation**: Melhorado script de release para compatibilidade com GitHub Actions
+- **Upload de Assets**: Criado workflow manual para upload de assets em releases existentes
+- **Compatibilidade de Release**: Release script agora cria releases sem assets, permitindo que GitHub Actions faça upload
+
+### Added
+- **Workflow Manual**: Novo workflow `upload-assets.yml` para upload manual de assets
+- **Trigger por Tag**: GitHub Actions agora executa também quando tags são criadas
+- **Verificação de Assets**: Validação automática de arquivos de build antes do upload
+- **Fallback de Release**: Múltiplas estratégias para upload de assets em caso de falha
+
 ## [1.1.1] - 2025-07-24
 
 ### Fixed

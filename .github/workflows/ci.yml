@@ -3,10 +3,16 @@ name: CI/CD Pipeline
 on:
   push:
     branches: [ main, develop ]
+    tags: [ 'v*' ]
   pull_request:
     branches: [ main ]
   release:
     types: [ published ]
+
+permissions:
+  contents: write
+  packages: write
+  pull-requests: read
 
 jobs:
   validate:
@@ -98,10 +104,10 @@ jobs:
         fi
 
   release:
-    name: Create Release
+    name: Upload Release Assets
     runs-on: ubuntu-latest
     needs: [validate, build, security-scan]
-    if: github.event_name == 'release'
+    if: github.event_name == 'release' || startsWith(github.ref, 'refs/tags/v')
     
     steps:
     - name: Checkout code
@@ -119,11 +125,38 @@ jobs:
     - name: Build extensions
       run: npm run build
       
+    - name: Get release info
+      id: release_info
+      run: |
+        if [[ "${{ github.event_name }}" == "release" ]]; then
+          echo "tag_name=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          echo "release_id=${{ github.event.release.id }}" >> $GITHUB_OUTPUT
+        else
+          # Extract tag from ref
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
+          # Get release ID from tag
+          RELEASE_ID=$(gh api repos/${{ github.repository }}/releases/tags/$TAG_NAME --jq '.id' 2>/dev/null || echo "")
+          echo "release_id=$RELEASE_ID" >> $GITHUB_OUTPUT
+        fi
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
     - name: Upload release assets
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
+        tag_name: ${{ steps.release_info.outputs.tag_name }}
         files: |
           .dist/monitor-sau-chrome.zip
           .dist/monitor-sau-firefox.zip
+        fail_on_unmatched_files: true
+        generate_release_notes: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Verify upload
+      run: |
+        echo "✅ Release assets uploaded successfully for ${{ steps.release_info.outputs.tag_name }}"
+        gh release view ${{ steps.release_info.outputs.tag_name }} --json assets --jq '.assets[].name'
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
