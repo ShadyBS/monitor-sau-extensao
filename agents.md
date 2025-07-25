@@ -17,6 +17,7 @@ Olá, agente! Este documento é o seu guia principal para entender e contribuir 
 9. [Recursos Úteis](#9-recursos-úteis)
 10. [Resumo do Fluxo](#10-resumo-do-fluxo)
 11. [Manutenção deste Documento](#11-manutenção-deste-documento)
+12. [Instruções Específicas para CHANGELOG e Commits](#12-instruções-específicas-para-changelog-e-commits)
 
 ## 1. Objetivo Principal
 
@@ -69,7 +70,7 @@ Esta é uma **extensão para navegador** (Chrome e Firefox) com estrutura espec�
 
 ### Passo 1: Entender a Tarefa
 
-Analise cuidadosamente a solicitaç��o. Para extensões de navegador, considere:
+Analise cuidadosamente a solicitação. Para extensões de navegador, considere:
 - Compatibilidade entre Chrome e Firefox
 - Limitações do Manifest V3
 - Permissões necessárias
@@ -283,7 +284,6 @@ Para funções que interagem com APIs de extensão, documente:
 
 1. **Manifest V3 Limitations:**
    - Service Workers em vez de background pages
-   - Sem `eval()` ou código inline
    - APIs assíncronas obrigatórias
 
 2. **Compatibilidade Chrome/Firefox:**
@@ -390,3 +390,143 @@ git commit -m "docs(agents): adicionar instruções para novo script de deploy"
 **Última atualização:** 2025-01-23 - Implementadas correções críticas de segurança, adicionado sistema de sanitização e atualizadas práticas de desenvolvimento seguro.
 
 Obrigado por sua contribuição!
+
+---
+
+## 12. Instruções Específicas para CHANGELOG e Commits
+
+### ⚠️ PROBLEMAS COMUNS E SOLUÇÕES
+
+#### Problema 1: Dificuldades com Edição do CHANGELOG.md
+
+**Sintomas:** Erro "Could not find exact match" ao tentar editar CHANGELOG.md
+
+**Soluções:**
+
+**Método 1 - Edição Direta (Preferido):**
+1. Leia o arquivo primeiro: `read_file CHANGELOG.md`
+2. Identifique a seção `[Unreleased]` exata
+3. Use `replace_in_file` com texto exato encontrado
+
+**Método 2 - Adição via Terminal (Fallback):**
+```bash
+# Se a edição direta falhar, use comandos echo:
+echo "" >> CHANGELOG.md
+echo "### Fixed" >> CHANGELOG.md
+echo "- **Sua Correção**: Descrição da correção implementada" >> CHANGELOG.md
+```
+
+**Método 3 - Adição no Final:**
+```bash
+# Adicione nova versão no final do arquivo
+echo "" >> CHANGELOG.md
+echo "## [1.x.x] - $(date +%Y-%m-%d)" >> CHANGELOG.md
+echo "" >> CHANGELOG.md
+echo "### Fixed" >> CHANGELOG.md
+echo "- **Sua Correção**: Descrição detalhada" >> CHANGELOG.md
+```
+
+#### Problema 2: Não Realização de Commit ao Final
+
+**⚠️ CRÍTICO:** SEMPRE finalize a tarefa com commit. Nunca deixe mudanças sem commit.
+
+**Sequência Obrigatória:**
+
+1. **Verificar Status:**
+```bash
+git status  # Veja quais arquivos foram modificados
+```
+
+2. **Adicionar Arquivos:**
+```bash
+git add .  # Adiciona todos os arquivos modificados
+# OU específicos:
+git add background.js CHANGELOG.md
+```
+
+3. **Commit com Conventional Commits:**
+```bash
+# Para correções de bugs:
+git commit -m "fix(background): corrigir múltiplas abas de login sem credenciais"
+
+# Para novas funcionalidades:
+git commit -m "feat(popup): adicionar dropdown de snooze configurável"
+
+# Para documentação:
+git commit -m "docs(changelog): atualizar com correções de login"
+```
+
+### Categorias do CHANGELOG
+
+**Use sempre estas categorias:**
+- `### Added` - Novas funcionalidades
+- `### Changed` - Mudanças em funcionalidades existentes  
+- `### Fixed` - Correções de bugs
+- `### Removed` - Funcionalidades removidas
+- `### Security` - Correções de segurança
+
+### Tipos de Commit Mais Comuns
+
+- `fix`: Correção de bug
+- `feat`: Nova funcionalidade
+- `docs`: Mudanças na documentação
+- `refactor`: Refatoração de código
+- `chore`: Tarefas de manutenção
+- `style`: Formatação, espaços em branco
+
+### Escopos Comuns
+
+- `background`: Service Worker
+- `popup`: Interface do popup
+- `content`: Content script
+- `options`: Página de configurações
+- `build`: Scripts de build
+- `security`: Correções de segurança
+
+### Exemplo Completo de Finalização
+
+```bash
+# 1. Verificar mudanças
+git status
+
+# 2. Adicionar arquivos
+git add background.js CHANGELOG.md
+
+# 3. Commit
+git commit -m "fix(background): implementar cooldown para evitar múltiplas abas de login"
+
+# 4. Versionamento (se necessário)
+npm run version:patch
+
+# 5. Validação final
+npm run validate
+npm run build
+```
+
+### Checklist Final Obrigatório
+
+**ANTES de finalizar qualquer tarefa, verifique:**
+
+- [ ] Código implementado e testado
+- [ ] `npm run validate` passa sem erros
+- [ ] `npm run build` executa com sucesso
+- [ ] CHANGELOG.md atualizado (use fallback se necessário)
+- [ ] `git status` verificado
+- [ ] `git add .` executado
+- [ ] `git commit -m "tipo(escopo): descrição"` executado
+- [ ] Versionamento feito se necessário (`npm run version:patch/minor/major`)
+
+**⚠️ NUNCA deixe uma tarefa sem commit final!**
+
+### Exemplo de Mensagens de Commit para Esta Tarefa
+
+```bash
+# Commit principal da correção
+git commit -m "fix(background): implementar cooldown para evitar múltiplas abas de login sem credenciais"
+
+# Commit da documentação
+git commit -m "docs(agents): adicionar instruções específicas para CHANGELOG e commits"
+
+# Commit do changelog
+git commit -m "docs(changelog): documentar correção de múltiplas abas de login"
+```

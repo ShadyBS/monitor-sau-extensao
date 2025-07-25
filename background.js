@@ -21,6 +21,8 @@ let snoozedTasks = {}; // { taskId: timestampWhenToNotifyAgain } - Tarefas "lemb
 let openedTasks = {}; // { taskId: true } - Tarefas que o usuário abriu e não devem mais ser notificadas
 let lastCheckTimestamp = 0; // Último timestamp da verificação de tarefas
 let taskNotificationTimestamps = {}; // { taskId: lastNotificationTimestamp } - Controla renotificações
+let lastLoginTabOpenedTimestamp = 0; // Timestamp da última vez que uma aba de login foi aberta
+let loginTabId = null; // ID da aba de login atualmente aberta (se houver)
 
 /**
  * Carrega os dados persistentes do armazenamento local do Chrome.
@@ -405,6 +407,35 @@ async function checkAndNotifyNewTasks() {
 }
 
 /**
+ * Verifica se já existe uma aba de login do SAU aberta
+ * @returns {Promise<boolean>} - True se existe uma aba de login aberta
+ */
+async function checkForExistingLoginTab() {
+  try {
+    const tabs = await browserAPI.tabs.query({
+      url: SAU_LOGIN_URL + "*"
+    });
+    
+    // Verifica se alguma das abas encontradas ainda está válida
+    for (const tab of tabs) {
+      try {
+        // Tenta acessar a aba para verificar se ainda existe
+        await browserAPI.tabs.get(tab.id);
+        backgroundLogger.debug(`Aba de login existente encontrada: ${tab.id}`);
+        return true;
+      } catch (error) {
+        // Aba foi fechada, continua verificando outras
+        backgroundLogger.debug(`Aba de login ${tab.id} não existe mais`);
+      }
+    }
+    return false;
+  } catch (error) {
+    backgroundLogger.error("Erro ao verificar abas de login existentes:", error);
+    return false;
+  }
+}
+
+/**
  * Tenta realizar o login automático no SAU usando as credenciais salvas.
  * Abre uma nova aba para a página de login e injeta um script para preencher e submeter o formulário.
  */
@@ -416,20 +447,51 @@ async function performAutomaticLogin() {
   const username = data.sauUsername;
   const password = data.sauPassword;
 
-  // Se as credenciais não estiverem salvas, notifica o usuário
+  // Se as credenciais não estiverem salvas, verifica se deve abrir uma nova aba
   if (!username || !password) {
     backgroundLogger.warn(
       "Credenciais de login não encontradas. Login automático não será realizado."
     );
-    browserAPI.notifications.create({
-      type: "basic",
-      iconUrl: "icons/icon48.png",
-      title: "Monitor SAU: Login Necessário",
-      message:
-        "Credenciais não configuradas. Por favor, acesse as opções da extensão para configurar o login automático.",
-    });
-    // Abre a página de login para que o usuário possa fazer o login manualmente
-    browserAPI.tabs.create({ url: SAU_LOGIN_URL, active: true }); // Mantém ativa para intervenção manual
+    
+    const now = Date.now();
+    const timeSinceLastLoginTab = now - lastLoginTabOpenedTimestamp;
+    const LOGIN_TAB_COOLDOWN = 5 * 60 * 1000; // 5 minutos em millisegundos
+    
+    // Verifica se já existe uma aba de login aberta
+    const hasExistingLoginTab = await checkForExistingLoginTab();
+    
+    // Só abre uma nova aba se:
+    // 1. Não há aba de login existente E
+    // 2. Passou tempo suficiente desde a última aba aberta (cooldown)
+    if (!hasExistingLoginTab && timeSinceLastLoginTab > LOGIN_TAB_COOLDOWN) {
+      backgroundLogger.info("Abrindo nova aba de login para configuração manual de credenciais");
+      
+      // Cria notificação apenas na primeira vez ou após o cooldown
+      browserAPI.notifications.create({
+        type: "basic",
+        iconUrl: "icons/icon48.png",
+        title: "Monitor SAU: Login Necessário",
+        message:
+          "Credenciais não configuradas. Por favor, acesse as opções da extensão para configurar o login automático.",
+      });
+      
+      // Abre a página de login para que o usuário possa fazer o login manualmente
+      const loginTab = await browserAPI.tabs.create({ 
+        url: SAU_LOGIN_URL, 
+        active: false // Abre em segundo plano para não interromper o usuário
+      });
+      
+      // Atualiza o timestamp e ID da última aba de login aberta
+      lastLoginTabOpenedTimestamp = now;
+      loginTabId = loginTab.id;
+      
+      backgroundLogger.info(`Nova aba de login criada: ${loginTab.id} (em segundo plano)`);
+    } else if (hasExistingLoginTab) {
+      backgroundLogger.debug("Aba de login já existe, não abrindo nova aba");
+    } else {
+      backgroundLogger.debug(`Cooldown ativo: ${Math.round((LOGIN_TAB_COOLDOWN - timeSinceLastLoginTab) / 1000)}s restantes`);
+    }
+    
     return;
   }
 
@@ -766,6 +828,17 @@ browserAPI.webNavigation.onCompleted.addListener(
   },
   { url: [{ urlMatches: "https://egov.santos.sp.gov.br/sau/*" }] }
 ); // Filtra para URLs do SAU
+
+/**
+ * Listener para quando abas são removidas/fechadas.
+ * Limpa o estado das abas de login quando elas são fechadas.
+ */
+browserAPI.tabs.onRemoved.addListener((tabId) => {
+  if (tabId === loginTabId) {
+    backgroundLogger.debug(`Aba de login ${tabId} foi fechada, limpando estado`);
+    loginTabId = null;
+  }
+});
 
 /**
  * Função de inicialização do Service Worker.

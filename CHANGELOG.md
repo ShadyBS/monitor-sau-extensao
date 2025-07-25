@@ -59,3 +59,10 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 ### Changed
 - **Experiência do Usuário**: Completamente redesenhada para novos usuários
 - **Arquitetura Modular**: Sistema extensível e bem documentado
+## [1.1.2] - 2025-01-23
+
+### Fixed
+- **Múltiplas Abas de Login**: Corrigido problema crítico onde extensão abria nova aba do SAU a cada verificação quando usuário não tinha credenciais salvas
+- **Cooldown de Login**: Implementado sistema de cooldown de 5 minutos para evitar spam de abas de login
+- **Verificação de Abas Existentes**: Extensão agora verifica se já existe aba de login aberta antes de criar nova
+- **Login em Segundo Plano**: Abas de login agora são abertas em segundo plano para não interromper o usuário
