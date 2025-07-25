@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'Release tag (e.g., v1.1.1)'
+        description: "Release tag (e.g., v1.1.1)"
         required: true
         type: string
 
@@ -15,57 +15,57 @@ jobs:
   upload-assets:
     name: Upload Assets to Release
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        ref: ${{ inputs.tag_name }}
-      
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
-        
-    - name: Install dependencies
-      run: npm ci
-      
-    - name: Validate project
-      run: npm run validate
-      
-    - name: Build extensions
-      run: npm run build
-      
-    - name: Verify build files
-      run: |
-        echo "📦 Verificando arquivos de build..."
-        ls -la .dist/
-        if [ ! -f ".dist/monitor-sau-chrome.zip" ]; then
-          echo "❌ Arquivo Chrome não encontrado"
-          exit 1
-        fi
-        if [ ! -f ".dist/monitor-sau-firefox.zip" ]; then
-          echo "❌ Arquivo Firefox não encontrado"
-          exit 1
-        fi
-        echo "✅ Todos os arquivos encontrados"
-    
-    - name: Upload assets to release
-      uses: softprops/action-gh-release@v2
-      with:
-        tag_name: ${{ inputs.tag_name }}
-        files: |
-          .dist/monitor-sau-chrome.zip
-          .dist/monitor-sau-firefox.zip
-        fail_on_unmatched_files: true
-        generate_release_notes: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    
-    - name: Verify upload success
-      run: |
-        echo "✅ Assets uploaded successfully to release ${{ inputs.tag_name }}"
-        gh release view ${{ inputs.tag_name }} --json assets --jq '.assets[] | "\(.name) (\(.size) bytes)"'
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag_name }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate project
+        run: npm run validate
+
+      - name: Build extensions
+        run: npm run build
+
+      - name: Verify build files
+        run: |
+          echo "📦 Verificando arquivos de build..."
+          ls -la .dist/
+          if [ ! -f ".dist/monitor-sau-chrome.zip" ]; then
+            echo "❌ Arquivo Chrome não encontrado"
+            exit 1
+          fi
+          if [ ! -f ".dist/monitor-sau-firefox.zip" ]; then
+            echo "❌ Arquivo Firefox não encontrado"
+            exit 1
+          fi
+          echo "✅ Todos os arquivos encontrados"
+
+      - name: Upload assets to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag_name }}
+          files: |
+            .dist/monitor-sau-chrome.zip
+            .dist/monitor-sau-firefox.zip
+          fail_on_unmatched_files: true
+          generate_release_notes: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify upload success
+        run: |
+          echo "✅ Assets uploaded successfully to release ${{ github.event.inputs.tag_name }}"
+          gh release view ${{ github.event.inputs.tag_name }} --json assets --jq '.assets[] | "\(.name) (\(.size) bytes)"'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
