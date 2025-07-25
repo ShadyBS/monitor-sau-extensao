@@ -412,9 +412,11 @@ async function performAutomaticLogin() {
   const data = await browserAPI.storage.local.get([
     "sauUsername",
     "sauPassword",
+    "hideMonitoringTab",
   ]);
   const username = data.sauUsername;
   const password = data.sauPassword;
+  const hideMonitoringTab = data.hideMonitoringTab || false;
 
   // Se as credenciais não estiverem salvas, notifica o usuário
   if (!username || !password) {
@@ -429,17 +431,22 @@ async function performAutomaticLogin() {
         "Credenciais não configuradas. Por favor, acesse as opções da extensão para configurar o login automático.",
     });
     // Abre a página de login para que o usuário possa fazer o login manualmente
-    browserAPI.tabs.create({ url: SAU_LOGIN_URL, active: true }); // Mantém ativa para intervenção manual
+    // Quando não há credenciais, sempre abre ativa para intervenção manual
+    browserAPI.tabs.create({ url: SAU_LOGIN_URL, active: true });
     return;
   }
 
-  // Abre uma nova aba para a página de login e a torna NÃO ativa
+  // Determina se a aba deve ficar oculta baseado na configuração
+  const shouldHideTab = hideMonitoringTab;
+  
+  // Abre uma nova aba para a página de login
   const loginTab = await browserAPI.tabs.create({
     url: SAU_LOGIN_URL,
-    active: false, // PRINCIPAL MUDANÇA: Abre em segundo plano
+    active: !shouldHideTab, // Se hideMonitoringTab for true, abre em segundo plano
   });
+  
   backgroundLogger.info(
-    `Tentando login automático na aba ${loginTab.id} (em segundo plano).`
+    `Tentando login automático na aba ${loginTab.id} ${shouldHideTab ? '(em segundo plano)' : '(ativa)'}.`
   );
 
   // Adiciona um listener para quando a página de login estiver completamente carregada
@@ -497,9 +504,13 @@ async function performAutomaticLogin() {
             iconUrl: "icons/icon48.png",
             title: "Monitor SAU: Erro no Login Automático",
             message:
-              "Não foi possível preencher o formulário de login em segundo plano. Por favor, tente fazer o login manualmente.",
+              "Não foi possível preencher o formulário de login. Por favor, tente fazer o login manualmente.",
           });
-          // Se o login falhar em segundo plano, a aba permanecerá em segundo plano.
+          // Se o login falhar e a aba estava oculta, torna ela visível para intervenção manual
+          if (shouldHideTab) {
+            browserAPI.tabs.update(loginTab.id, { active: true });
+            backgroundLogger.info(`Aba ${loginTab.id} tornada ativa devido a erro no login automático.`);
+          }
         });
     }
   });

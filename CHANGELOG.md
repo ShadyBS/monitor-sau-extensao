@@ -3,6 +3,11 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 ## [Unreleased]
 
+### Added
+- **Gerenciamento de Abas**: Nova opção para ocultar aba de monitoramento quando não há necessidade de login manual
+- **Configuração de Visibilidade**: Usuários podem escolher se a aba do SAU deve ficar oculta durante o monitoramento automático
+- **Experiência Melhorada**: Reduz poluição visual mantendo abas desnecessárias em segundo plano
+
 ### Fixed
 - **GitHub Actions Release**: Corrigido erro "Resource not accessible by integration" ao fazer upload de assets
 - **Permissões de Workflow**: Adicionadas permissões `contents: write` para GitHub Actions
@@ -10,11 +15,11 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - **Upload de Assets**: Criado workflow manual para upload de assets em releases existentes
 - **Compatibilidade de Release**: Release script agora cria releases sem assets, permitindo que GitHub Actions faça upload
 
-### Added
-- **Workflow Manual**: Novo workflow `upload-assets.yml` para upload manual de assets
-- **Trigger por Tag**: GitHub Actions agora executa também quando tags são criadas
-- **Verificação de Assets**: Validação automática de arquivos de build antes do upload
-- **Fallback de Release**: Múltiplas estratégias para upload de assets em caso de falha
+### Technical Details
+- **Background Script**: Modificada função `performAutomaticLogin()` para verificar configuração `hideMonitoringTab`
+- **Options Page**: Adicionada nova seção "Gerenciamento de Abas" nas configurações de notificação
+- **Storage**: Nova configuração `hideMonitoringTab` salva no storage local da extensão
+- **Fallback de Segurança**: Se login automático falhar com aba oculta, ela é automaticamente tornada visível para intervenção manual
 
 ## [1.1.1] - 2025-07-24
 

@@ -58,6 +58,7 @@ async function saveSettings() {
     document.getElementById("renotificationInterval").value,
     10
   );
+  const hideMonitoringTab = document.getElementById("hideMonitoringTab").checked;
 
   if (isNaN(checkInterval) || checkInterval < 10) {
     showStatus(
@@ -82,6 +83,7 @@ async function saveSettings() {
       checkInterval: checkInterval,
       enableRenotification: enableRenotification,
       renotificationInterval: renotificationInterval,
+      hideMonitoringTab: hideMonitoringTab,
     });
     showStatus("settingsStatus", "Configurações salvas com sucesso!");
     optionsLogger.info(
@@ -310,6 +312,7 @@ async function loadOptions() {
       "checkInterval",
       "enableRenotification",
       "renotificationInterval",
+      "hideMonitoringTab",
       "logLevel",
       "taskDisplaySettings",
       "snoozeSettings",
@@ -328,6 +331,9 @@ async function loadOptions() {
     // Carrega configurações de renotificação
     document.getElementById("enableRenotification").checked = data.enableRenotification || false;
     document.getElementById("renotificationInterval").value = data.renotificationInterval || 30;
+    
+    // Carrega configuração de ocultar aba de monitoramento
+    document.getElementById("hideMonitoringTab").checked = data.hideMonitoringTab || false;
     
     if (data.logLevel !== undefined) {
       const logLevelSelect = document.getElementById("logLevel");
