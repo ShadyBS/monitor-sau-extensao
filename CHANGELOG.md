@@ -3,6 +3,8 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 ## [Unreleased]
 
+## [1.1.2] - 2025-07-25
+
 ### Fixed
 
 - **Padronização de Logs**: Refatorados `background.js` e `content.js` para usar o sistema de logging centralizado (`logger.js`) em vez de `console.log`, `console.warn` e `console.error`, alinhando com as boas práticas do projeto.
