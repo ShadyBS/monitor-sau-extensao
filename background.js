@@ -49,7 +49,8 @@ async function loadPersistentData() {
       ignoredTasks: Object.keys(ignoredTasks).length,
       snoozedTasks: Object.keys(snoozedTasks).length,
       openedTasks: Object.keys(openedTasks).length, // Log o tamanho do novo estado
-      taskNotificationTimestamps: Object.keys(taskNotificationTimestamps).length,
+      taskNotificationTimestamps: Object.keys(taskNotificationTimestamps)
+        .length,
       lastCheckTimestamp,
     });
     backgroundLogger.debug("Conteúdo de lastKnownTasks:", lastKnownTasks); // Log o conteúdo completo para depuração
@@ -110,37 +111,40 @@ async function checkIfShouldRenotify(taskId) {
       "enableRenotification",
       "renotificationInterval",
     ]);
-    
+
     const enableRenotification = settings.enableRenotification || false;
     const renotificationInterval = settings.renotificationInterval || 30; // padrão 30 minutos
-    
+
     // Se renotificação está desabilitada, não renotifica
     if (!enableRenotification) {
       return false;
     }
-    
+
     const lastNotificationTime = taskNotificationTimestamps[taskId];
-    
+
     // Se nunca foi notificada, não renotifica (só notifica tarefas novas)
     if (!lastNotificationTime) {
       return false;
     }
-    
+
     const now = Date.now();
     const timeSinceLastNotification = now - lastNotificationTime;
     const renotificationIntervalMs = renotificationInterval * 60 * 1000; // converte para ms
-    
+
     // Renotifica se passou o tempo configurado desde a última notificação
-    const shouldRenotify = timeSinceLastNotification >= renotificationIntervalMs;
-    
+    const shouldRenotify =
+      timeSinceLastNotification >= renotificationIntervalMs;
+
     backgroundLogger.debug(
       `Verificação de renotificação para tarefa ${taskId}: ` +
-      `enableRenotification=${enableRenotification}, ` +
-      `timeSinceLastNotification=${Math.round(timeSinceLastNotification / 60000)}min, ` +
-      `renotificationInterval=${renotificationInterval}min, ` +
-      `shouldRenotify=${shouldRenotify}`
+        `enableRenotification=${enableRenotification}, ` +
+        `timeSinceLastNotification=${Math.round(
+          timeSinceLastNotification / 60000
+        )}min, ` +
+        `renotificationInterval=${renotificationInterval}min, ` +
+        `shouldRenotify=${shouldRenotify}`
     );
-    
+
     return shouldRenotify;
   } catch (error) {
     backgroundLogger.error("Erro ao verificar renotificação:", error);
@@ -242,7 +246,10 @@ browserAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
           ),
         });
       } catch (error) {
-        backgroundLogger.debug("Popup não está aberto para receber atualização:", error.message);
+        backgroundLogger.debug(
+          "Popup não está aberto para receber atualização:",
+          error.message
+        );
       }
       break;
     case "snoozeTask":
@@ -270,7 +277,10 @@ browserAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
             ),
           });
         } catch (error) {
-          backgroundLogger.debug("Popup não está aberto para receber atualização:", error.message);
+          backgroundLogger.debug(
+            "Popup não está aberto para receber atualização:",
+            error.message
+          );
         }
       });
       break;
@@ -294,7 +304,10 @@ browserAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
           ),
         });
       } catch (error) {
-        backgroundLogger.debug("Popup não está aberto para receber atualização:", error.message);
+        backgroundLogger.debug(
+          "Popup não está aberto para receber atualização:",
+          error.message
+        );
       }
       break;
     case "newTasksFound":
@@ -413,9 +426,9 @@ async function checkAndNotifyNewTasks() {
 async function checkForExistingLoginTab() {
   try {
     const tabs = await browserAPI.tabs.query({
-      url: SAU_LOGIN_URL + "*"
+      url: SAU_LOGIN_URL + "*",
     });
-    
+
     // Verifica se alguma das abas encontradas ainda está válida
     for (const tab of tabs) {
       try {
@@ -430,7 +443,10 @@ async function checkForExistingLoginTab() {
     }
     return false;
   } catch (error) {
-    backgroundLogger.error("Erro ao verificar abas de login existentes:", error);
+    backgroundLogger.error(
+      "Erro ao verificar abas de login existentes:",
+      error
+    );
     return false;
   }
 }
@@ -452,20 +468,22 @@ async function performAutomaticLogin() {
     backgroundLogger.warn(
       "Credenciais de login não encontradas. Login automático não será realizado."
     );
-    
+
     const now = Date.now();
     const timeSinceLastLoginTab = now - lastLoginTabOpenedTimestamp;
     const LOGIN_TAB_COOLDOWN = 5 * 60 * 1000; // 5 minutos em millisegundos
-    
+
     // Verifica se já existe uma aba de login aberta
     const hasExistingLoginTab = await checkForExistingLoginTab();
-    
+
     // Só abre uma nova aba se:
     // 1. Não há aba de login existente E
     // 2. Passou tempo suficiente desde a última aba aberta (cooldown)
     if (!hasExistingLoginTab && timeSinceLastLoginTab > LOGIN_TAB_COOLDOWN) {
-      backgroundLogger.info("Abrindo nova aba de login para configuração manual de credenciais");
-      
+      backgroundLogger.info(
+        "Abrindo nova aba de login para configuração manual de credenciais"
+      );
+
       // Cria notificação apenas na primeira vez ou após o cooldown
       browserAPI.notifications.create({
         type: "basic",
@@ -474,24 +492,30 @@ async function performAutomaticLogin() {
         message:
           "Credenciais não configuradas. Por favor, acesse as opções da extensão para configurar o login automático.",
       });
-      
+
       // Abre a página de login para que o usuário possa fazer o login manualmente
-      const loginTab = await browserAPI.tabs.create({ 
-        url: SAU_LOGIN_URL, 
-        active: false // Abre em segundo plano para não interromper o usuário
+      const loginTab = await browserAPI.tabs.create({
+        url: SAU_LOGIN_URL,
+        active: false, // Abre em segundo plano para não interromper o usuário
       });
-      
+
       // Atualiza o timestamp e ID da última aba de login aberta
       lastLoginTabOpenedTimestamp = now;
       loginTabId = loginTab.id;
-      
-      backgroundLogger.info(`Nova aba de login criada: ${loginTab.id} (em segundo plano)`);
+
+      backgroundLogger.info(
+        `Nova aba de login criada: ${loginTab.id} (em segundo plano)`
+      );
     } else if (hasExistingLoginTab) {
       backgroundLogger.debug("Aba de login já existe, não abrindo nova aba");
     } else {
-      backgroundLogger.debug(`Cooldown ativo: ${Math.round((LOGIN_TAB_COOLDOWN - timeSinceLastLoginTab) / 1000)}s restantes`);
+      backgroundLogger.debug(
+        `Cooldown ativo: ${Math.round(
+          (LOGIN_TAB_COOLDOWN - timeSinceLastLoginTab) / 1000
+        )}s restantes`
+      );
     }
-    
+
     return;
   }
 
@@ -526,16 +550,16 @@ async function performAutomaticLogin() {
                 passwordInput.value = pass;
                 loginForm.submit();
                 // Logs no console da página (não do Service Worker)
-                console.log(
+                backgroundLogger.info(
                   "Content Script (Login): Credenciais preenchidas e formulário submetido."
                 );
               } else {
-                console.error(
+                backgroundLogger.error(
                   "Content Script (Login): Campos de login (IDs: usuario, senha) não encontrados na página do SAU."
                 );
               }
             } else {
-              console.error(
+              backgroundLogger.error(
                 'Content Script (Login): Formulário de login (id="loginForm") não encontrado na página do SAU.'
               );
             }
@@ -680,7 +704,10 @@ async function handleNewTasks(newTasks) {
       });
     } catch (error) {
       // Popup pode não estar aberto, isso é normal
-      backgroundLogger.debug("Popup não está aberto para receber atualização:", error.message);
+      backgroundLogger.debug(
+        "Popup não está aberto para receber atualização:",
+        error.message
+      );
     }
 
     // Tenta enviar uma mensagem para a aba ativa do SAU para exibir a UI de notificação visual
@@ -717,7 +744,10 @@ async function handleNewTasks(newTasks) {
         ).toLocaleTimeString()}`,
       });
     } catch (error) {
-      backgroundLogger.debug("Popup não está aberto para receber atualização:", error.message);
+      backgroundLogger.debug(
+        "Popup não está aberto para receber atualização:",
+        error.message
+      );
     }
   }
 }
@@ -753,9 +783,15 @@ browserAPI.notifications.onButtonClicked.addListener(
         );
         // Notifica o popup para atualizar sua lista
         try {
-          browserAPI.runtime.sendMessage({ action: "updatePopup", newTasks: [] });
+          browserAPI.runtime.sendMessage({
+            action: "updatePopup",
+            newTasks: [],
+          });
         } catch (error) {
-          backgroundLogger.debug("Popup não está aberto para receber atualização:", error.message);
+          backgroundLogger.debug(
+            "Popup não está aberto para receber atualização:",
+            error.message
+          );
         }
       } else if (buttonIndex === 1) {
         // Botão "Ignorar Todas"
@@ -770,9 +806,15 @@ browserAPI.notifications.onButtonClicked.addListener(
         );
         // Notifica o popup para limpar a lista de tarefas
         try {
-          browserAPI.runtime.sendMessage({ action: "updatePopup", newTasks: [] });
+          browserAPI.runtime.sendMessage({
+            action: "updatePopup",
+            newTasks: [],
+          });
         } catch (error) {
-          backgroundLogger.debug("Popup não está aberto para receber atualização:", error.message);
+          backgroundLogger.debug(
+            "Popup não está aberto para receber atualização:",
+            error.message
+          );
         }
       }
     }
@@ -835,7 +877,9 @@ browserAPI.webNavigation.onCompleted.addListener(
  */
 browserAPI.tabs.onRemoved.addListener((tabId) => {
   if (tabId === loginTabId) {
-    backgroundLogger.debug(`Aba de login ${tabId} foi fechada, limpando estado`);
+    backgroundLogger.debug(
+      `Aba de login ${tabId} foi fechada, limpando estado`
+    );
     loginTabId = null;
   }
 });
