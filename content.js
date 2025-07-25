@@ -281,11 +281,28 @@
   }
 
   /**
+   * Verifica se a opção "Novas" está selecionada na página
+   * @returns {boolean} true se a opção "Novas" estiver selecionada
+   */
+  function isNewTasksOptionSelected() {
+    const novasOption = document.getElementById("tarefaPesquisaOpcao1");
+    return novasOption && novasOption.checked;
+  }
+
+  /**
    * Processa o conteúdo HTML recebido de uma requisição AJAX
    * para extrair tarefas e identificar novas.
    * @param {string} htmlContent - O fragmento HTML contendo as tarefas.
    */
   function processTasksHtml(htmlContent) {
+    // Verifica se a opção "Novas" está selecionada
+    if (!isNewTasksOptionSelected()) {
+      console.log(
+        "Content Script: Opção 'Novas' não está selecionada. Ignorando processamento de tarefas para evitar notificações desnecessárias."
+      );
+      return;
+    }
+
     const parser = new DOMParser();
     const doc = parser.parseFromString(htmlContent, "text/html");
     const taskElements = doc.querySelectorAll("table.tarefaLista");
@@ -300,6 +317,14 @@
    * Procura por tarefas que já existem na página no momento em que o script é carregado.
    */
   function scanForExistingTasks() {
+    // Verifica se a opção "Novas" está selecionada antes de processar tarefas existentes
+    if (!isNewTasksOptionSelected()) {
+      console.log(
+        "Content Script: Opção 'Novas' não está selecionada. Ignorando escaneamento de tarefas existentes."
+      );
+      return;
+    }
+
     const taskElements = document.querySelectorAll("table.tarefaLista");
     if (taskElements.length > 0) {
       console.log(

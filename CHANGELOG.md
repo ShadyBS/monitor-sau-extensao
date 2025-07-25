@@ -3,23 +3,22 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 ## [Unreleased]
 
-### Added
-- **Gerenciamento de Abas**: Nova opção para ocultar aba de monitoramento quando não há necessidade de login manual
-- **Configuração de Visibilidade**: Usuários podem escolher se a aba do SAU deve ficar oculta durante o monitoramento automático
-- **Experiência Melhorada**: Reduz poluição visual mantendo abas desnecessárias em segundo plano
-
 ### Fixed
+- **Detecção de Contexto**: Extensão agora só processa tarefas quando a opção "Novas" está selecionada
+- **Notificações Desnecessárias**: Corrigido problema onde clicar em "Abertas" ou outras opções gerava notificações falsas
+- **Filtragem Inteligente**: Implementada verificação de contexto antes de processar tarefas via AJAX ou DOM
 - **GitHub Actions Release**: Corrigido erro "Resource not accessible by integration" ao fazer upload de assets
 - **Permissões de Workflow**: Adicionadas permissões `contents: write` para GitHub Actions
 - **Release Automation**: Melhorado script de release para compatibilidade com GitHub Actions
 - **Upload de Assets**: Criado workflow manual para upload de assets em releases existentes
 - **Compatibilidade de Release**: Release script agora cria releases sem assets, permitindo que GitHub Actions faça upload
 
-### Technical Details
-- **Background Script**: Modificada função `performAutomaticLogin()` para verificar configuração `hideMonitoringTab`
-- **Options Page**: Adicionada nova seção "Gerenciamento de Abas" nas configurações de notificação
-- **Storage**: Nova configuração `hideMonitoringTab` salva no storage local da extensão
-- **Fallback de Segurança**: Se login automático falhar com aba oculta, ela é automaticamente tornada visível para intervenção manual
+### Added
+- **Verificação de Opção Selecionada**: Nova função `isNewTasksOptionSelected()` para detectar contexto da página
+- **Workflow Manual**: Novo workflow `upload-assets.yml` para upload manual de assets
+- **Trigger por Tag**: GitHub Actions agora executa também quando tags são criadas
+- **Verificação de Assets**: Validação automática de arquivos de build antes do upload
+- **Fallback de Release**: Múltiplas estratégias para upload de assets em caso de falha
 
 ## [1.1.1] - 2025-07-24
 
