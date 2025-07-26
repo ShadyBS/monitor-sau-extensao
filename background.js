@@ -11,7 +11,13 @@ import { logger } from "./logger.js";
 const backgroundLogger = logger("[Background]");
 
 // Define o objeto de API do navegador de forma compatível (Chrome ou Firefox)
-const browserAPI = globalThis.browser || globalThis.chrome;
+const browserAPI = (() => {
+  if (typeof globalThis !== 'undefined' && globalThis.browser) return globalThis.browser;
+  if (typeof globalThis !== 'undefined' && globalThis.chrome) return globalThis.chrome;
+  if (typeof window !== 'undefined' && window.browser) return window.browser;
+  if (typeof window !== 'undefined' && window.chrome) return window.chrome;
+  throw new Error('Browser extension API not available');
+})();
 
 // Variáveis globais para armazenar o estado da extensão.
 // Serão persistidas no chrome.storage.local.
@@ -23,6 +29,10 @@ let lastCheckTimestamp = 0; // Último timestamp da verificação de tarefas
 let taskNotificationTimestamps = {}; // { taskId: lastNotificationTimestamp } - Controla renotificações
 let lastLoginTabOpenedTimestamp = 0; // Timestamp da última vez que uma aba de login foi aberta
 let loginTabId = null; // ID da aba de login atualmente aberta (se houver)
+
+// Rate limiting para notificações
+let lastNotificationTime = 0;
+const NOTIFICATION_COOLDOWN = 5000; // 5 segundos entre notificações
 
 /**
  * Carrega os dados persistentes do armazenamento local do Chrome.
@@ -592,6 +602,20 @@ async function performAutomaticLogin() {
 }
 
 /**
+ * Utilitário para deep copy performático
+ * @param {any} obj - Objeto para copiar
+ * @returns {any} Cópia profunda do objeto
+ */
+function performantDeepCopy(obj) {
+  // Use structuredClone se disponível (mais performático)
+  if (typeof structuredClone !== 'undefined') {
+    return structuredClone(obj);
+  }
+  // Fallback para JSON (menos performático mas compatível)
+  return JSON.parse(JSON.stringify(obj));
+}
+
+/**
  * Lida com as novas tarefas recebidas do content script.
  * Filtra, notifica o usuário e atualiza o estado persistente da extensão.
  * @param {Array<Object>} newTasks - Um array de objetos de tarefa recém-encontradas.
@@ -605,21 +629,42 @@ async function handleNewTasks(newTasks) {
 
   const tasksToNotify = [];
   // Cria uma cópia profunda de lastKnownTasks para evitar mutações diretas durante a iteração
-  const updatedLastKnownTasks = JSON.parse(JSON.stringify(lastKnownTasks));
+  const updatedLastKnownTasks = performantDeepCopy(lastKnownTasks);
 
-  // Itera sobre as novas tarefas recebidas
-  for (const newTask of newTasks) {
-    const taskId = newTask.id; // O ID já vem do content script
+  // Otimização: Processa verificações de renotificação em paralelo
+  const renotificationChecks = await Promise.all(
+    newTasks.map(async (newTask) => {
+      const taskId = newTask.id;
+      const isAlreadyKnownIndex = updatedLastKnownTasks.findIndex(
+        (task) => task.id === taskId
+      );
+      const isAlreadyKnown = isAlreadyKnownIndex !== -1;
+      const isIgnored = ignoredTasks[taskId];
+      const isSnoozed = snoozedTasks[taskId] && snoozedTasks[taskId] > Date.now();
+      const isOpened = openedTasks[taskId];
 
-    // Verifica se a tarefa já é conhecida em updatedLastKnownTasks
-    const isAlreadyKnownIndex = updatedLastKnownTasks.findIndex(
-      (task) => task.id === taskId
-    );
-    const isAlreadyKnown = isAlreadyKnownIndex !== -1;
+      // Se é tarefa conhecida e não está ignorada/snoozed/aberta, verifica renotificação
+      let shouldRenotify = false;
+      if (isAlreadyKnown && !isIgnored && !isSnoozed && !isOpened) {
+        shouldRenotify = await checkIfShouldRenotify(taskId);
+      }
 
-    const isIgnored = ignoredTasks[taskId];
-    const isSnoozed = snoozedTasks[taskId] && snoozedTasks[taskId] > Date.now();
-    const isOpened = openedTasks[taskId]; // Verifica se a tarefa foi aberta
+      return {
+        newTask,
+        taskId,
+        isAlreadyKnown,
+        isAlreadyKnownIndex,
+        isIgnored,
+        isSnoozed,
+        isOpened,
+        shouldRenotify
+      };
+    })
+  );
+
+  // Processa resultados das verificações
+  for (const check of renotificationChecks) {
+    const { newTask, taskId, isAlreadyKnown, isAlreadyKnownIndex, isIgnored, isSnoozed, isOpened, shouldRenotify } = check;
 
     backgroundLogger.debug(
       `Processando tarefa ${taskId}: isAlreadyKnown=${isAlreadyKnown}, isIgnored=${isIgnored}, isSnoozed=${isSnoozed}, isOpened=${isOpened}`
@@ -649,8 +694,6 @@ async function handleNewTasks(newTasks) {
 
       // Lógica para re-notificar tarefas pendentes
       if (!isIgnored && !isSnoozed && !isOpened) {
-        // Verifica se deve renotificar esta tarefa
-        const shouldRenotify = await checkIfShouldRenotify(taskId);
         if (shouldRenotify) {
           tasksToNotify.push(newTask);
           taskNotificationTimestamps[taskId] = Date.now(); // Atualiza timestamp da renotificação
@@ -677,22 +720,31 @@ async function handleNewTasks(newTasks) {
       `Disparando notificação para ${tasksToNotify.length} nova(s) tarefa(s).`,
       tasksToNotify
     );
-    try {
-      // Cria uma notificação do navegador para as novas tarefas usando Promises (compatível com Chrome e Firefox)
-      const notificationId = await browserAPI.notifications.create({
-        type: "basic",
-        iconUrl: "icons/icon48.png",
-        title: `Monitor SAU: ${tasksToNotify.length} Nova(s) Tarefa(s)!`,
-        message:
-          tasksToNotify
-            .map((t) => t.titulo)
-            .join(", ")
-            .substring(0, 100) + "...",
-        buttons: [{ title: "Abrir Todas" }, { title: "Ignorar Todas" }],
-      });
-      backgroundLogger.info("Notificação do navegador criada:", notificationId);
-    } catch (error) {
-      backgroundLogger.error("Erro ao criar notificação do navegador:", error);
+    
+    // Rate limiting para notificações
+    const now = Date.now();
+    if (now - lastNotificationTime >= NOTIFICATION_COOLDOWN) {
+      try {
+        // Cria uma notificação do navegador para as novas tarefas usando Promises (compatível com Chrome e Firefox)
+        const notificationId = await browserAPI.notifications.create({
+          type: "basic",
+          iconUrl: "icons/icon48.png",
+          title: `Monitor SAU: ${tasksToNotify.length} Nova(s) Tarefa(s)!`,
+          message:
+            tasksToNotify
+              .map((t) => t.titulo)
+              .join(", ")
+              .substring(0, 100) + "...",
+          buttons: [{ title: "Abrir Todas" }, { title: "Ignorar Todas" }],
+        });
+        lastNotificationTime = now; // Atualiza timestamp da última notificação
+        backgroundLogger.info("Notificação do navegador criada:", notificationId);
+      } catch (error) {
+        backgroundLogger.error("Erro ao criar notificação do navegador:", error);
+      }
+    } else {
+      const remainingCooldown = Math.ceil((NOTIFICATION_COOLDOWN - (now - lastNotificationTime)) / 1000);
+      backgroundLogger.debug(`Notificação suprimida devido ao rate limiting. Aguarde ${remainingCooldown}s`);
     }
 
     // Envia uma mensagem para o popup (se aberto) para que ele possa atualizar sua lista de tarefas

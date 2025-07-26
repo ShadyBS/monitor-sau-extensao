@@ -77,3 +77,16 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 - **Experiência do Usuário**: Completamente redesenhada para novos usuários
 - **Arquitetura Modular**: Sistema extensível e bem documentado
+
+### Fixed
+
+- **Otimização de Performance**: Implementadas correções críticas para melhorar responsividade e experiência do usuário
+- **Bloqueio da UI Principal**: Corrigido processamento síncrono de tarefas que causava travamentos temporários
+- **Rate Limiting de Notificações**: Implementado cooldown de 5 segundos entre notificações para evitar spam
+- **Throttling do MutationObserver**: Adicionado throttling de 500ms para reduzir verificações excessivas de DOM
+- **Compatibilidade Robusta**: Melhorado wrapper de API do navegador com fallbacks para Chrome/Firefox
+- **Memory Leaks**: Corrigidos vazamentos de memória em event listeners e MutationObserver
+- **Tratamento de Erros**: Implementado tratamento robusto de erros de parsing com fallbacks seguros
+- **Feedback Visual**: Adicionado indicadores de loading e estados de erro para operações assíncronas
+- **Sanitização de Dados**: Melhorada validação e sanitização de dados de tarefas para prevenir XSS
+- **Logging Padronizado**: Substituído console.log por sistema de logging centralizado no content script

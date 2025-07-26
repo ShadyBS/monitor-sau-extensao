@@ -1,7 +1,6 @@
-// NOTA TÉCNICA: Este script utiliza console.log/warn/error em vez do logger.js
+// NOTA TÉCNICA: Este script utiliza um logger simplificado em vez do logger.js completo
 // devido a uma limitação na forma como os content scripts são injetados programaticamente,
 // o que impede o uso de módulos ES6 (import/export) diretamente.
-// A refatoração para suportar módulos aqui exigiria mudanças significativas na arquitetura de injeção.
 
 // Injection Guard: Previne a re-execução do script se ele já foi injetado nesta página.
 // Isso evita erros de "identifier has already been declared" e a duplicação de listeners.
@@ -13,17 +12,26 @@
   window.monitorSauHasInjected = true;
 
   // Define o objeto de API do navegador de forma compatível (Chrome ou Firefox)
-  const browserAPI = globalThis.browser || globalThis.chrome;
+  const browserAPI = (() => {
+    if (typeof globalThis !== 'undefined' && globalThis.browser) return globalThis.browser;
+    if (typeof globalThis !== 'undefined' && globalThis.chrome) return globalThis.chrome;
+    if (typeof window !== 'undefined' && window.browser) return window.browser;
+    if (typeof window !== 'undefined' && window.chrome) return window.chrome;
+    throw new Error('Browser extension API not available');
+  })();
+
+  // Logger simplificado para content script
+  const contentLogger = {
+    info: (...args) => console.info('[Content Script]', ...args),
+    warn: (...args) => console.warn('[Content Script]', ...args),
+    error: (...args) => console.error('[Content Script]', ...args),
+    debug: (...args) => console.debug('[Content Script]', ...args)
+  };
 
   // Verificação de robustez: Garante que as APIs da extensão estão disponíveis.
   // Se não estiverem, o script não pode funcionar e deve parar.
   if (!browserAPI || !browserAPI.runtime || !browserAPI.storage) {
-    console.error(
-      "Monitor SAU: APIs da extensão (browserAPI.runtime, browserAPI.storage) não encontradas. " +
-        "O script pode não estar sendo executado no contexto correto de uma extensão. " +
-        "Verifique se o 'manifest.json' tem as permissões corretas (ex: \"storage\") e " +
-        "se o script está sendo injetado corretamente (ex: via 'chrome.scripting.executeScript')."
-    );
+    contentLogger.error("Extensão não configurada corretamente. Reinstale a extensão.");
     // Interrompe a execução para evitar mais erros.
     return;
   }
@@ -44,6 +52,10 @@
   // Variável para armazenar a tarefa atualmente exibida no modal de detalhes da página
   let currentNotificationModalTask = null;
 
+  // Throttling para MutationObserver
+  let mutationTimeout = null;
+  const MUTATION_THROTTLE_DELAY = 500; // 500ms
+
   /**
    * Lida com o login automático se a página atual for a página de login do SAU.
    * Tenta preencher e submeter o formulário de login com as credenciais salvas.
@@ -51,9 +63,7 @@
   async function handleLoginIfNecessary() {
     // Verifica se a URL atual começa com a URL de login do SAU
     if (window.location.href.startsWith(SAU_LOGIN_URL)) {
-      console.log(
-        "Página de login detectada. Verificando credenciais para login automático..."
-      );
+      contentLogger.info("Página de login detectada. Verificando credenciais para login automático...");
       try {
         // Obtém as credenciais armazenadas no storage da extensão
         const data = await browserAPI.storage.local.get([
@@ -72,24 +82,18 @@
               usernameInput.value = username;
               passwordInput.value = password;
               loginForm.submit(); // Submete o formulário
-              console.log("Credenciais preenchidas e formulário submetido.");
+              contentLogger.info("Credenciais preenchidas e formulário submetido.");
             } else {
-              console.warn(
-                "Campos de usuário/senha (IDs: usuario, senha) não encontrados na página de login do SAU."
-              );
+              contentLogger.warn("Campos de usuário/senha não encontrados na página de login do SAU.");
             }
           } else {
-            console.warn(
-              "Formulário de login (ID: loginForm) não encontrado na página do SAU."
-            );
+            contentLogger.warn("Formulário de login não encontrado na página do SAU.");
           }
         } else {
-          console.log(
-            "Credenciais não salvas nas opções da extensão. Login automático desativado."
-          );
+          contentLogger.info("Credenciais não salvas nas opções da extensão. Login automático desativado.");
         }
       } catch (error) {
-        console.error("Erro ao tentar login automático:", error);
+        contentLogger.error("Erro ao tentar login automático:", error);
       }
     }
   }
@@ -112,9 +116,7 @@
       );
 
       if (!detailTable) {
-        console.warn(
-          "Content Script: Tabela de detalhes da tarefa não encontrada."
-        );
+        contentLogger.warn("Tabela de detalhes da tarefa não encontrada.");
         return null;
       }
 
@@ -142,7 +144,7 @@
 
       // Extração de Data de Envio
       dataEnvio = extractValueByLabel("Data de Envio:", detailTable);
-      console.log("Content Script: Data de Envio extraída:", dataEnvio);
+      contentLogger.debug("Data de Envio extraída:", dataEnvio);
 
       // Extração de Posição
       const posicaoElementInTable = Array.from(
@@ -151,19 +153,19 @@
       posicao = posicaoElementInTable
         ? posicaoElementInTable.querySelector("b").textContent.trim()
         : null;
-      console.log("Content Script: Posição extraída:", posicao);
+      contentLogger.debug("Posição extraída:", posicao);
 
       // Extração de Solicitante
       solicitante = extractValueByLabel("Solicitante:", detailTable);
-      console.log("Content Script: Solicitante extraído:", solicitante);
+      contentLogger.debug("Solicitante extraído:", solicitante);
 
       // Extração de Unidade
       unidade = extractValueByLabel("Unidade:", detailTable);
-      console.log("Content Script: Unidade extraída:", unidade);
+      contentLogger.debug("Unidade extraída:", unidade);
 
       // Extração de Descrição
       descricao = extractValueByLabel("Descrição:", detailTable);
-      console.log("Content Script: Descrição extraída:", descricao);
+      contentLogger.debug("Descrição extraída:", descricao);
 
       // Extração de Endereços
       const enderecosListElements = detailTable.querySelectorAll(
@@ -172,7 +174,7 @@
       enderecos = Array.from(enderecosListElements).map((el) =>
         el.textContent.trim()
       );
-      console.log("Content Script: Endereços extraídos:", enderecos);
+      contentLogger.debug("Endereços extraídos:", enderecos);
 
       // Verifica se todos os elementos essenciais foram encontrados
       if (
@@ -209,15 +211,24 @@
           descricao,
           enderecos,
         };
-        console.log("Content Script: Tarefa parseada:", parsedTask); // Log detalhado da tarefa parseada
+        contentLogger.debug("Tarefa parseada:", parsedTask);
         return parsedTask;
       }
     } catch (e) {
-      console.error(
-        "Content Script: Erro ao parsear elemento da tarefa:",
-        e,
-        taskHtmlElement
-      );
+      contentLogger.error("Erro ao parsear elemento da tarefa:", e);
+      // Retorna objeto de fallback em vez de null
+      return {
+        id: `fallback-${Date.now()}`,
+        numero: "Erro",
+        titulo: "Tarefa com erro de parsing",
+        link: "#",
+        dataEnvio: new Date().toLocaleDateString(),
+        posicao: "N/A",
+        solicitante: "N/A",
+        unidade: "N/A",
+        descricao: "Erro ao processar dados da tarefa",
+        enderecos: []
+      };
     }
     return null; // Retorna null se não conseguir parsear a tarefa
   }
@@ -237,15 +248,11 @@
     });
 
     if (foundTasks.length === 0) {
-      console.log("Content Script: Nenhuma tarefa encontrada para processar.");
+      contentLogger.info("Nenhuma tarefa encontrada para processar.");
       return; // Nenhuma tarefa encontrada para processar
     }
 
-    console.log(
-      "Content Script: Tarefas encontradas para processamento:",
-      foundTasks.length,
-      foundTasks
-    ); // Log detalhado das tarefas encontradas
+    contentLogger.info("Tarefas encontradas para processamento:", foundTasks.length);
 
     // Filtra as tarefas que são realmente novas (não estão em currentSessionTasks)
     const newTasks = foundTasks.filter(
@@ -254,11 +261,7 @@
     );
 
     if (newTasks.length > 0) {
-      console.log(
-        "Content Script: Novas tarefas detectadas:",
-        newTasks.length,
-        newTasks
-      ); // Log detalhado das novas tarefas
+      contentLogger.info("Novas tarefas detectadas:", newTasks.length);
       // Adiciona as novas tarefas à lista de tarefas da sessão atual
       currentSessionTasks = [...currentSessionTasks, ...newTasks];
       // Envia as novas tarefas para o background script para processamento e notificação
@@ -268,20 +271,13 @@
           tasks: newTasks,
         })
         .then(() => {
-          console.log(
-            "Content Script: Mensagem 'newTasksFound' enviada com sucesso."
-          );
+          contentLogger.info("Mensagem 'newTasksFound' enviada com sucesso.");
         })
         .catch((error) => {
-          console.error(
-            "Content Script: Erro ao enviar mensagem 'newTasksFound':",
-            error
-          );
+          contentLogger.error("Erro ao enviar mensagem 'newTasksFound':", error);
         });
     } else {
-      console.log(
-        "Content Script: Nenhuma nova tarefa detectada nesta verificação."
-      );
+      contentLogger.info("Nenhuma nova tarefa detectada nesta verificação.");
     }
   }
 
@@ -302,19 +298,14 @@
   function processTasksHtml(htmlContent) {
     // Verifica se a opção "Novas" está selecionada
     if (!isNewTasksOptionSelected()) {
-      console.log(
-        "Content Script: Opção 'Novas' não está selecionada. Ignorando processamento de tarefas para evitar notificações desnecessárias."
-      );
+      contentLogger.info("Opção 'Novas' não está selecionada. Ignorando processamento de tarefas para evitar notificações desnecessárias.");
       return;
     }
 
     const parser = new DOMParser();
     const doc = parser.parseFromString(htmlContent, "text/html");
     const taskElements = doc.querySelectorAll("table.tarefaLista");
-    console.log(
-      "Content Script: HTML de tarefas recebido para processamento. Elementos encontrados:",
-      taskElements.length
-    );
+    contentLogger.info("HTML de tarefas recebido para processamento. Elementos encontrados:", taskElements.length);
     processTaskElements(taskElements);
   }
 
@@ -324,27 +315,21 @@
   function scanForExistingTasks() {
     // Verifica se a opção "Novas" está selecionada antes de processar tarefas existentes
     if (!isNewTasksOptionSelected()) {
-      console.log(
-        "Content Script: Opção 'Novas' não está selecionada. Ignorando escaneamento de tarefas existentes."
-      );
+      contentLogger.info("Opção 'Novas' não está selecionada. Ignorando escaneamento de tarefas existentes.");
       return;
     }
 
     const taskElements = document.querySelectorAll("table.tarefaLista");
     if (taskElements.length > 0) {
-      console.log(
-        `Content Script: Encontradas ${taskElements.length} tarefas pré-existentes no DOM. Processando...`
-      );
+      contentLogger.info(`Encontradas ${taskElements.length} tarefas pré-existentes no DOM. Processando...`);
       processTaskElements(taskElements);
     } else {
-      console.log(
-        "Content Script: Nenhuma tarefa pré-existente encontrada no DOM."
-      );
+      contentLogger.info("Nenhuma tarefa pré-existente encontrada no DOM.");
     }
   }
 
   /**
-   * Configura um MutationObserver para monitorar mudanças no DOM.
+   * Configura um MutationObserver para monitorar mudanças no DOM com throttling.
    * Isso serve como um fallback ou complemento à interceptação AJAX,
    * caso as tarefas sejam injetadas diretamente no DOM sem uma requisição XHR óbvia.
    */
@@ -352,36 +337,35 @@
     // Tenta encontrar o elemento que contém a lista de tarefas, ou monitora o body como fallback
     const targetNode = document.getElementById("divLista") || document.body;
     if (!targetNode) {
-      console.warn(
-        "Content Script: Elemento alvo para MutationObserver (divLista) não encontrado. Monitoramento de DOM pode ser limitado."
-      );
+      contentLogger.warn("Elemento alvo para MutationObserver (divLista) não encontrado. Monitoramento de DOM pode ser limitado.");
       return;
     }
 
     // Configuração do observador: observar mudanças na lista de filhos e em subárvores
     const config = { childList: true, subtree: true };
 
-    // Callback que será executado quando houver mutações no DOM
+    // Callback com throttling que será executado quando houver mutações no DOM
     const callback = function (mutationsList) {
-      // Para simplificar e tornar mais robusto, qualquer mudança relevante no DOM
-      // (como a adição de nós) aciona uma nova verificação completa por tarefas existentes.
-      // A função `scanForExistingTasks` já lida com a filtragem de duplicatas.
-      const hasRelevantChanges = mutationsList.some(
-        (mutation) =>
-          mutation.type === "childList" && mutation.addedNodes.length > 0
-      );
-
-      if (hasRelevantChanges) {
-        console.log(
-          "Content Script: Mudanças no DOM detectadas pelo MutationObserver. Re-escaneando por tarefas..."
+      // Se já há um timeout ativo, não faz nada (throttling)
+      if (mutationTimeout) return;
+      
+      mutationTimeout = setTimeout(() => {
+        const hasRelevantChanges = mutationsList.some(
+          (mutation) =>
+            mutation.type === "childList" && mutation.addedNodes.length > 0
         );
-        scanForExistingTasks();
-      }
+
+        if (hasRelevantChanges) {
+          contentLogger.info("Mudanças no DOM detectadas pelo MutationObserver. Re-escaneando por tarefas...");
+          scanForExistingTasks();
+        }
+        mutationTimeout = null;
+      }, MUTATION_THROTTLE_DELAY);
     };
 
     const observer = new MutationObserver(callback);
     observer.observe(targetNode, config); // Inicia a observação
-    console.log("Content Script: MutationObserver configurado para divLista.");
+    contentLogger.info("MutationObserver configurado para divLista com throttling.");
   }
 
   /**
@@ -401,49 +385,59 @@
     notificationContainer.id = "sau-notification-container";
     notificationContainer.className = "sau-notification-container";
 
-    // Cria o HTML para cada tarefa na notificação
+    // Cria o HTML para cada tarefa na notificação de forma segura
     let tasksHtml = tasks
-      .map(
-        (task) => `
+      .map((task) => {
+        // Sanitiza os dados da tarefa
+        const safeTask = {
+          numero: String(task.numero || '').substring(0, 50),
+          titulo: String(task.titulo || '').substring(0, 200),
+          dataEnvio: String(task.dataEnvio || '').substring(0, 50),
+          posicao: String(task.posicao || '').substring(0, 50),
+          solicitante: String(task.solicitante || 'N/A').substring(0, 100),
+          unidade: String(task.unidade || 'N/A').substring(0, 100),
+          descricao: String(task.descricao || 'N/A').substring(0, 1000),
+          id: String(task.id || '').substring(0, 100),
+          link: String(task.link || '#').substring(0, 500),
+          enderecos: Array.isArray(task.enderecos) 
+            ? task.enderecos.slice(0, 10).map(addr => String(addr).substring(0, 200))
+            : []
+        };
+
+        // Valida URL
+        try {
+          new URL(safeTask.link);
+        } catch (error) {
+          contentLogger.warn(`URL inválida na tarefa ${safeTask.id}: ${safeTask.link}`);
+          safeTask.link = '#';
+        }
+
+        return `
         <div class="sau-notification-item">
-            <p><strong>${task.numero}</strong>: ${task.titulo}</p>
-            <p class="sau-notification-meta">Envio: ${
-              task.dataEnvio
-            } | Posição: ${task.posicao}</p>
+            <p><strong>${safeTask.numero}</strong>: ${safeTask.titulo}</p>
+            <p class="sau-notification-meta">Envio: ${safeTask.dataEnvio} | Posição: ${safeTask.posicao}</p>
             <div class="sau-notification-actions">
-                <button class="sau-btn-open" data-url="${task.link}" data-id="${
-          task.id
-        }">Abrir</button>
-                <button class="sau-btn-details" data-id="${
-                  task.id
-                }">Detalhes</button>
-                <button class="sau-btn-ignore" data-id="${
-                  task.id
-                }">Ignorar</button>
-                <button class="sau-btn-snooze" data-id="${
-                  task.id
-                }">Lembrar Mais Tarde</button>
+                <button class="sau-btn-open" data-url="${safeTask.link}" data-id="${safeTask.id}">Abrir</button>
+                <button class="sau-btn-details" data-id="${safeTask.id}">Detalhes</button>
+                <button class="sau-btn-ignore" data-id="${safeTask.id}">Ignorar</button>
+                <button class="sau-btn-snooze" data-id="${safeTask.id}">Lembrar Mais Tarde</button>
             </div>
-            <div class="sau-details-expanded" id="sau-details-${task.id}">
-                <p><strong>Solicitante:</strong> ${
-                  task.solicitante || "N/A"
-                }</p>
-                <p><strong>Unidade:</strong> ${task.unidade || "N/A"}</p>
-                <p><strong>Descrição:</strong> ${task.descricao || "N/A"}</p>
+            <div class="sau-details-expanded" id="sau-details-${safeTask.id}">
+                <p><strong>Solicitante:</strong> ${safeTask.solicitante}</p>
+                <p><strong>Unidade:</strong> ${safeTask.unidade}</p>
+                <p><strong>Descrição:</strong> ${safeTask.descricao}</p>
                 ${
-                  task.enderecos && task.enderecos.length > 0
-                    ? `<p><strong>Endereço(s):</strong> ${task.enderecos
+                  safeTask.enderecos && safeTask.enderecos.length > 0
+                    ? `<p><strong>Endereço(s):</strong> ${safeTask.enderecos
                         .map((addr) => `<span>${addr}</span>`)
                         .join("<br>")}</p>`
                     : ""
                 }
-                <p><strong>Link:</strong> <a href="${
-                  task.link
-                }" target="_blank" rel="noopener noreferrer">Abrir no SAU</a></p>
+                <p><strong>Link:</strong> <a href="${safeTask.link}" target="_blank" rel="noopener noreferrer">Abrir no SAU</a></p>
             </div>
         </div>
-    `
-      )
+    `;
+      })
       .join("");
 
     // Constrói o HTML completo da notificação
@@ -498,9 +492,7 @@
           const taskId = e.target.dataset.id;
           const task = tasks.find((t) => t.id === taskId);
           if (task) {
-            console.log(
-              `Content Script: Botão 'Detalhes' clicado para a tarefa: ${taskId}. Alternando visibilidade dos detalhes.`
-            );
+            contentLogger.info(`Botão 'Detalhes' clicado para a tarefa: ${taskId}. Alternando visibilidade dos detalhes.`);
             const detailsDiv = document.getElementById(
               `sau-details-${task.id}`
             );
@@ -556,17 +548,13 @@
 
   // --- Execução Inicial do Content Script ---
   (async () => {
-    console.log("Content Script: Inicializando...");
+    contentLogger.info("Inicializando...");
 
     // Carrega as últimas tarefas conhecidas do storage local para a sessão atual do content script.
     // Isso é importante para que o content script não notifique sobre tarefas já vistas na mesma sessão.
     const data = await browserAPI.storage.local.get("lastKnownTasks");
     currentSessionTasks = data.lastKnownTasks || [];
-    console.log(
-      "Content Script: Tarefas conhecidas na sessão:",
-      currentSessionTasks.length,
-      currentSessionTasks // Log the actual content of currentSessionTasks
-    );
+    contentLogger.info("Tarefas conhecidas na sessão:", currentSessionTasks.length);
 
     // Lida com a tentativa de login automático se a página atual for a de login
     await handleLoginIfNecessary();
@@ -579,47 +567,40 @@
     window.addEventListener("message", (event) => {
       // Validação de segurança aprimorada
       if (event.source !== window) {
-        console.warn(
-          "Content Script: Mensagem de fonte não confiável rejeitada"
-        );
+        contentLogger.warn("Mensagem de fonte não confiável rejeitada");
         return;
       }
 
       if (event.origin !== window.location.origin) {
-        console.warn(
-          "Content Script: Mensagem de origem incorreta rejeitada:",
-          event.origin
-        );
+        contentLogger.warn("Mensagem de origem incorreta rejeitada:", event.origin);
         return;
       }
 
       if (!event.data || typeof event.data !== "object") {
-        console.warn("Content Script: Dados de mensagem inválidos rejeitados");
+        contentLogger.warn("Dados de mensagem inválidos rejeitados");
         return;
       }
 
       if (event.data.type === "SAU_TASKS_RESPONSE") {
         // Validação adicional do conteúdo
         if (typeof event.data.htmlContent !== "string") {
-          console.warn("Content Script: Conteúdo HTML inválido rejeitado");
+          contentLogger.warn("Conteúdo HTML inválido rejeitado");
           return;
         }
 
         // Validação de tamanho (limite de 5MB para prevenir ataques de DoS)
         if (event.data.htmlContent.length > 5 * 1024 * 1024) {
-          console.warn("Content Script: Conteúdo HTML muito grande rejeitado");
+          contentLogger.warn("Conteúdo HTML muito grande rejeitado");
           return;
         }
 
         // Validação de timestamp (mensagens não podem ser muito antigas - 30 segundos)
         if (event.data.timestamp && Date.now() - event.data.timestamp > 30000) {
-          console.warn("Content Script: Mensagem muito antiga rejeitada");
+          contentLogger.warn("Mensagem muito antiga rejeitada");
           return;
         }
 
-        console.log(
-          "Content Script: Resposta AJAX de tarefas recebida do interceptor."
-        );
+        contentLogger.info("Resposta AJAX de tarefas recebida do interceptor.");
         processTasksHtml(event.data.htmlContent);
       }
     });
@@ -633,10 +614,7 @@
       (message, sender, sendResponse) => {
         // O listener padrão e seguro para comunicação entre background e content scripts.
         if (message.action === "showNotificationUI") {
-          console.log(
-            "Content Script: Mensagem para mostrar UI de notificação recebida do Background:",
-            message.tasks
-          );
+          contentLogger.info("Mensagem para mostrar UI de notificação recebida do Background:", message.tasks);
           // Injeta a UI de notificação visual na página
           injectNotificationUI(message.tasks);
           // Opcional: responder ao background que a ação foi concluída.
@@ -648,9 +626,7 @@
     // Se o content script for injetado na página de consulta de tarefas,
     // simula um clique no botão de pesquisa para carregar as tarefas iniciais.
     if (window.location.href.startsWith(SAU_PREPARAR_PESQUISAR_TAREFA_URL)) {
-      console.log(
-        'Content Script: Página de consulta de tarefas ativa. Tentando simular clique em "Pesquisar" para verificação inicial.'
-      );
+      contentLogger.info('Página de consulta de tarefas ativa. Tentando simular clique em "Pesquisar" para verificação inicial.');
       const searchButton = document.getElementById("btn_pesquisarTarefaForm"); // Botão de pesquisa principal
       const searchButtonAdvanced = document.getElementById(
         "btn_pesquisarTarefaFormAvancado"
@@ -658,21 +634,17 @@
 
       if (searchButton) {
         searchButton.click();
-        console.log("Content Script: Botão de pesquisa principal clicado.");
+        contentLogger.info("Botão de pesquisa principal clicado.");
       } else if (searchButtonAdvanced) {
         searchButtonAdvanced.click();
-        console.log("Content Script: Botão de pesquisa avançada clicado.");
+        contentLogger.info("Botão de pesquisa avançada clicado.");
       } else {
-        console.warn(
-          "Content Script: Nenhum botão de pesquisa de tarefas encontrado. A verificação inicial pode não ocorrer automaticamente."
-        );
+        contentLogger.warn("Nenhum botão de pesquisa de tarefas encontrado. A verificação inicial pode não ocorrer automaticamente.");
       }
     } else if (window.location.href.startsWith(SAU_HOME_URL)) {
       // Se o script for injetado na página inicial após o login,
       // redireciona para a página de consulta de tarefas para iniciar o processo.
-      console.log(
-        "Content Script: Página inicial (home) detectada. Redirecionando para a página de consulta de tarefas..."
-      );
+      contentLogger.info("Página inicial (home) detectada. Redirecionando para a página de consulta de tarefas...");
       window.location.href = SAU_PREPARAR_PESQUISAR_TAREFA_URL;
     }
   })();
