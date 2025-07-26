@@ -557,3 +557,7 @@ if (Date.now() - lastNotificationTime >= NOTIFICATION_COOLDOWN) {
   lastNotificationTime = Date.now();
 }
 ```
+
+## 14. Boas Práticas para Edição de Arquivos Markdown
+
+### ⚠️ PROBLEMAS CRÍTICOS A EVITAR
