@@ -530,3 +530,30 @@ git commit -m "docs(agents): adicionar instruções específicas para CHANGELOG 
 # Commit do changelog
 git commit -m "docs(changelog): documentar correção de múltiplas abas de login"
 ```
+### 13. Práticas de Performance e UX
+
+#### Problemas Críticos a Evitar
+
+**Bloqueio da UI Principal:**
+```javascript
+// ❌ Incorreto - bloqueia a UI
+for (const task of tasks) {
+  const result = await processTask(task);
+}
+
+// ✅ Correto - processamento paralelo
+const results = await Promise.all(
+  tasks.map(async (task) => await processTask(task))
+);
+```
+
+**Rate Limiting Obrigatório:**
+```javascript
+// ✅ Implemente cooldown para notificações
+let lastNotificationTime = 0;
+const NOTIFICATION_COOLDOWN = 5000; // 5 segundos
+if (Date.now() - lastNotificationTime >= NOTIFICATION_COOLDOWN) {
+  await createNotification(options);
+  lastNotificationTime = Date.now();
+}
+```
