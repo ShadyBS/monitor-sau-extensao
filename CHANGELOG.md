@@ -9,6 +9,10 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - **Observer Inteligente para SIGSS**: Sistema de observação de mudanças no DOM específico para detectar alterações no elemento .sigss-title
 - **Compatibilidade Cross-Browser**: Funcionalidade funciona tanto no Chrome quanto no Firefox com fallback automático entre storage.sync e storage.local
 
+### Fixed
+- **Config Manager**: Adicionada configuração `enableSigssTabRename` ao DEFAULT_CONFIG para garantir valor padrão correto
+- **Manifest Permissions**: Adicionadas permissões para URLs do SIGSS (c1863prd.cloudmv.com.br e c1863tst1.cloudmv.com.br) nos manifests Chrome e Firefox
+
 ### Technical Details
 - Implementada detecção automática de páginas do SIGSS baseada na URL
 - Sistema de MutationObserver otimizado com requestAnimationFrame para performance
@@ -49,6 +53,10 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - **Página de Opções**: Atualizada para usar o novo gerenciador de configurações
 - **Background Script**: Refatorado para usar o sistema unificado de configurações
 
+### Fixed
+- **Config Manager**: Adicionada configuração `enableSigssTabRename` ao DEFAULT_CONFIG para garantir valor padrão correto
+- **Manifest Permissions**: Adicionadas permissões para URLs do SIGSS (c1863prd.cloudmv.com.br e c1863tst1.cloudmv.com.br) nos manifests Chrome e Firefox
+
 ### Technical Details
 - Criado módulo `config-manager.js` com funções `setConfig`, `getConfig`, `setConfigs`, `getConfigs`
 - Implementada detecção automática de disponibilidade do `chrome.storage.sync`
@@ -79,6 +87,10 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - **Logs Detalhados**: Adicionados logs específicos para situações de timeout e abas não responsivas
 - **Recuperação Automática**: Sistema automático de recuperação quando abas ficam travadas
 
+### Fixed
+- **Config Manager**: Adicionada configuração `enableSigssTabRename` ao DEFAULT_CONFIG para garantir valor padrão correto
+- **Manifest Permissions**: Adicionadas permissões para URLs do SIGSS (c1863prd.cloudmv.com.br e c1863tst1.cloudmv.com.br) nos manifests Chrome e Firefox
+
 ### Technical Details
 
 - Adicionada função `isTabResponsive()` para verificar se aba responde a mensagens
@@ -107,6 +119,10 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - **Controle Inteligente de Abas**: Sistema para gerenciar abas de login sem credenciais
 - **Rastreamento de Estado**: Variáveis para controlar timestamp e ID da última aba de login aberta
 - **Listener de Abas Fechadas**: Detecta quando abas de login são fechadas para limpar estado interno
+
+### Fixed
+- **Config Manager**: Adicionada configuração `enableSigssTabRename` ao DEFAULT_CONFIG para garantir valor padrão correto
+- **Manifest Permissions**: Adicionadas permissões para URLs do SIGSS (c1863prd.cloudmv.com.br e c1863tst1.cloudmv.com.br) nos manifests Chrome e Firefox
 
 ### Technical Details
 
@@ -137,6 +153,10 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - **Build da Extensão**: Corrigido script de build que não incluía arquivos críticos no ZIP (sanitizer.js, tooltip-system.js, help.\*)
 - **Arquivos Essenciais**: Adicionados arquivos essenciais à lista de sourceFiles no script de build
 - **Instalação via ZIP**: Resolvido problema onde extensão funcionava "sem pacote" mas falhava quando instalada via ZIP
+
+### Fixed
+- **Config Manager**: Adicionada configuração `enableSigssTabRename` ao DEFAULT_CONFIG para garantir valor padrão correto
+- **Manifest Permissions**: Adicionadas permissões para URLs do SIGSS (c1863prd.cloudmv.com.br e c1863tst1.cloudmv.com.br) nos manifests Chrome e Firefox
 
 ### Technical Details
 
@@ -173,4 +193,5 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - **Feedback Visual**: Adicionado indicadores de loading e estados de erro para operações assíncronas
 - **Sanitização de Dados**: Melhorada validação e sanitização de dados de tarefas para prevenir XSS
 - **Logging Padronizado**: Substituído console.log por sistema de logging centralizado no content script
+
 

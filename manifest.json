@@ -29,9 +29,12 @@
     "webNavigation"
   ],
   "host_permissions": [
-    "https://egov.santos.sp.gov.br/sau/*"
+    "https://egov.santos.sp.gov.br/sau/*",
+    "http://c1863prd.cloudmv.com.br/sigss/*",
+    "http://c1863tst1.cloudmv.com.br/sigss/*"
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'none'; base-uri 'none';"
   }
 }
+

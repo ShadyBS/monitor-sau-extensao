@@ -25,6 +25,7 @@ const DEFAULT_CONFIG = {
   checkInterval: 30,
   enableRenotification: false,
   renotificationInterval: 30,
+  enableSigssTabRename: true, // Habilitado por padrão
   
   // Configurações de exibição
   taskDisplaySettings: {
