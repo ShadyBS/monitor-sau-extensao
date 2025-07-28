@@ -234,7 +234,7 @@ browserAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
         ).toLocaleTimeString()}`,
         lastCheck: lastCheckTimestamp,
       });
-      break;
+      return true; // Indica que a resposta será enviada de forma síncrona
     case "ignoreTask":
       // Marca uma tarefa como ignorada e salva o estado
       ignoredTasks[request.taskId] = true;
@@ -338,7 +338,7 @@ browserAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
         "Solicitação de logs recebida da página de opções."
       );
       sendResponse({ logs: backgroundLogger.getStoredLogs() });
-      break;
+      return true; // Indica que a resposta será enviada de forma síncrona
     case "resetTaskMemory": // NOVO CASE PARA RESETAR A MEMÓRIA
       backgroundLogger.warn("Resetando a memória de tarefas por solicitação.");
       lastKnownTasks = [];
@@ -351,7 +351,7 @@ browserAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
       sendResponse({ status: "Memória de tarefas resetada com sucesso." });
       // Força uma nova verificação para repopular a lista se a página estiver aberta
       checkAndNotifyNewTasks();
-      break;
+      return true; // Indica que a resposta será enviada de forma síncrona
   }
 });
 
