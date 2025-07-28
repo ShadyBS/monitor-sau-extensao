@@ -9,6 +9,11 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - **Observer Inteligente para SIGSS**: Sistema de observação de mudanças no DOM específico para detectar alterações no elemento .sigss-title
 - **Compatibilidade Cross-Browser**: Funcionalidade funciona tanto no Chrome quanto no Firefox com fallback automático entre storage.sync e storage.local
 
+### Changed
+- **Arquitetura Modular**: Refatorado content scripts para separação de responsabilidades - `content.js` para SAU e `content-sigss.js` para SIGSS
+- **Injeção Inteligente**: Background script agora injeta o content script apropriado baseado na URL da página
+- **Manutenibilidade**: Cada funcionalidade agora tem seu próprio arquivo, facilitando manutenção e testes
+
 ### Fixed
 - **Config Manager**: Adicionada configuração `enableSigssTabRename` ao DEFAULT_CONFIG para garantir valor padrão correto
 - **Manifest Permissions**: Adicionadas permissões para URLs do SIGSS (c1863prd.cloudmv.com.br e c1863tst1.cloudmv.com.br) nos manifests Chrome e Firefox
@@ -22,8 +27,18 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - Logging detalhado para debugging e monitoramento
 ## [1.1.5] - 2025-07-28
 
+### Changed
+- **Arquitetura Modular**: Refatorado content scripts para separação de responsabilidades - `content.js` para SAU e `content-sigss.js` para SIGSS
+- **Injeção Inteligente**: Background script agora injeta o content script apropriado baseado na URL da página
+- **Manutenibilidade**: Cada funcionalidade agora tem seu próprio arquivo, facilitando manutenção e testes
+
 ### Fixed
 - **Sincronização de Versões**: Corrigida discrepância entre versões do package.json e manifests para release v1.1.5## [1.1.5] - 2025-01-28
+
+### Changed
+- **Arquitetura Modular**: Refatorado content scripts para separação de responsabilidades - `content.js` para SAU e `content-sigss.js` para SIGSS
+- **Injeção Inteligente**: Background script agora injeta o content script apropriado baseado na URL da página
+- **Manutenibilidade**: Cada funcionalidade agora tem seu próprio arquivo, facilitando manutenção e testes
 
 ### Fixed
 - **Build Script Missing File**: Corrigido problema crítico onde popup funcionava no modo desenvolvimento mas falhava no ZIP empacotado devido ao arquivo config-manager.js não estar incluído na lista sourceFiles do script de build
@@ -53,6 +68,11 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - **Página de Opções**: Atualizada para usar o novo gerenciador de configurações
 - **Background Script**: Refatorado para usar o sistema unificado de configurações
 
+### Changed
+- **Arquitetura Modular**: Refatorado content scripts para separação de responsabilidades - `content.js` para SAU e `content-sigss.js` para SIGSS
+- **Injeção Inteligente**: Background script agora injeta o content script apropriado baseado na URL da página
+- **Manutenibilidade**: Cada funcionalidade agora tem seu próprio arquivo, facilitando manutenção e testes
+
 ### Fixed
 - **Config Manager**: Adicionada configuração `enableSigssTabRename` ao DEFAULT_CONFIG para garantir valor padrão correto
 - **Manifest Permissions**: Adicionadas permissões para URLs do SIGSS (c1863prd.cloudmv.com.br e c1863tst1.cloudmv.com.br) nos manifests Chrome e Firefox
@@ -71,6 +91,11 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 - **Novo Script de Changelog**: Adicionado script para automatizar a atualização do changelog.
 
+### Changed
+- **Arquitetura Modular**: Refatorado content scripts para separação de responsabilidades - `content.js` para SAU e `content-sigss.js` para SIGSS
+- **Injeção Inteligente**: Background script agora injeta o content script apropriado baseado na URL da página
+- **Manutenibilidade**: Cada funcionalidade agora tem seu próprio arquivo, facilitando manutenção e testes
+
 ### Fixed
 
 - **Timeout para Abas Travadas**: Implementado sistema de timeout para detectar e lidar com abas do SAU que ficam não responsivas
@@ -87,6 +112,11 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - **Logs Detalhados**: Adicionados logs específicos para situações de timeout e abas não responsivas
 - **Recuperação Automática**: Sistema automático de recuperação quando abas ficam travadas
 
+### Changed
+- **Arquitetura Modular**: Refatorado content scripts para separação de responsabilidades - `content.js` para SAU e `content-sigss.js` para SIGSS
+- **Injeção Inteligente**: Background script agora injeta o content script apropriado baseado na URL da página
+- **Manutenibilidade**: Cada funcionalidade agora tem seu próprio arquivo, facilitando manutenção e testes
+
 ### Fixed
 - **Config Manager**: Adicionada configuração `enableSigssTabRename` ao DEFAULT_CONFIG para garantir valor padrão correto
 - **Manifest Permissions**: Adicionadas permissões para URLs do SIGSS (c1863prd.cloudmv.com.br e c1863tst1.cloudmv.com.br) nos manifests Chrome e Firefox
@@ -100,11 +130,21 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - Melhorada lógica de fallback em `checkAndNotifyNewTasks()` para lidar com abas travadas
 - Implementados timeouts usando `Promise.race()` para operações críticas## [1.1.3] - 2025-07-25
 
+### Changed
+- **Arquitetura Modular**: Refatorado content scripts para separação de responsabilidades - `content.js` para SAU e `content-sigss.js` para SIGSS
+- **Injeção Inteligente**: Background script agora injeta o content script apropriado baseado na URL da página
+- **Manutenibilidade**: Cada funcionalidade agora tem seu próprio arquivo, facilitando manutenção e testes
+
 ### Fixed
 
 - **Erro de Módulo em Content Script**: Corrigido o erro `Uncaught SyntaxError: Cannot use import statement outside a module` em `content.js`. A tentativa de usar `import` para o logger foi revertida devido a limitações na injeção de scripts como módulos. O `content.js` voltará a usar `console.*` para logs, com uma nota técnica explicando a limitação.
 
 ## [1.1.2] - 2025-07-25
+
+### Changed
+- **Arquitetura Modular**: Refatorado content scripts para separação de responsabilidades - `content.js` para SAU e `content-sigss.js` para SIGSS
+- **Injeção Inteligente**: Background script agora injeta o content script apropriado baseado na URL da página
+- **Manutenibilidade**: Cada funcionalidade agora tem seu próprio arquivo, facilitando manutenção e testes
 
 ### Fixed
 
@@ -120,6 +160,11 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - **Rastreamento de Estado**: Variáveis para controlar timestamp e ID da última aba de login aberta
 - **Listener de Abas Fechadas**: Detecta quando abas de login são fechadas para limpar estado interno
 
+### Changed
+- **Arquitetura Modular**: Refatorado content scripts para separação de responsabilidades - `content.js` para SAU e `content-sigss.js` para SIGSS
+- **Injeção Inteligente**: Background script agora injeta o content script apropriado baseado na URL da página
+- **Manutenibilidade**: Cada funcionalidade agora tem seu próprio arquivo, facilitando manutenção e testes
+
 ### Fixed
 - **Config Manager**: Adicionada configuração `enableSigssTabRename` ao DEFAULT_CONFIG para garantir valor padrão correto
 - **Manifest Permissions**: Adicionadas permissões para URLs do SIGSS (c1863prd.cloudmv.com.br e c1863tst1.cloudmv.com.br) nos manifests Chrome e Firefox
@@ -134,11 +179,21 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 ## [1.1.1] - 2025-07-24
 
+### Changed
+- **Arquitetura Modular**: Refatorado content scripts para separação de responsabilidades - `content.js` para SAU e `content-sigss.js` para SIGSS
+- **Injeção Inteligente**: Background script agora injeta o content script apropriado baseado na URL da página
+- **Manutenibilidade**: Cada funcionalidade agora tem seu próprio arquivo, facilitando manutenção e testes
+
 ### Fixed
 
 - Release v1.1.1 com correções críticas de popup e build da extensão
 
 ## [1.1.1] - 2025-01-24
+
+### Changed
+- **Arquitetura Modular**: Refatorado content scripts para separação de responsabilidades - `content.js` para SAU e `content-sigss.js` para SIGSS
+- **Injeção Inteligente**: Background script agora injeta o content script apropriado baseado na URL da página
+- **Manutenibilidade**: Cada funcionalidade agora tem seu próprio arquivo, facilitando manutenção e testes
 
 ### Fixed
 
@@ -153,6 +208,11 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - **Build da Extensão**: Corrigido script de build que não incluía arquivos críticos no ZIP (sanitizer.js, tooltip-system.js, help.\*)
 - **Arquivos Essenciais**: Adicionados arquivos essenciais à lista de sourceFiles no script de build
 - **Instalação via ZIP**: Resolvido problema onde extensão funcionava "sem pacote" mas falhava quando instalada via ZIP
+
+### Changed
+- **Arquitetura Modular**: Refatorado content scripts para separação de responsabilidades - `content.js` para SAU e `content-sigss.js` para SIGSS
+- **Injeção Inteligente**: Background script agora injeta o content script apropriado baseado na URL da página
+- **Manutenibilidade**: Cada funcionalidade agora tem seu próprio arquivo, facilitando manutenção e testes
 
 ### Fixed
 - **Config Manager**: Adicionada configuração `enableSigssTabRename` ao DEFAULT_CONFIG para garantir valor padrão correto
@@ -181,6 +241,11 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - **Experiência do Usuário**: Completamente redesenhada para novos usuários
 - **Arquitetura Modular**: Sistema extensível e bem documentado
 
+### Changed
+- **Arquitetura Modular**: Refatorado content scripts para separação de responsabilidades - `content.js` para SAU e `content-sigss.js` para SIGSS
+- **Injeção Inteligente**: Background script agora injeta o content script apropriado baseado na URL da página
+- **Manutenibilidade**: Cada funcionalidade agora tem seu próprio arquivo, facilitando manutenção e testes
+
 ### Fixed
 
 - **Otimização de Performance**: Implementadas correções críticas para melhorar responsividade e experiência do usuário
@@ -193,5 +258,6 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - **Feedback Visual**: Adicionado indicadores de loading e estados de erro para operações assíncronas
 - **Sanitização de Dados**: Melhorada validação e sanitização de dados de tarefas para prevenir XSS
 - **Logging Padronizado**: Substituído console.log por sistema de logging centralizado no content script
+
 
 

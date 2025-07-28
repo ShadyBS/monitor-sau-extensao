@@ -16,6 +16,7 @@ const CONFIG = {
   sourceFiles: [
     'background.js',
     'content.js',
+    'content-sigss.js',
     'interceptor.js',
     'logger.js',
     'sanitizer.js',

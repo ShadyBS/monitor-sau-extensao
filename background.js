@@ -8,7 +8,29 @@ const SAU_PREPARAR_PESQUISAR_TAREFA_URL =
 
 // Importa o logger e o instancia para o contexto do background script
 import { logger } from "./logger.js";
-const backgroundLogger = logger("[Background]");
+const backgroundLogger = logger('[Background]');
+/**
+ * Determina qual content script usar baseado na URL da aba
+ * @param {number} tabId - ID da aba
+ * @returns {Promise<string>} - Nome do arquivo do content script
+ */
+async function getContentScriptForTab(tabId) {
+  try {
+    const tab = await browserAPI.tabs.get(tabId);
+    const url = tab.url || '';
+    
+    // Verifica se é uma página do SIGSS
+    if (/sigss/i.test(url)) {
+      return 'content-sigss.js';
+    }
+    
+    // Padrão: páginas do SAU
+    return 'content.js';
+  } catch (error) {
+    backgroundLogger.warn(`Erro ao determinar content script para aba ${tabId}:`, error);
+    return 'content.js'; // Fallback para SAU
+  }
+}
 
 // Define o objeto de API do navegador de forma compatível (Chrome ou Firefox)
 const browserAPI = (() => {
@@ -401,7 +423,7 @@ async function injectScriptsWithTimeout(tabId) {
         // Injeta o content script principal no contexto ISOLADO (padrão)
         browserAPI.scripting.executeScript({
           target: { tabId },
-          files: ["content.js"],
+          files: [await getContentScriptForTab(tabId)],
         }),
         // Injeta o script interceptor no contexto da PÁGINA (MAIN)
         browserAPI.scripting.executeScript({
@@ -1018,7 +1040,7 @@ browserAPI.webNavigation.onCompleted.addListener(
         // Injeta o content script principal no contexto ISOLADO (padrão)
         await browserAPI.scripting.executeScript({
           target: { tabId: details.tabId },
-          files: ["content.js"],
+          files: [await getContentScriptForTab(tabId)],
         });
         // Injeta o script interceptor no contexto da PÁGINA (MAIN)
         // para que ele possa sobrescrever o XMLHttpRequest da página.
@@ -1092,3 +1114,5 @@ loadPersistentData()
       error
     );
   });
+
+
