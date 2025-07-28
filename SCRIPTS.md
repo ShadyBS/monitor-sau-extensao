@@ -24,6 +24,7 @@ npm run build:firefox
 ```
 
 **Funcionalidades:**
+
 - ✅ Validação de arquivos obrigatórios
 - ✅ Validação de manifests específicos por navegador
 - ✅ Cópia inteligente de arquivos
@@ -52,11 +53,34 @@ node scripts/version.js info
 ```
 
 **Funcionalidades:**
+
 - ✅ Validação SemVer
 - ✅ Sincronização entre package.json e manifests
 - ✅ Confirmação interativa
 - ✅ Detecção de versões dessincronizadas
 - ✅ Suporte a prerelease
+
+### Changelog (`scripts/changelog.js`)
+
+Automatiza a atualização do `CHANGELOG.md` para um novo release.
+
+```bash
+# Mover notas "Unreleased" para uma nova versão
+npm run changelog
+```
+
+**Funcionalidades:**
+
+- ✅ Lê a versão atual do `package.json`.
+- ✅ Verifica se a versão já existe no `CHANGELOG.md` para evitar duplicatas.
+- ✅ Move o conteúdo da seção `[Unreleased]` para uma nova seção de versão com a data atual.
+- ✅ Limpa a seção `[Unreleased]` para o próximo ciclo.
+- ✅ Retorna erro se a seção `[Unreleased]` estiver vazia.
+
+**Pré-requisitos:**
+
+- `package.json` com a versão desejada para o release.
+- `CHANGELOG.md` com notas na seção `[Unreleased]`.
 
 ### Release (`scripts/release.js`)
 
@@ -71,6 +95,7 @@ npm run release -- --auto-confirm
 ```
 
 **Funcionalidades:**
+
 - ✅ Validação de ambiente Git
 - ✅ Verificação de mudanças não commitadas
 - ✅ Validação do CHANGELOG.md
@@ -81,6 +106,7 @@ npm run release -- --auto-confirm
 - ✅ Extração automática de release notes
 
 **Pré-requisitos:**
+
 - Git configurado
 - GitHub CLI instalado e autenticado
 - CHANGELOG.md atualizado
@@ -95,6 +121,7 @@ npm run validate
 ```
 
 **Verificações:**
+
 - ✅ Estrutura de arquivos obrigatórios
 - ✅ Validação de manifests
 - ✅ Sintaxe JavaScript básica
@@ -116,6 +143,7 @@ npm run clean -- --dry-run
 ```
 
 **Remove:**
+
 - `.dist/` - Arquivos de build
 - `*.log` - Arquivos de log
 - `.tmp/`, `.temp/` - Arquivos temporários
@@ -124,18 +152,21 @@ npm run clean -- --dry-run
 ## 🔒 Verificações de Segurança
 
 ### Build
+
 - Validação de manifests
 - Verificação de permissões perigosas
 - Exclusão de arquivos sensíveis
 - Validação de tamanho dos arquivos
 
 ### Validação
+
 - Detecção de `eval()` e outras práticas inseguras
 - Verificação de arquivos `.env` e similares
 - Validação de `.gitignore`
 - Auditoria de dependências
 
 ### Release
+
 - Verificação de autenticação GitHub
 - Validação de estado Git limpo
 - Confirmação interativa
@@ -153,6 +184,7 @@ npm run clean -- --dry-run
 ## 🔄 Fluxo de Desenvolvimento Recomendado
 
 ### 1. Desenvolvimento
+
 ```bash
 # Fazer mudanças no código
 # Atualizar CHANGELOG.md
@@ -160,6 +192,7 @@ npm run validate  # Verificar qualidade
 ```
 
 ### 2. Versionamento
+
 ```bash
 npm run version:patch  # ou minor/major
 # Revisar mudanças
@@ -168,6 +201,7 @@ git commit -m "chore(release): v1.0.1"
 ```
 
 ### 3. Release
+
 ```bash
 npm run release
 # Confirmar quando solicitado
@@ -176,6 +210,7 @@ npm run release
 ## ⚙️ Configuração
 
 ### GitHub CLI
+
 ```bash
 # Instalar GitHub CLI
 winget install GitHub.cli
@@ -185,13 +220,16 @@ gh auth login
 ```
 
 ### Variáveis de Ambiente
+
 ```bash
 # Opcional: configurar token GitHub
 export GITHUB_TOKEN=your_token_here
 ```
 
 ### Configuração do Repositório
+
 Atualize as URLs no `package.json`:
+
 ```json
 {
   "repository": {
@@ -204,6 +242,7 @@ Atualize as URLs no `package.json`:
 ## 🐛 Troubleshooting
 
 ### Erro: "GitHub CLI não encontrado"
+
 ```bash
 # Windows
 winget install GitHub.cli
@@ -216,21 +255,25 @@ sudo apt install gh
 ```
 
 ### Erro: "Não autenticado no GitHub"
+
 ```bash
 gh auth login
 # Seguir instruções interativas
 ```
 
 ### Erro: "Mudanças não commitadas"
+
 ```bash
 git add .
 git commit -m "suas mudanças"
 ```
 
 ### Erro: "CHANGELOG não atualizado"
+
 Edite `CHANGELOG.md` e adicione suas mudanças na seção `[Unreleased]`.
 
 ### Erro: "Versões dessincronizadas"
+
 ```bash
 node scripts/version.js patch  # Sincroniza automaticamente
 ```
@@ -238,16 +281,19 @@ node scripts/version.js patch  # Sincroniza automaticamente
 ## 📊 Métricas e Relatórios
 
 ### Build
+
 - Tamanho dos ZIPs gerados
 - Tempo de build
 - Arquivos incluídos/excluídos
 
 ### Validação
+
 - Número de erros/avisos
 - Verificações de segurança
 - Qualidade do código
 
 ### Release
+
 - Versão criada
 - Assets enviados
 - URL do release
@@ -255,18 +301,22 @@ node scripts/version.js patch  # Sincroniza automaticamente
 ## 🔧 Personalização
 
 ### Adicionar Novos Arquivos ao Build
+
 Edite `CONFIG.sourceFiles` em `scripts/build.js`:
+
 ```javascript
 sourceFiles: [
-  'background.js',
-  'content.js',
+  "background.js",
+  "content.js",
   // ... arquivos existentes
-  'seu-novo-arquivo.js'  // Adicione aqui
-]
+  "seu-novo-arquivo.js", // Adicione aqui
+];
 ```
 
 ### Personalizar Validações
+
 Edite `scripts/validate.js` para adicionar novas verificações:
+
 ```javascript
 async validateCustom() {
   // Suas validações personalizadas
@@ -274,7 +324,9 @@ async validateCustom() {
 ```
 
 ### Modificar Processo de Release
+
 Edite `scripts/release.js` para personalizar o fluxo:
+
 ```javascript
 async customReleaseStep() {
   // Seus passos personalizados
@@ -284,12 +336,14 @@ async customReleaseStep() {
 ## 📝 Logs e Debug
 
 ### Ativar Logs Detalhados
+
 ```bash
 DEBUG=1 npm run build
 DEBUG=1 npm run release
 ```
 
 ### Localização dos Logs
+
 - Console: Saída em tempo real
 - `.dist/`: Arquivos temporários de debug
 - GitHub Actions: Logs de CI/CD

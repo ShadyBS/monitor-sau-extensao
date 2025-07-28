@@ -3,6 +3,12 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 ## [Unreleased]
 
+## [1.1.5] - 2025-07-28
+
+### Added
+
+- **Novo Script de Changelog**: Adicionado script para automatizar a atualização do changelog.
+
 ### Fixed
 
 - **Timeout para Abas Travadas**: Implementado sistema de timeout para detectar e lidar com abas do SAU que ficam não responsivas
@@ -26,9 +32,7 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - Criada constante `SCRIPT_INJECTION_TIMEOUT` para controlar timeout de injeção
 - Adicionado tratamento de mensagem "ping" no content script
 - Melhorada lógica de fallback em `checkAndNotifyNewTasks()` para lidar com abas travadas
-- Implementados timeouts usando `Promise.race()` para operações críticas
-
-## [1.1.3] - 2025-07-25
+- Implementados timeouts usando `Promise.race()` para operações críticas## [1.1.3] - 2025-07-25
 
 ### Fixed
 
