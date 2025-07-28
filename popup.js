@@ -22,12 +22,25 @@ document.addEventListener("DOMContentLoaded", initializePopup);
  */
 async function getDisplaySettings() {
   try {
-    const taskDisplaySettings = await getConfig("taskDisplaySettings");
+    console.log("getDisplaySettings: Iniciando carregamento de configurações de exibição");
+    
+    // Fallback temporário: usa storage direto se config-manager falhar
+    let taskDisplaySettings;
+    try {
+      taskDisplaySettings = await getConfig("taskDisplaySettings");
+      console.log("getDisplaySettings: Configurações carregadas via config-manager:", taskDisplaySettings);
+    } catch (configError) {
+      console.warn("getDisplaySettings: Erro no config-manager, usando storage direto:", configError);
+      const data = await browserAPI.storage.local.get(["taskDisplaySettings"]);
+      taskDisplaySettings = data.taskDisplaySettings;
+      console.log("getDisplaySettings: Configurações carregadas via storage direto:", taskDisplaySettings);
+    }
+    
     if (taskDisplaySettings && taskDisplaySettings.headerFields) {
       return taskDisplaySettings.headerFields;
     } else {
       // Configurações padrão
-      return {
+      const defaultSettings = {
         numero: true,
         titulo: true,
         dataEnvio: true,
@@ -35,8 +48,11 @@ async function getDisplaySettings() {
         solicitante: false,
         unidade: false,
       };
+      console.log("getDisplaySettings: Usando configurações padrão:", defaultSettings);
+      return defaultSettings;
     }
   } catch (error) {
+    console.error("getDisplaySettings: Erro ao carregar configurações:", error);
     await popupLogger.error(
       "Erro ao carregar configurações de exibição:",
       error
@@ -458,19 +474,30 @@ function closeSnoozeDropdownOnOutsideClick(event) {
  * Inicializa o popup com todas as funcionalidades
  */
 async function initializePopup() {
-  await popupLogger.info("Inicializando popup...");
+  try {
+    await popupLogger.info("Inicializando popup...");
 
-  // Configura event listeners dos botões principais
-  setupMainEventListeners();
+    // Configura event listeners dos botões principais
+    setupMainEventListeners();
 
-  // Carrega dados do popup
-  await loadPopupData();
+    // Carrega dados do popup
+    await loadPopupData();
 
-  // Configura sistema de ajuda
-  setupHelpSystem();
+    // Configura sistema de ajuda
+    setupHelpSystem();
 
-  // Verifica se deve mostrar ajuda para novos usuários
-  await checkFirstTimeUser();
+    // Verifica se deve mostrar ajuda para novos usuários
+    await checkFirstTimeUser();
+
+    await popupLogger.info("Popup inicializado com sucesso!");
+  } catch (error) {
+    await popupLogger.error("Erro crítico na inicialização do popup:", error);
+    console.error("Erro crítico na inicialização do popup:", error);
+    
+    // Fallback: mostra mensagem de erro para o usuário
+    document.getElementById("status-message").textContent = 
+      "Erro ao inicializar popup. Verifique o console para detalhes.";
+  }
 }
 
 /**
@@ -593,12 +620,23 @@ function setupHelpSystem() {
  */
 async function checkFirstTimeUser() {
   try {
-    const data = await getConfigs([
-      "helpTourCompleted",
-      "firstTimeUser",
-      "helpDismissed",
-      "sauUsername", // Verifica se já configurou credenciais
-    ]);
+    let data;
+    try {
+      data = await getConfigs([
+        "helpTourCompleted",
+        "firstTimeUser",
+        "helpDismissed",
+        "sauUsername", // Verifica se já configurou credenciais
+      ]);
+    } catch (configError) {
+      console.warn("checkFirstTimeUser: Erro no config-manager, usando storage direto:", configError);
+      data = await browserAPI.storage.local.get([
+        "helpTourCompleted",
+        "firstTimeUser", 
+        "helpDismissed",
+        "sauUsername"
+      ]);
+    }
 
     // Se é primeira vez, não fez tour, não dispensou ajuda e não tem credenciais
     const isFirstTime = data.firstTimeUser !== false;
