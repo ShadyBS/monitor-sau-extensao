@@ -3,15 +3,15 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 ## [Unreleased]
 
+## [2.1.0] - 2025-07-28
+
 ### Changed
 - **Design da Página de Opções**: Melhorado o design geral da página de opções para um visual mais moderno e elegante, com melhor espaçamento, sombras e hierarquia visual.
 - **Tooltips**: Aumentado o tamanho da fonte dos tooltips para melhorar a legibilidade.
 - **Botões de Ajuda**: Consolidado os botões de ajuda na página de opções, substituindo múltiplos botões por um único botão por seção para uma interface mais limpa.
 
 ### Fixed
-- **Alinhamento de Checkbox**: Corrigido o problema de quebra de linha entre o checkbox e o texto na opção "Permitir tempo personalizado".
-
-## [2.0.0] - 2025-07-28
+- **Alinhamento de Checkbox**: Corrigido o problema de quebra de linha entre o checkbox e o texto na opção "Permitir tempo personalizado".## [2.0.0] - 2025-07-28
 
 ### Fixed
 - **Background Script Error**: Corrigido erro crítico `ReferenceError: tabId is not defined` na linha 1043 do background.js que impedia a injeção correta de content scripts
