@@ -40,7 +40,8 @@ Esta é uma **extensão para navegador** (Chrome e Firefox) com estrutura espec�
 │   └── clean.js              # Limpeza de arquivos
 ├── icons/                     # Ícones da extensão (16px, 48px, 128px)
 ├── background.js              # Service Worker principal
-├── content.js                 # Script injetado nas páginas
+├── content.js                 # Script injetado nas páginas do SAU
+├── content-sigss.js           # Script injetado nas páginas do SIGSS
 ├── interceptor.js             # Interceptador de requisições
 ├── sanitizer.js               # Utilitários de segurança e sanitização
 ├── popup.html/js/css          # Interface do popup
@@ -561,3 +562,4 @@ if (Date.now() - lastNotificationTime >= NOTIFICATION_COOLDOWN) {
 ## 14. Boas Práticas para Edição de Arquivos Markdown
 
 ### ⚠️ PROBLEMAS CRÍTICOS A EVITAR
+
