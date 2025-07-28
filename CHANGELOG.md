@@ -3,6 +3,19 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 ## [Unreleased]
 
+### Added
+- **Renomear Abas do SIGSS**: Nova funcionalidade para renomear automaticamente as abas do SIGSS com o título da página (habilitada por padrão)
+- **Configuração de Renomear Abas**: Adicionada opção nas configurações para habilitar/desabilitar a funcionalidade de renomear abas do SIGSS
+- **Observer Inteligente para SIGSS**: Sistema de observação de mudanças no DOM específico para detectar alterações no elemento .sigss-title
+- **Compatibilidade Cross-Browser**: Funcionalidade funciona tanto no Chrome quanto no Firefox com fallback automático entre storage.sync e storage.local
+
+### Technical Details
+- Implementada detecção automática de páginas do SIGSS baseada na URL
+- Sistema de MutationObserver otimizado com requestAnimationFrame para performance
+- Configuração sincronizada entre dispositivos quando disponível
+- Listener para mudanças em tempo real nas configurações
+- Cleanup automático de recursos quando a página é descarregada
+- Logging detalhado para debugging e monitoramento
 ## [1.1.5] - 2025-07-28
 
 ### Fixed
@@ -160,3 +173,4 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - **Feedback Visual**: Adicionado indicadores de loading e estados de erro para operações assíncronas
 - **Sanitização de Dados**: Melhorada validação e sanitização de dados de tarefas para prevenir XSS
 - **Logging Padronizado**: Substituído console.log por sistema de logging centralizado no content script
+

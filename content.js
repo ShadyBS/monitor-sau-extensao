@@ -653,4 +653,172 @@
       window.location.href = SAU_PREPARAR_PESQUISAR_TAREFA_URL;
     }
   })();
+    // Inicializa a funcionalidade de renomear abas do SIGSS
+    await initializeSigssTabRenamer();
+  })();
+
+  // --- Funcionalidade de Renomear Abas do SIGSS ---
+  
+  // Variáveis para funcionalidade de renomear abas do SIGSS
+  let sigssTabRenamerEnabled = true; // Habilitado por padrão
+  let sigssTabRenamerPreviousTitle = '';
+  let sigssTabRenamerObserver = null;
+
+  /**
+   * Verifica se a funcionalidade de renomear abas do SIGSS está habilitada
+   */
+  async function checkSigssTabRenamerEnabled() {
+    try {
+      const data = await browserAPI.storage.sync.get(['enableSigssTabRename']);
+      sigssTabRenamerEnabled = data.enableSigssTabRename !== false;
+      contentLogger.debug('Funcionalidade de renomear abas SIGSS:', sigssTabRenamerEnabled ? 'habilitada' : 'desabilitada');
+      return sigssTabRenamerEnabled;
+    } catch (error) {
+      try {
+        const data = await browserAPI.storage.local.get(['enableSigssTabRename']);
+        sigssTabRenamerEnabled = data.enableSigssTabRename !== false;
+        contentLogger.debug('Funcionalidade de renomear abas SIGSS (local):', sigssTabRenamerEnabled ? 'habilitada' : 'desabilitada');
+        return sigssTabRenamerEnabled;
+      } catch (localError) {
+        contentLogger.warn('Erro ao verificar configuração SIGSS Tab Renamer, mantendo habilitado por padrão:', localError);
+        sigssTabRenamerEnabled = true;
+        return sigssTabRenamerEnabled;
+      }
+    }
+  }
+
+  /**
+   * Atualiza o título da aba com base no elemento .sigss-title
+   */
+  function updateSigssTabTitle() {
+    if (!sigssTabRenamerEnabled) {
+      return;
+    }
+
+    const titleElement = document.querySelector('.ui-widget-header.sigss-title');
+    
+    if (!titleElement) {
+      return;
+    }
+
+    const newTitle = titleElement.textContent.trim();
+    
+    if (newTitle && newTitle !== sigssTabRenamerPreviousTitle) {
+      sigssTabRenamerPreviousTitle = newTitle;
+      document.title = newTitle;
+      contentLogger.debug('Título da aba SIGSS atualizado para:', newTitle);
+    }
+  }
+
+  /**
+   * Execução segura da atualização do título SIGSS
+   */
+  function safeSigssTabUpdate() {
+    try {
+      updateSigssTabTitle();
+    } catch (error) {
+      contentLogger.warn('Erro na atualização do título SIGSS:', error);
+    }
+  }
+
+  /**
+   * Inicia o sistema de observação para renomear abas do SIGSS
+   */
+  function startSigssTabRenamerObserver() {
+    if (!sigssTabRenamerEnabled) {
+      return;
+    }
+
+    // Para o observer anterior se existir
+    if (sigssTabRenamerObserver) {
+      sigssTabRenamerObserver.disconnect();
+    }
+
+    // Callback do MutationObserver para SIGSS
+    const sigssObserverCallback = (mutations) => {
+      if (!document.hidden && sigssTabRenamerEnabled) {
+        window.requestAnimationFrame(safeSigssTabUpdate);
+      }
+    };
+
+    // Cria e inicia o novo observer para SIGSS
+    sigssTabRenamerObserver = new MutationObserver(sigssObserverCallback);
+    sigssTabRenamerObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+      characterData: true
+    });
+    
+    contentLogger.info('Observer SIGSS Tab Renamer iniciado');
+  }
+
+  /**
+   * Para o sistema de observação do SIGSS Tab Renamer
+   */
+  function stopSigssTabRenamerObserver() {
+    if (sigssTabRenamerObserver) {
+      sigssTabRenamerObserver.disconnect();
+      sigssTabRenamerObserver = null;
+      contentLogger.info('Observer SIGSS Tab Renamer parado');
+    }
+  }
+
+  /**
+   * Verifica se a URL atual é uma página do SIGSS
+   */
+  function isSigssPage() {
+    const url = window.location.href;
+    return /sigss/i.test(url);
+  }
+
+  /**
+   * Inicializa a funcionalidade de renomear abas do SIGSS
+   */
+  async function initializeSigssTabRenamer() {
+    if (!isSigssPage()) {
+      contentLogger.debug('Não é uma página do SIGSS, funcionalidade de renomear abas não será ativada');
+      return;
+    }
+
+    contentLogger.info('Inicializando sistema de renomeação de abas SIGSS...');
+
+    try {
+      await checkSigssTabRenamerEnabled();
+
+      if (sigssTabRenamerEnabled) {
+        safeSigssTabUpdate();
+        startSigssTabRenamerObserver();
+        contentLogger.info('Sistema de renomeação de abas SIGSS inicializado com sucesso');
+      } else {
+        contentLogger.info('Sistema de renomeação de abas SIGSS desabilitado nas configurações');
+      }
+    } catch (error) {
+      contentLogger.error('Erro na inicialização do sistema de renomeação de abas SIGSS:', error);
+    }
+  }
+
+  // Listener para mudanças nas configurações do SIGSS Tab Renamer
+  browserAPI.storage.onChanged.addListener((changes, namespace) => {
+    if (changes.enableSigssTabRename) {
+      const newValue = changes.enableSigssTabRename.newValue;
+      const oldValue = changes.enableSigssTabRename.oldValue;
+      
+      contentLogger.info('Configuração de renomear abas SIGSS alterada:', oldValue, '->', newValue);
+      
+      sigssTabRenamerEnabled = newValue !== false;
+      
+      if (sigssTabRenamerEnabled && isSigssPage()) {
+        startSigssTabRenamerObserver();
+        safeSigssTabUpdate();
+      } else {
+        stopSigssTabRenamerObserver();
+      }
+    }
+  });
+
+  // Cleanup quando a página é descarregada
+  window.addEventListener('unload', () => {
+    stopSigssTabRenamerObserver();
+  }, { once: true });
+
 })(); // Fecha o IIFE do injection guard

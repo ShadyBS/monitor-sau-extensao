@@ -75,6 +75,9 @@ async function saveSettings() {
     document.getElementById("renotificationInterval").value,
     10
   );
+  const enableSigssTabRename = document.getElementById(
+    "enableSigssTabRename"
+  ).checked;
 
   if (isNaN(checkInterval) || checkInterval < 10) {
     showStatus(
@@ -102,6 +105,7 @@ async function saveSettings() {
       checkInterval: checkInterval,
       enableRenotification: enableRenotification,
       renotificationInterval: renotificationInterval,
+      enableSigssTabRename: enableSigssTabRename,
     });
     showStatus("settingsStatus", "Configurações salvas com sucesso!");
     await optionsLogger.info(
@@ -356,6 +360,7 @@ async function loadOptions() {
       "checkInterval",
       "enableRenotification",
       "renotificationInterval",
+      "enableSigssTabRename",
       "logLevel",
       "taskDisplaySettings",
       "snoozeSettings",
@@ -376,6 +381,10 @@ async function loadOptions() {
       data.enableRenotification || false;
     document.getElementById("renotificationInterval").value =
       data.renotificationInterval || 30;
+
+    // Carrega configuração de renomear abas do SIGSS (habilitada por padrão)
+    document.getElementById("enableSigssTabRename").checked =
+      data.enableSigssTabRename !== false;
 
     if (data.logLevel !== undefined) {
       const logLevelSelect = document.getElementById("logLevel");
