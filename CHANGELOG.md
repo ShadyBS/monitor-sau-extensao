@@ -3,6 +3,8 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 ## [Unreleased]
 
+## [2.0.0] - 2025-07-28
+
 ### Fixed
 - **Background Script Error**: Corrigido erro crítico `ReferenceError: tabId is not defined` na linha 1043 do background.js que impedia a injeção correta de content scripts
 - **SIGSS Tab Renaming**: Corrigido problema onde títulos das abas do SIGSS não estavam sendo renomeados devido a falta de injeção do content script apropriado

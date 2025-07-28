@@ -1,6 +1,6 @@
 {
   "name": "monitor-sau-extensao",
-  "version": "1.1.5",
+  "version": "2.0.0",
   "description": "Monitor de Tarefas SAU - Extensão para Chrome e Firefox",
   "scripts": {
     "build": "node scripts/build.js",
