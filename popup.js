@@ -22,18 +22,18 @@ document.addEventListener("DOMContentLoaded", initializePopup);
  */
 async function getDisplaySettings() {
   try {
-    console.log("getDisplaySettings: Iniciando carregamento de configurações de exibição");
+    await popupLogger.info("getDisplaySettings: Iniciando carregamento de configurações de exibição");
     
     // Fallback temporário: usa storage direto se config-manager falhar
     let taskDisplaySettings;
     try {
       taskDisplaySettings = await getConfig("taskDisplaySettings");
-      console.log("getDisplaySettings: Configurações carregadas via config-manager:", taskDisplaySettings);
+      await popupLogger.info("getDisplaySettings: Configurações carregadas via config-manager:", taskDisplaySettings);
     } catch (configError) {
-      console.warn("getDisplaySettings: Erro no config-manager, usando storage direto:", configError);
+      await popupLogger.warn("getDisplaySettings: Erro no config-manager, usando storage direto:", configError);
       const data = await browserAPI.storage.local.get(["taskDisplaySettings"]);
       taskDisplaySettings = data.taskDisplaySettings;
-      console.log("getDisplaySettings: Configurações carregadas via storage direto:", taskDisplaySettings);
+      await popupLogger.info("getDisplaySettings: Configurações carregadas via storage direto:", taskDisplaySettings);
     }
     
     if (taskDisplaySettings && taskDisplaySettings.headerFields) {
@@ -48,11 +48,11 @@ async function getDisplaySettings() {
         solicitante: false,
         unidade: false,
       };
-      console.log("getDisplaySettings: Usando configurações padrão:", defaultSettings);
+      await popupLogger.info("getDisplaySettings: Usando configurações padrão:", defaultSettings);
       return defaultSettings;
     }
   } catch (error) {
-    console.error("getDisplaySettings: Erro ao carregar configurações:", error);
+    await popupLogger.error("getDisplaySettings: Erro ao carregar configurações:", error);
     await popupLogger.error(
       "Erro ao carregar configurações de exibição:",
       error
@@ -492,11 +492,11 @@ async function initializePopup() {
     await popupLogger.info("Popup inicializado com sucesso!");
   } catch (error) {
     await popupLogger.error("Erro crítico na inicialização do popup:", error);
-    console.error("Erro crítico na inicialização do popup:", error);
+    await popupLogger.error("Erro crítico na inicialização do popup:", error);
     
     // Fallback: mostra mensagem de erro para o usuário
     document.getElementById("status-message").textContent = 
-      "Erro ao inicializar popup. Verifique o console para detalhes.";
+      "Erro ao inicializar popup. Verifique o log para detalhes.";
   }
 }
 
@@ -629,7 +629,7 @@ async function checkFirstTimeUser() {
         "sauUsername", // Verifica se já configurou credenciais
       ]);
     } catch (configError) {
-      console.warn("checkFirstTimeUser: Erro no config-manager, usando storage direto:", configError);
+      await popupLogger.warn("checkFirstTimeUser: Erro no config-manager, usando storage direto:", configError);
       data = await browserAPI.storage.local.get([
         "helpTourCompleted",
         "firstTimeUser", 

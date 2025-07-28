@@ -20,6 +20,7 @@ const CONFIG = {
     'logger.js',
     'sanitizer.js',
     'tooltip-system.js',
+    'config-manager.js',
     'popup.html',
     'popup.js',
     'popup.css',

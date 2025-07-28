@@ -215,26 +215,28 @@ browserAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
       checkAndNotifyNewTasks();
       break;
     case "getLatestTasks":
-      // Retorna as tarefas que não foram ignoradas, abertas ou estão prontas para serem "lembradas"
-      const currentPendingTasks = lastKnownTasks.filter(
-        (task) =>
-          !ignoredTasks[task.id] &&
-          !openedTasks[task.id] && // Filtra tarefas abertas
-          (!snoozedTasks[task.id] || snoozedTasks[task.id] <= Date.now())
-      );
-      backgroundLogger.debug(
-        "Retornando últimas tarefas para popup:",
-        currentPendingTasks.length,
-        currentPendingTasks
-      );
-      sendResponse({
-        newTasks: currentPendingTasks,
-        message: `Última verificação: ${new Date(
-          lastCheckTimestamp
-        ).toLocaleTimeString()}`,
-        lastCheck: lastCheckTimestamp,
+      // Garante que os dados persistentes estejam carregados antes de responder
+      loadPersistentData().then(() => {
+        const currentPendingTasks = lastKnownTasks.filter(
+          (task) =>
+            !ignoredTasks[task.id] &&
+            !openedTasks[task.id] && // Filtra tarefas abertas
+            (!snoozedTasks[task.id] || snoozedTasks[task.id] <= Date.now())
+        );
+        backgroundLogger.debug(
+          "Retornando últimas tarefas para popup:",
+          currentPendingTasks.length,
+          currentPendingTasks
+        );
+        sendResponse({
+          newTasks: currentPendingTasks,
+          message: `Última verificação: ${new Date(
+            lastCheckTimestamp
+          ).toLocaleTimeString()}`,
+          lastCheck: lastCheckTimestamp,
+        });
       });
-      return true; // Indica que a resposta será enviada de forma síncrona
+      return true; // Indica que a resposta será enviada de forma assíncrona
     case "ignoreTask":
       // Marca uma tarefa como ignorada e salva o estado
       ignoredTasks[request.taskId] = true;
