@@ -30,33 +30,41 @@ Esta é uma **extensão para navegador** (Chrome e Firefox) com estrutura espec�
 ```
 ├── .github/                    # CI/CD e templates
 │   ├── workflows/             # GitHub Actions
+│   │   ├── ci.yml            # Pipeline principal CI/CD
+│   │   └── upload-assets.yml # Upload de assets para releases
 │   └── ISSUE_TEMPLATE/        # Templates para issues
 ├── .dist/                     # Arquivos de build (gerado automaticamente)
+│   ├── monitor-sau-chrome.zip # Build para Chrome
+│   └── monitor-sau-firefox.zip # Build para Firefox
 ├── scripts/                   # Scripts de automação
 │   ├── build.js              # Build para Chrome/Firefox
-│   ├── version.js            # Gerenciamento de versões
+│   ├���─ version.js            # Gerenciamento de versões
 │   ├── release.js            # Release automatizado
 │   ├── validate.js           # Validações de qualidade
 │   └── clean.js              # Limpeza de arquivos
 ├── icons/                     # Ícones da extensão (16px, 48px, 128px)
-├── background.js              # Service Worker principal
+├── background.js              # Service Worker principal (Manifest V3)
 ├── content.js                 # Script injetado nas páginas do SAU
 ├── content-sigss.js           # Script injetado nas páginas do SIGSS
 ├── interceptor.js             # Interceptador de requisições
 ├── sanitizer.js               # Utilitários de segurança e sanitização
+├── logger.js                  # Sistema de logging centralizado
+├── config-manager.js          # Gerenciamento de configurações
+├── tooltip-system.js          # Sistema de tooltips
+├── sigss-tab-renamer.js       # Renomeação de abas SIGSS
 ├── popup.html/js/css          # Interface do popup
 ├── options.html/js/css        # Página de configurações
+├── help.html/js/css           # Sistema de ajuda
 ├── notification-ui.css        # Estilos para notificações visuais
 ├── css-variables.css          # Variáveis CSS centralizadas
-├── logger.js                  # Sistema de logging
-├── manifest.json              # Manifest para Chrome
+├── styles.css                 # Estilos globais
+├── manifest.json              # Manifest para Chrome (Manifest V3)
 ├── manifest-firefox.json      # Manifest para Firefox
 ├── package.json               # Dependências e scripts NPM
 ├── CHANGELOG.md               # Histórico de mudanças
 ├── README.md                  # Documentação principal
 ├── SCRIPTS.md                 # Documentação dos scripts
 ├── SECURITY-FIXES.md          # Guia de correções de segurança
-├── SECURITY-AUDIT-SUMMARY.md  # Relatório de auditoria de segurança
 ├── LICENSE                    # Licença MIT
 └── agents.md                  # Este guia
 ```
@@ -66,6 +74,8 @@ Esta é uma **extensão para navegador** (Chrome e Firefox) com estrutura espec�
 - **Sempre analise** os arquivos existentes para entender padrões
 - **Use o sistema de logging** (`logger.js`) em vez de `console.log`
 - **Mantenha compatibilidade** entre Chrome e Firefox
+- **Use `sanitizer.js`** para manipulação segura do DOM
+- **Siga Manifest V3** - service workers, não background pages
 
 ## 3. Fluxo de Trabalho de Modificação
 
@@ -388,7 +398,7 @@ git commit -m "docs(agents): adicionar instruções para novo script de deploy"
 
 **Lembre-se:** Este guia é um documento vivo. Sua precisão e utilidade dependem de mantê-lo atualizado com a evolução do projeto. A qualidade do código e a eficiência da equipe dependem de seguir e manter estas diretrizes.
 
-**Última atualização:** 2025-01-23 - Implementadas correções críticas de segurança, adicionado sistema de sanitização e atualizadas práticas de desenvolvimento seguro.
+**Última atualização:** 2025-01-23 - Revisada estrutura do projeto e atualizados scripts de build/release.
 
 Obrigado por sua contribuição!
 
@@ -531,7 +541,8 @@ git commit -m "docs(agents): adicionar instruções específicas para CHANGELOG 
 # Commit do changelog
 git commit -m "docs(changelog): documentar correção de múltiplas abas de login"
 ```
-### 13. Práticas de Performance e UX
+
+## 13. Práticas de Performance e UX
 
 #### Problemas Críticos a Evitar
 
@@ -563,3 +574,113 @@ if (Date.now() - lastNotificationTime >= NOTIFICATION_COOLDOWN) {
 
 ### ⚠️ PROBLEMAS CRÍTICOS A EVITAR
 
+**Nunca truncar arquivos Markdown:** Sempre forneça o conteúdo completo quando usar `write_to_file`.
+
+**Usar `replace_in_file` para mudanças pontuais:** Para edições pequenas, use blocos SEARCH/REPLACE precisos.
+
+**Validar sintaxe Markdown:** Certifique-se de que links, headers e formatação estão corretos.
+
+## 15. Arquitetura Específica do Monitor SAU
+
+### **🏗️ Estrutura Real do Projeto**
+
+```
+Monitor SAU Extension (Manifest V3)
+├── background.js              # Service Worker principal
+├── content.js                 # Monitora páginas SAU
+├── content-sigss.js           # Monitora páginas SIGSS  
+├── interceptor.js             # Intercepta requisições
+├── sanitizer.js               # Segurança e sanitização
+├── logger.js                  # Sistema de logging
+├── config-manager.js          # Gerenciamento de configurações
+├── tooltip-system.js          # Sistema de tooltips
+├── sigss-tab-renamer.js       # Renomeia abas SIGSS
+├── popup.html/js/css          # Interface principal
+├── options.html/js/css        # Configurações
+├── help.html/js/css           # Sistema de ajuda
+├── notification-ui.css        # Notificações visuais
+├── css-variables.css          # Variáveis CSS
+└── styles.css                 # Estilos globais
+```
+
+### **🔧 APIs e Permissions Utilizadas**
+
+```javascript
+// Permissions atuais no manifest.json
+const permissions = [
+  "storage",        // Armazenamento de configurações
+  "notifications",  // Notificações do sistema
+  "tabs",          // Gerenciamento de abas
+  "alarms",        // Alarmes para verificações periódicas
+  "scripting",     // Injeção de scripts (Manifest V3)
+  "webNavigation"  // Navegação entre páginas
+];
+
+// Host permissions específicas
+const hostPermissions = [
+  "https://egov.santos.sp.gov.br/sau/*",     // SAU principal
+  "http://c1863prd.cloudmv.com.br/sigss/*",  // SIGSS produção
+  "http://c1863tst1.cloudmv.com.br/sigss/*"  // SIGSS teste
+];
+```
+
+### **📊 Fluxo de Dados da Extensão**
+
+```javascript
+// Fluxo principal de monitoramento
+const monitoringFlow = {
+  1: 'background.js monitora abas SAU/SIGSS',
+  2: 'content.js/content-sigss.js extraem dados das páginas',
+  3: 'interceptor.js captura requisições AJAX',
+  4: 'sanitizer.js limpa e valida dados',
+  5: 'logger.js registra atividades',
+  6: 'popup.js exibe status e controles',
+  7: 'options.js gerencia configurações'
+};
+```
+
+### **🎯 Padrões Específicos do Projeto**
+
+```javascript
+// ✅ Padrão de logging usado no projeto
+import { logger } from './logger.js';
+const log = logger('[ModuleName]');
+log.info('Operação realizada');
+log.warn('Aviso importante');
+log.error('Erro detectado', error);
+
+// ✅ Padrão de sanitização
+import { sanitizeTaskData, createSafeElement } from './sanitizer.js';
+const cleanTask = sanitizeTaskData(rawTaskData);
+const safeElement = createSafeElement('div', cleanTask.title);
+
+// ✅ Padrão de configuração
+import { ConfigManager } from './config-manager.js';
+const config = new ConfigManager();
+const settings = await config.getSettings();
+```
+
+### **🚨 Validações Específicas do Projeto**
+
+```javascript
+// Validação de URLs SAU/SIGSS
+function isValidSauUrl(url) {
+  return url.includes('egov.santos.sp.gov.br/sau/');
+}
+
+function isValidSigssUrl(url) {
+  return url.includes('cloudmv.com.br/sigss/');
+}
+
+// Validação de dados de tarefa
+function validateTaskData(task) {
+  return task && 
+         typeof task.id === 'string' && 
+         typeof task.title === 'string' &&
+         task.title.length > 0;
+}
+```
+
+---
+
+**Última atualização:** 2025-01-23 - Revisada estrutura completa do projeto, atualizados scripts de build/release e adicionadas especificações da arquitetura Monitor SAU.
