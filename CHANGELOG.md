@@ -9,6 +9,7 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - **appendChild Error (Popup)**: Corrigido erro crítico "Failed to execute 'appendChild' on 'Node': parameter 1 is not of type 'Node'" no popup.js linha 150, causado por uso incorreto de async/await em forEach loops
 - **appendChild Error (Sanitizer)**: Corrigido erro crítico "Failed to execute 'appendChild' on 'Node': parameter 1 is not of type 'Node'" em Edge/Chrome causado por uso incorreto de async/await em forEach loops no sanitizer.js
 - **background.js**: Implementado cooldown para evitar múltiplas abas de login sem credenciais.
+- **Config Manager Loading Error**: Corrigido erro "Failed to load resource: net::ERR_FILE_NOT_FOUND" para config-manager.js no popup, atualizando popup.js para usar o novo sistema de gerenciamento de configurações
 
 ### Fixed
 

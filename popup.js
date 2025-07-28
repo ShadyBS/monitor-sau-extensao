@@ -8,6 +8,7 @@ import {
   setSafeTextContent,
 } from "./sanitizer.js";
 import { tooltipSystem } from "./tooltip-system.js";
+import { getConfig, getConfigs } from "./config-manager.js";
 const popupLogger = logger("[Popup]");
 
 // Define o objeto de API do navegador de forma compatível (Chrome ou Firefox)
@@ -21,9 +22,9 @@ document.addEventListener("DOMContentLoaded", initializePopup);
  */
 async function getDisplaySettings() {
   try {
-    const data = await browserAPI.storage.local.get(["taskDisplaySettings"]);
-    if (data.taskDisplaySettings && data.taskDisplaySettings.headerFields) {
-      return data.taskDisplaySettings.headerFields;
+    const taskDisplaySettings = await getConfig("taskDisplaySettings");
+    if (taskDisplaySettings && taskDisplaySettings.headerFields) {
+      return taskDisplaySettings.headerFields;
     } else {
       // Configurações padrão
       return {
@@ -57,9 +58,9 @@ async function getDisplaySettings() {
  */
 async function getSnoozeSettings() {
   try {
-    const data = await browserAPI.storage.local.get(["snoozeSettings"]);
-    if (data.snoozeSettings) {
-      return data.snoozeSettings;
+    const snoozeSettings = await getConfig("snoozeSettings");
+    if (snoozeSettings) {
+      return snoozeSettings;
     } else {
       // Configurações padrão
       return {
@@ -592,16 +593,16 @@ function setupHelpSystem() {
  */
 async function checkFirstTimeUser() {
   try {
-    const data = await browserAPI.storage.local.get([
+    const data = await getConfigs([
       "helpTourCompleted",
       "firstTimeUser",
       "helpDismissed",
-      "username", // Verifica se já configurou credenciais
+      "sauUsername", // Verifica se já configurou credenciais
     ]);
 
     // Se é primeira vez, não fez tour, não dispensou ajuda e não tem credenciais
     const isFirstTime = data.firstTimeUser !== false;
-    const hasCredentials = data.username && data.username.trim() !== "";
+    const hasCredentials = data.sauUsername && data.sauUsername.trim() !== "";
     const tourCompleted = data.helpTourCompleted === true;
     const helpDismissed = data.helpDismissed === true;
 
