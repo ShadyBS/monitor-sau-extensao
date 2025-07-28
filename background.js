@@ -6,8 +6,9 @@ const SAU_TASK_SEARCH_URL =
 const SAU_PREPARAR_PESQUISAR_TAREFA_URL =
   "https://egov.santos.sp.gov.br/sau/comum/prepararPesquisar_Tarefa.sau";
 
-// Importa o logger e o instancia para o contexto do background script
+// Importa o logger e o gerenciador de configurações
 import { logger } from "./logger.js";
+import { getConfig, getConfigs, setConfig, setConfigs } from "./config-manager.js";
 const backgroundLogger = logger("[Background]");
 
 // Define o objeto de API do navegador de forma compatível (Chrome ou Firefox)
@@ -117,7 +118,7 @@ async function savePersistentData() {
  */
 async function checkIfShouldRenotify(taskId) {
   try {
-    const settings = await browserAPI.storage.local.get([
+    const settings = await getConfigs([
       "enableRenotification",
       "renotificationInterval",
     ]);
@@ -551,7 +552,7 @@ async function checkForExistingLoginTab() {
  * Abre uma nova aba para a página de login e injeta um script para preencher e submeter o formulário.
  */
 async function performAutomaticLogin() {
-  const data = await browserAPI.storage.local.get([
+  const data = await getConfigs([
     "sauUsername",
     "sauPassword",
   ]);
@@ -1025,10 +1026,8 @@ browserAPI.tabs.onRemoved.addListener((tabId) => {
  * Função de inicialização do Service Worker.
  * Carrega os dados persistentes e agenda a primeira verificação.
  */
-loadPersistentData().then(() => {
-  browserAPI.storage.local.get("checkInterval").then((data) => {
-    const interval = data.checkInterval || 30; // Padrão: 30 segundos
-    scheduleNextCheck(interval);
-    updateBadge(); // Atualiza o badge na inicialização
-  });
+loadPersistentData().then(async () => {
+  const interval = await getConfig("checkInterval", 30); // Padrão: 30 segundos
+  scheduleNextCheck(interval);
+  updateBadge(); // Atualiza o badge na inicialização
 });

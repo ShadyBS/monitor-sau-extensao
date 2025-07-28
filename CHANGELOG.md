@@ -3,6 +3,31 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 ## [Unreleased]
 
+### Added
+
+- **Sistema de Sincronização de Configurações**: Implementado salvamento das configurações no chrome.storage.sync com fallback para chrome.storage.local
+- **Gerenciador de Configurações**: Novo módulo `config-manager.js` para gerenciar configurações de forma unificada
+- **Compatibilidade Cross-Browser**: Sistema funciona tanto no Chrome quanto no Firefox com detecção automática de disponibilidade do sync
+- **Migração Automática**: Configurações existentes são automaticamente migradas do local para sync quando disponível
+- **Backup Automático**: Configurações sync são automaticamente copiadas para local storage como backup
+- **Categorização Inteligente**: Configurações são categorizadas entre sincronizáveis e apenas locais (dados de sessão)
+
+### Changed
+
+- **Salvamento de Configurações**: Todas as configurações de usuário agora são salvas com sincronização automática
+- **Carregamento de Configurações**: Sistema prioriza configurações do sync, com fallback para local storage
+- **Página de Opções**: Atualizada para usar o novo gerenciador de configurações
+- **Background Script**: Refatorado para usar o sistema unificado de configurações
+
+### Technical Details
+
+- Criado módulo `config-manager.js` com funções `setConfig`, `getConfig`, `setConfigs`, `getConfigs`
+- Implementada detecção automática de disponibilidade do `chrome.storage.sync`
+- Configurações sensíveis (credenciais) são sincronizadas entre dispositivos
+- Dados de sessão (`lastKnownTasks`, `snoozeTime`) permanecem apenas locais
+- Sistema de fallback robusto para quando sync não está disponível
+- Migração automática de configurações existentes na primeira execução
+
 ## [1.1.4] - 2025-07-28
 
 ### Added

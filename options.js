@@ -1,4 +1,13 @@
 import { logger, LOG_LEVELS } from "./logger.js";
+import { 
+  setConfig, 
+  setConfigs, 
+  getConfig, 
+  getConfigs, 
+  getStorageInfo,
+  migrateToSync 
+} from "./config-manager.js";
+
 const optionsLogger = logger("[Options]");
 
 // Define o objeto de API do navegador de forma compatível (Chrome ou Firefox)
@@ -36,12 +45,12 @@ async function saveLogin() {
   }
 
   try {
-    await browserAPI.storage.local.set({
+    await setConfigs({
       sauUsername: username,
       sauPassword: password,
     });
     showStatus("loginStatus", "Credenciais salvas com sucesso!");
-    optionsLogger.info("Credenciais de login salvas.");
+    optionsLogger.info("Credenciais de login salvas com sincronização.");
   } catch (error) {
     optionsLogger.error("Erro ao salvar credenciais:", error);
     showStatus("loginStatus", "Erro ao salvar credenciais.", true);
@@ -78,14 +87,14 @@ async function saveSettings() {
   }
 
   try {
-    await browserAPI.storage.local.set({
+    await setConfigs({
       checkInterval: checkInterval,
       enableRenotification: enableRenotification,
       renotificationInterval: renotificationInterval,
     });
     showStatus("settingsStatus", "Configurações salvas com sucesso!");
     optionsLogger.info(
-      "Configurações de notificação salvas. Enviando mensagem para atualizar alarme."
+      "Configurações de notificação salvas com sincronização. Enviando mensagem para atualizar alarme."
     );
     browserAPI.runtime.sendMessage({ action: "updateAlarm" });
   } catch (error) {
@@ -107,12 +116,10 @@ async function saveDisplaySettings() {
       }
     };
 
-    await browserAPI.storage.local.set({
-      taskDisplaySettings: displaySettings,
-    });
+    await setConfig("taskDisplaySettings", displaySettings);
     
     showStatus("displayStatus", "Configurações de exibição salvas com sucesso!");
-    optionsLogger.info("Configurações de exibição de tarefas salvas:", displaySettings);
+    optionsLogger.info("Configurações de exibição de tarefas salvas com sincronização:", displaySettings);
   } catch (error) {
     optionsLogger.error("Erro ao salvar configurações de exibição:", error);
     showStatus("displayStatus", "Erro ao salvar configurações de exibição.", true);
@@ -144,12 +151,10 @@ async function saveSnoozeSettings() {
       allowCustom: allowCustomSnooze
     };
 
-    await browserAPI.storage.local.set({
-      snoozeSettings: snoozeSettings,
-    });
+    await setConfig("snoozeSettings", snoozeSettings);
     
     showStatus("snoozeSettingsStatus", "Configurações de 'Lembrar Mais Tarde' salvas com sucesso!");
-    optionsLogger.info("Configurações de snooze salvas:", snoozeSettings);
+    optionsLogger.info("Configurações de snooze salvas com sincronização:", snoozeSettings);
   } catch (error) {
     optionsLogger.error("Erro ao salvar configurações de snooze:", error);
     showStatus("snoozeSettingsStatus", "Erro ao salvar configurações de snooze.", true);
@@ -304,7 +309,11 @@ function resetTaskMemory() {
 
 async function loadOptions() {
   try {
-    const data = await browserAPI.storage.local.get([
+    // Executa migração para sync se necessário
+    await migrateToSync();
+    
+    // Carrega configurações usando o gerenciador
+    const data = await getConfigs([
       "sauUsername",
       "sauPassword",
       "checkInterval",
@@ -357,7 +366,13 @@ async function loadOptions() {
     // Carrega configurações de snooze
     loadSnoozeOptions(data.snoozeSettings);
 
-    optionsLogger.info("Opções carregadas na página de configurações.");
+    // Exibe informações sobre o storage
+    const storageInfo = await getStorageInfo();
+    optionsLogger.info("Opções carregadas na página de configurações.", {
+      syncAvailable: storageInfo.syncAvailable,
+      syncUsage: storageInfo.syncUsage,
+      localUsage: storageInfo.localUsage
+    });
   } catch (error) {
     optionsLogger.error("Erro ao carregar opções:", error);
   }
