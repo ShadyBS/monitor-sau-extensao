@@ -89,6 +89,13 @@ class ReleaseManager {
       let changelogContent = await fs.readFile(this.changelogPath, "utf8");
       const today = new Date().toISOString().split("T")[0];
 
+      // Novo: Verifica se a seção da versão já existe
+      const versionHeaderRegex = new RegExp(`^## \\[${version}\\] - \\d{4}-\\d{2}-\\d{2}`, 'm');
+      if (versionHeaderRegex.test(changelogContent)) {
+        console.log(`ℹ️  Seção da versão ${version} já existe no CHANGELOG.md. Pulando etapa de mover notas.`);
+        return;
+      }
+
       // Regex para encontrar a seção [Unreleased] e seu conteúdo
       const unreleasedRegex =
         /^## \[Unreleased\]([\s\S]*?)(?=^## \[\d+\.\d+\.\d+\])/m;
