@@ -8,8 +8,8 @@ const LOG_LEVELS = {
 };
 
 // Nível de log padrão, será carregado do storage
+// Inicializamos com INFO para garantir que logs mínimos funcionem antes do carregamento completo
 let currentLogLevel = LOG_LEVELS.INFO;
-let isLogLevelInitialized = false; // Flag para controlar a inicialização
 
 // Buffer para armazenar as mensagens de log em memória
 const logBuffer = [];
@@ -20,26 +20,24 @@ const MAX_LOG_ENTRIES = 1000; // Armazenar até 1000 mensagens de log
 const browserAPI = globalThis.browser || globalThis.chrome;
 
 /**
- * Carrega o nível de log do storage de forma assíncrona.
- * Esta função será chamada apenas uma vez.
+ * Inicializa o nível de log a partir do storage da extensão.
+ * Esta função deve ser explicitamente chamada pelo script principal (e.g., background.js)
+ * para garantir que o ambiente da extensão esteja pronto.
  */
 async function initializeLogLevel() {
-  if (isLogLevelInitialized) return;
-
   try {
     const data = await browserAPI.storage.local.get("logLevel");
     if (data.logLevel !== undefined) {
       currentLogLevel = data.logLevel;
     }
-    isLogLevelInitialized = true;
+    // Logamos no console nativo aqui, pois o logger completo ainda pode estar sendo configurado
     console.log(
       `[Logger] Nível de log inicial definido para: ${Object.keys(
         LOG_LEVELS
       ).find((key) => LOG_LEVELS[key] === currentLogLevel)}`
     );
   } catch (error) {
-    console.error("[Logger] Erro ao inicializar nível de log:", error);
-    isLogLevelInitialized = true; // Marca como inicializado mesmo em caso de erro para não tentar novamente
+    console.error("[Logger] Erro ao carregar nível de log do storage:", error);
   }
 }
 
@@ -63,12 +61,7 @@ browserAPI.storage.onChanged.addListener((changes, namespace) => {
  * @param {string} prefix - Prefixo do script (ex: "[Background]").
  * @param {Array<any>} args - Argumentos da mensagem de log.
  */
-async function log(levelName, levelValue, prefix, ...args) {
-  // Garante que o nível de log seja inicializado antes de qualquer log
-  if (!isLogLevelInitialized) {
-    await initializeLogLevel();
-  }
-
+function log(levelName, levelValue, prefix, ...args) {
   const timestamp = new Date().toISOString(); // Usar ISO string para timestamp exato
 
   // Adiciona a mensagem ao buffer de logs
@@ -131,6 +124,9 @@ const logger = (prefix) => ({
   },
   // Novo método para obter os logs armazenados
   getStoredLogs: () => logBuffer.slice(), // Retorna uma cópia do buffer
+
+  // Expõe a função de inicialização para ser chamada externamente
+  initialize: initializeLogLevel,
 });
 
 // Exporta uma função que cria uma instância do logger com um prefixo

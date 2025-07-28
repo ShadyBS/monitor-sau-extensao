@@ -221,7 +221,7 @@ export async function createSafeTaskElement(task, displaySettings = {}) {
     { label: "Descrição", value: task.descricao, show: true },
   ];
 
-  detailFields.forEach(async (field) => {
+  for (const field of detailFields) {
     if (field.show) {
       const fieldP = await createSafeElement("p");
       const labelStrong = await createSafeElement("strong", `${field.label}: `);
@@ -229,7 +229,7 @@ export async function createSafeTaskElement(task, displaySettings = {}) {
       fieldP.appendChild(document.createTextNode(field.value || "N/A"));
       detailsDiv.appendChild(fieldP);
     }
-  });
+  }
 
   // Add addresses if available
   if (task.enderecos && task.enderecos.length > 0) {
@@ -237,13 +237,14 @@ export async function createSafeTaskElement(task, displaySettings = {}) {
     const addressLabel = await createSafeElement("strong", "Endereço(s): ");
     addressP.appendChild(addressLabel);
 
-    task.enderecos.forEach(async (addr, index) => {
+    for (let index = 0; index < task.enderecos.length; index++) {
+      const addr = task.enderecos[index];
       if (index > 0) {
         addressP.appendChild(document.createElement("br"));
       }
       const addrSpan = await createSafeElement("span", addr);
       addressP.appendChild(addrSpan);
-    });
+    }
 
     detailsDiv.appendChild(addressP);
   }
