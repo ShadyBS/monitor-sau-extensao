@@ -37,6 +37,9 @@ h2 {
   font-size: var(--font-size-xxl);
   border-bottom: 1px solid var(--border-light);
   padding-bottom: var(--spacing-xs);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
 }
 
 .card {
@@ -53,10 +56,13 @@ h2 {
 }
 
 label {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
   margin-bottom: var(--spacing-sm);
   font-weight: 600;
   color: var(--text-secondary);
+  flex-wrap: wrap;
 }
 
 input[type="text"],
@@ -114,14 +120,6 @@ input[type="checkbox"] {
   transform: scale(1.2);
 }
 
-label {
-  display: flex;
-  align-items: center;
-  margin-bottom: var(--spacing-sm);
-  font-weight: 400;
-  cursor: pointer;
-}
-
 label input[type="checkbox"]:disabled {
   cursor: not-allowed;
   opacity: 0.6;
@@ -139,6 +137,9 @@ h3 {
   font-size: var(--font-size-lg);
   border-bottom: 1px solid var(--border-light);
   padding-bottom: var(--spacing-xs);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
 }
 
 /* Estilo para botão de perigo */
@@ -210,4 +211,80 @@ h3 {
   font-weight: 600;
   color: var(--text-secondary);
   min-width: 60px;
+}
+
+/* Estilos para botões de ajuda */
+.help-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: bold;
+  margin-left: var(--spacing-xs);
+  transition: all 0.2s ease;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.help-button:hover {
+  background-color: var(--primary-hover);
+  transform: scale(1.1);
+}
+
+.help-button:active {
+  transform: scale(0.95);
+}
+
+/* Ajustes para labels com botões de ajuda */
+label .help-button {
+  margin-left: auto;
+  margin-right: 0;
+}
+
+/* Estilos específicos para botões de ajuda em diferentes contextos */
+.form-group label .help-button {
+  margin-left: var(--spacing-xs);
+  margin-right: 0;
+}
+
+/* Ajuste para botões dentro de outros botões */
+button .help-button {
+  margin-left: var(--spacing-sm);
+  background-color: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+button .help-button:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Responsividade para botões de ajuda */
+@media (max-width: 768px) {
+  .help-button {
+    width: 18px;
+    height: 18px;
+    font-size: 11px;
+  }
+  
+  h2, h3 {
+    flex-wrap: wrap;
+  }
+  
+  label {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  label .help-button {
+    align-self: flex-end;
+    margin-top: var(--spacing-xs);
+  }
 }

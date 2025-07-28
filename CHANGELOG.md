@@ -262,3 +262,21 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 
 
+
+### Added
+- **Sistema de Ajuda Contextual**: Adicionados pequenos botões de ajuda rápida (?) em todas as configurações da página de opções
+- **Tooltips Informativos**: Cada configuração agora possui tooltip explicativo detalhado com título, descrição e dicas práticas
+- **Documentação SIGSS**: Adicionada explicação completa sobre a funcionalidade de renomeação de abas do SIGSS na seção de ajuda
+- **Guia de Configurações**: Expandida seção de configurações no help.html com detalhes sobre renomeação de abas SIGSS
+
+### Changed
+- **Interface de Configurações**: Melhorada usabilidade da página de opções com botões de ajuda contextual
+- **Sistema de Tooltips**: Integrado tooltip-system.js na página de configurações para fornecer ajuda instantânea
+- **Experiência do Usuário**: Facilitado entendimento de cada configuração através de explicações práticas e diretas
+
+### Technical Details
+- Adicionados 20+ botões de ajuda contextual em options.html
+- Criado sistema de definições de ajuda em options.js com explicações detalhadas
+- Implementados estilos responsivos para botões de ajuda em options.css
+- Integrado sistema de tooltips existente para fornecer ajuda contextual
+- Expandida documentação sobre funcionalidade SIGSS no help.html

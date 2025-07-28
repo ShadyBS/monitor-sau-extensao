@@ -7,13 +7,177 @@ import {
   getStorageInfo,
   migrateToSync,
 } from "./config-manager.js";
+import { tooltipSystem } from "./tooltip-system.js";
 
 const optionsLogger = logger("[Options]");
 
 // Define o objeto de API do navegador de forma compatível (Chrome ou Firefox)
 const browserAPI = globalThis.browser || globalThis.chrome;
 
-document.addEventListener("DOMContentLoaded", loadOptions);
+// Definições de ajuda para cada configuração
+const helpDefinitions = {
+  "login-auto": {
+    title: "🔐 Login Automático",
+    content: "Permite que a extensão faça login automaticamente no SAU usando suas credenciais salvas. Isso elimina a necessidade de inserir usuário e senha manualmente a cada verificação.",
+    tip: "Suas credenciais são criptografadas e armazenadas apenas no seu navegador, nunca sendo enviadas para terceiros."
+  },
+  "username": {
+    title: "👤 Campo Usuário",
+    content: "Digite aqui o mesmo nome de usuário que você usa para acessar o SAU manualmente. Este campo é obrigatório para o funcionamento da extensão.",
+    tip: "Use exatamente o mesmo usuário que você utiliza no site do SAU."
+  },
+  "password": {
+    title: "🔑 Campo Senha",
+    content: "Digite aqui a mesma senha que você usa para acessar o SAU manualmente. A senha será armazenada de forma segura e criptografada.",
+    tip: "A senha é armazenada localmente no seu navegador e nunca é compartilhada."
+  },
+  "notifications": {
+    title: "🔔 Configurações de Notificação",
+    content: "Controla como e quando você será notificado sobre novas tarefas no SAU. Inclui configurações de intervalo de verificação e renotificação.",
+    tip: "Ajuste essas configurações de acordo com sua rotina de trabalho."
+  },
+  "check-interval": {
+    title: "⏱️ Intervalo de Verificação",
+    content: "Define de quantos em quantos segundos a extensão verifica se há novas tarefas no SAU. Valores menores significam verificações mais frequentes, mas podem sobrecarregar o servidor.",
+    tip: "Recomendamos entre 30-60 segundos para um bom equilíbrio entre rapidez e performance."
+  },
+  "renotification": {
+    title: "🔄 Renotificação de Tarefas Pendentes",
+    content: "Sistema que relembra você sobre tarefas que ainda não foram atendidas. Útil para não esquecer de tarefas importantes.",
+    tip: "Ative esta opção se você quer ser lembrado sobre tarefas que ainda não abriu."
+  },
+  "enable-renotification": {
+    title: "✅ Ativar Renotificação",
+    content: "Quando ativado, a extensão irá renotificar você sobre tarefas pendentes que ainda não foram abertas ou ignoradas.",
+    tip: "Desative se você não quer ser lembrado sobre tarefas antigas."
+  },
+  "renotification-interval": {
+    title: "⏰ Intervalo de Renotificação",
+    content: "Define de quantos em quantos minutos você será lembrado sobre tarefas pendentes. Só funciona se a renotificação estiver ativada.",
+    tip: "Configure um tempo que faça sentido para seu fluxo de trabalho, como 30 ou 60 minutos."
+  },
+  "sigss-rename": {
+    title: "🏷️ Renomear Abas do SIGSS",
+    content: "Funcionalidade que melhora a organização das abas do SIGSS, renomeando-as automaticamente com o título da página atual.",
+    tip: "Muito útil quando você trabalha com múltiplas abas do SIGSS abertas simultaneamente."
+  },
+  "enable-sigss-rename": {
+    title: "🔄 Ativar Renomeação SIGSS",
+    content: "Quando ativado, as abas do SIGSS serão automaticamente renomeadas com o conteúdo do elemento '.sigss-title' da página, facilitando a identificação.",
+    tip: "Desative se você preferir manter os títulos originais das abas do SIGSS."
+  },
+  "snooze-settings": {
+    title: "⏰ Configurações de 'Lembrar Mais Tarde'",
+    content: "Permite personalizar as opções de tempo que aparecem quando você escolhe adiar uma tarefa. Você pode criar opções pré-configuradas e permitir tempos personalizados.",
+    tip: "Configure opções que fazem sentido para sua rotina, como 15min, 1h, 4h."
+  },
+  "snooze-options": {
+    title: "📋 Opções Pré-configuradas",
+    content: "Lista de tempos fixos que aparecerão no menu 'Lembrar Mais Tarde'. Cada opção pode ter horas e minutos específicos.",
+    tip: "Adicione opções que você usa frequentemente, como intervalos de almoço ou reuniões."
+  },
+  "snooze-general": {
+    title: "⚙️ Configurações Gerais de Snooze",
+    content: "Configurações que afetam o comportamento geral do sistema de 'Lembrar Mais Tarde', como permitir tempos personalizados.",
+    tip: "O tempo personalizado permite que o usuário digite qualquer valor de horas e minutos."
+  },
+  "custom-snooze": {
+    title: "🎯 Tempo Personalizado",
+    content: "Quando ativado, além das opções pré-configuradas, o usuário poderá inserir um tempo específico (horas e minutos) para ser lembrado.",
+    tip: "Útil para situações específicas onde as opções pré-configuradas não atendem."
+  },
+  "task-display": {
+    title: "�� Exibição de Tarefas",
+    content: "Controla quais informações das tarefas são mostradas no cabeçalho (sempre visíveis) e quais ficam nos detalhes (visíveis ao expandir).",
+    tip: "Personalize a interface para mostrar apenas as informações mais importantes para você."
+  },
+  "header-info": {
+    title: "📌 Informações do Cabeçalho",
+    content: "Campos que ficam sempre visíveis no cabeçalho de cada tarefa. Número e título são obrigatórios, mas você pode adicionar outros campos.",
+    tip: "Escolha campos que você consulta frequentemente para ter acesso rápido."
+  },
+  "data-envio": {
+    title: "📅 Data de Envio",
+    content: "Mostra quando a tarefa foi enviada/criada no SAU. Útil para priorizar tarefas mais antigas ou identificar urgências.",
+    tip: "Recomendado manter visível para controle de prazos."
+  },
+  "posicao-fila": {
+    title: "🔢 Posição na Fila",
+    content: "Mostra a posição da tarefa na fila de atendimento. Ajuda a entender a ordem de prioridade das tarefas.",
+    tip: "Útil para saber quais tarefas atender primeiro."
+  },
+  "solicitante": {
+    title: "👤 Solicitante",
+    content: "Mostra quem solicitou ou criou a tarefa. Pode ser útil para identificar tarefas de pessoas específicas ou setores.",
+    tip: "Útil se você precisa priorizar tarefas de determinadas pessoas."
+  },
+  "unidade": {
+    title: "🏢 Unidade",
+    content: "Mostra a unidade ou setor relacionado à tarefa. Ajuda a categorizar e organizar o trabalho por departamento.",
+    tip: "Útil para organizar tarefas por setor ou área de atuação."
+  },
+  "details-info": {
+    title: "📄 Informações dos Detalhes",
+    content: "Campos que ficam ocultos inicialmente e só aparecem quando você expande os detalhes da tarefa. Ajuda a manter a interface limpa.",
+    tip: "Informações menos consultadas ficam nos detalhes para não poluir a interface."
+  },
+  "log-settings": {
+    title: "📝 Configurações de Log",
+    content: "Controla o nível de detalhamento dos logs da extensão. Logs são úteis para diagnóstico de problemas e suporte técnico.",
+    tip: "Use DEBUG apenas para diagnóstico, pois gera muitos logs."
+  },
+  "log-level": {
+    title: "📊 Nível de Log",
+    content: "Define quais tipos de mensagens serão registradas nos logs:<br>• ERROR: Apenas erros críticos<br>• WARN: Avisos e erros<br>• INFO: Informações gerais<br>• DEBUG: Informações detalhadas<br>• NONE: Desativa logs",
+    tip: "Para uso normal, recomendamos INFO. Use DEBUG apenas para diagnóstico."
+  },
+  "export-logs": {
+    title: "📤 Exportar Logs",
+    content: "Baixa um arquivo de texto com todos os logs registrados pela extensão. Útil para enviar ao suporte técnico em caso de problemas.",
+    tip: "Os logs ajudam a identificar problemas e melhorar a extensão."
+  },
+  "development": {
+    title: "🔧 Ferramentas de Desenvolvimento",
+    content: "Ferramentas úteis para teste e diagnóstico da extensão. Use com cuidado, pois algumas ações não podem ser desfeitas.",
+    tip: "Estas ferramentas são principalmente para teste e resolução de problemas."
+  },
+  "reset-tasks": {
+    title: "🗑️ Resetar Memória de Tarefas",
+    content: "Remove todas as tarefas conhecidas, ignoradas e 'snoozed' da memória da extensão. Útil para testar notificações ou resolver problemas.",
+    tip: "CUIDADO: Esta ação não pode ser desfeita. Use apenas para teste ou resolução de problemas."
+  }
+};
+
+/**
+ * Configura os botões de ajuda na página
+ */
+function setupHelpButtons() {
+  // Encontra todos os botões de ajuda
+  const helpButtons = document.querySelectorAll('.help-button[data-help]');
+  
+  helpButtons.forEach(button => {
+    const helpKey = button.getAttribute('data-help');
+    const helpConfig = helpDefinitions[helpKey];
+    
+    if (helpConfig) {
+      // Adiciona tooltip ao botão
+      tooltipSystem.addTooltip(button, {
+        title: helpConfig.title,
+        content: helpConfig.content,
+        tip: helpConfig.tip,
+        trigger: 'click',
+        position: 'right'
+      });
+    }
+  });
+  
+  optionsLogger.info(`Configurados ${helpButtons.length} botões de ajuda`);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  loadOptions();
+  setupHelpButtons();
+});
 
 document.getElementById("saveLogin").addEventListener("click", saveLogin);
 document.getElementById("saveSettings").addEventListener("click", saveSettings);
