@@ -3,25 +3,23 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 ## [Unreleased]
 
+## [1.1.5] - 2025-01-28
+
 ### Fixed
 - **Build Script Missing File**: Corrigido problema crítico onde popup funcionava no modo desenvolvimento mas falhava no ZIP empacotado devido ao arquivo config-manager.js não estar incluído na lista sourceFiles do script de build
 - **Syntax Error (Popup)**: Corrigido erro de sintaxe "Unexpected token ')'" no popup.js linha 251, causado por parêntese extra no final da função displayTasks
 - **Comunicação Popup-Background**: Corrigido erro "Could not establish connection. Receiving end does not exist" adicionando return true nos message listeners que usam sendResponse
 - **appendChild Error (Popup)**: Corrigido erro crítico "Failed to execute 'appendChild' on 'Node': parameter 1 is not of type 'Node'" no popup.js linha 150, causado por uso incorreto de async/await em forEach loops
 - **appendChild Error (Sanitizer)**: Corrigido erro crítico "Failed to execute 'appendChild' on 'Node': parameter 1 is not of type 'Node'" em Edge/Chrome causado por uso incorreto de async/await em forEach loops no sanitizer.js
-- **background.js**: Implementado cooldown para evitar múltiplas abas de login sem credenciais.
+- **background.js**: Implementado cooldown para evitar múltiplas abas de login sem credenciais
 - **Config Manager Loading Error**: Corrigido erro "Failed to load resource: net::ERR_FILE_NOT_FOUND" para config-manager.js no popup, atualizando popup.js para usar o novo sistema de gerenciamento de configurações
 - **Popup Initialization Failure**: Corrigido falha na inicialização do popup devido a erros no config-manager, implementado sistema de fallback robusto que usa storage direto quando config-manager falha
-
-### Fixed
-
-- **Erro de Registro do Service Worker**: Corrigido erro "Service worker registration failed. Status code: 3" ao simplificar a inicialização da `browserAPI` em `background.js`, removendo uma função que lançava um erro fatal durante a inicialização.
-- **Erro de Script Injetado**: Prevenido um erro de `ReferenceError` no script de login automático ao substituir chamadas ao `backgroundLogger` (que não existe no contexto da página) por `console.log` e `console.error`.
-- **Logger Assíncrono**: Refatorado `logger.js` para inicialização lazy e assíncrona, evitando operações assíncronas no nível superior que violam regras do Service Worker.
-- **Compatibilidade com Service Worker**: Atualizados todos os arquivos para usar `await` com chamadas do logger (`background.js`, `popup.js`, `options.js`, `sanitizer.js`, `tooltip-system.js`, `help.js`).
+- **Erro de Registro do Service Worker**: Corrigido erro "Service worker registration failed. Status code: 3" ao simplificar a inicialização da `browserAPI` em `background.js`, removendo uma função que lançava um erro fatal durante a inicialização
+- **Erro de Script Injetado**: Prevenido um erro de `ReferenceError` no script de login automático ao substituir chamadas ao `backgroundLogger` (que não existe no contexto da página) por `console.log` e `console.error`
+- **Logger Assíncrono**: Refatorado `logger.js` para inicialização lazy e assíncrona, evitando operações assíncronas no nível superior que violam regras do Service Worker
+- **Compatibilidade com Service Worker**: Atualizados todos os arquivos para usar `await` com chamadas do logger (`background.js`, `popup.js`, `options.js`, `sanitizer.js`, `tooltip-system.js`, `help.js`)
 
 ### Added
-
 - **Sistema de Sincronização de Configurações**: Implementado salvamento das configurações no chrome.storage.sync com fallback para chrome.storage.local
 - **Gerenciador de Configurações**: Novo módulo `config-manager.js` para gerenciar configurações de forma unificada
 - **Compatibilidade Cross-Browser**: Sistema funciona tanto no Chrome quanto no Firefox com detecção automática de disponibilidade do sync
@@ -30,14 +28,12 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - **Categorização Inteligente**: Configurações são categorizadas entre sincronizáveis e apenas locais (dados de sessão)
 
 ### Changed
-
 - **Salvamento de Configurações**: Todas as configurações de usuário agora são salvas com sincronização automática
 - **Carregamento de Configurações**: Sistema prioriza configurações do sync, com fallback para local storage
 - **Página de Opções**: Atualizada para usar o novo gerenciador de configurações
 - **Background Script**: Refatorado para usar o sistema unificado de configurações
 
 ### Technical Details
-
 - Criado módulo `config-manager.js` com funções `setConfig`, `getConfig`, `setConfigs`, `getConfigs`
 - Implementada detecção automática de disponibilidade do `chrome.storage.sync`
 - Configurações sensíveis (credenciais) são sincronizadas entre dispositivos
