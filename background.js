@@ -8,17 +8,16 @@ const SAU_PREPARAR_PESQUISAR_TAREFA_URL =
 
 // Importa o logger e o gerenciador de configurações
 import { logger } from "./logger.js";
-import { getConfig, getConfigs, setConfig, setConfigs } from "./config-manager.js";
+import {
+  getConfig,
+  getConfigs,
+  setConfig,
+  setConfigs,
+} from "./config-manager.js";
 const backgroundLogger = logger("[Background]");
 
 // Define o objeto de API do navegador de forma compatível (Chrome ou Firefox)
-const browserAPI = (() => {
-  if (typeof globalThis !== 'undefined' && globalThis.browser) return globalThis.browser;
-  if (typeof globalThis !== 'undefined' && globalThis.chrome) return globalThis.chrome;
-  if (typeof window !== 'undefined' && window.browser) return window.browser;
-  if (typeof window !== 'undefined' && window.chrome) return window.chrome;
-  throw new Error('Browser extension API not available');
-})();
+const browserAPI = globalThis.browser || globalThis.chrome;
 
 // Variáveis globais para armazenar o estado da extensão.
 // Serão persistidas no chrome.storage.local.
@@ -371,13 +370,15 @@ async function isTabResponsive(tabId) {
     // Tenta enviar uma mensagem de ping para a aba com timeout
     const response = await Promise.race([
       browserAPI.tabs.sendMessage(tabId, { action: "ping" }),
-      new Promise((_, reject) => 
+      new Promise((_, reject) =>
         setTimeout(() => reject(new Error("Tab ping timeout")), 3000)
-      )
+      ),
     ]);
     return true;
   } catch (error) {
-    backgroundLogger.debug(`Aba ${tabId} não está responsiva: ${error.message}`);
+    backgroundLogger.debug(
+      `Aba ${tabId} não está responsiva: ${error.message}`
+    );
     return false;
   }
 }
@@ -391,7 +392,7 @@ async function injectScriptsWithTimeout(tabId) {
   try {
     // Verifica se a aba ainda existe
     await browserAPI.tabs.get(tabId);
-    
+
     // Injeta scripts com timeout
     await Promise.race([
       Promise.all([
@@ -406,18 +407,25 @@ async function injectScriptsWithTimeout(tabId) {
           files: ["interceptor.js"],
           world: "MAIN",
           injectImmediately: true,
-        })
+        }),
       ]),
-      new Promise((_, reject) => 
-        setTimeout(() => reject(new Error("Script injection timeout")), SCRIPT_INJECTION_TIMEOUT)
-      )
+      new Promise((_, reject) =>
+        setTimeout(
+          () => reject(new Error("Script injection timeout")),
+          SCRIPT_INJECTION_TIMEOUT
+        )
+      ),
     ]);
-    
-    backgroundLogger.info(`Content scripts injetados com sucesso na aba ${tabId}.`);
+
+    backgroundLogger.info(
+      `Content scripts injetados com sucesso na aba ${tabId}.`
+    );
     return true;
   } catch (error) {
     if (error.message === "Script injection timeout") {
-      backgroundLogger.warn(`Timeout ao injetar scripts na aba ${tabId} - aba pode estar travada`);
+      backgroundLogger.warn(
+        `Timeout ao injetar scripts na aba ${tabId} - aba pode estar travada`
+      );
     } else if (error.message.includes("No tab with id")) {
       backgroundLogger.debug(`Aba ${tabId} foi fechada durante a injeção`);
     } else {
@@ -458,21 +466,26 @@ async function checkAndNotifyNewTasks() {
   if (sauTab) {
     // Verifica se a aba está responsiva antes de tentar operações
     const isResponsive = await isTabResponsive(sauTab.id);
-    
+
     if (!isResponsive) {
-      backgroundLogger.warn(`Aba SAU ${sauTab.id} não está responsiva. Tentando recarregar...`);
-      
+      backgroundLogger.warn(
+        `Aba SAU ${sauTab.id} não está responsiva. Tentando recarregar...`
+      );
+
       try {
         await Promise.race([
           browserAPI.tabs.reload(sauTab.id),
-          new Promise((_, reject) => 
+          new Promise((_, reject) =>
             setTimeout(() => reject(new Error("Reload timeout")), 5000)
-          )
+          ),
         ]);
         backgroundLogger.info(`Aba ${sauTab.id} recarregada com sucesso`);
         return; // Sai da função, o webNavigation.onCompleted fará a injeção
       } catch (error) {
-        backgroundLogger.error(`Erro ao recarregar aba não responsiva ${sauTab.id}:`, error);
+        backgroundLogger.error(
+          `Erro ao recarregar aba não responsiva ${sauTab.id}:`,
+          error
+        );
         // Se não conseguir recarregar, tenta login automático
         await performAutomaticLogin();
         return;
@@ -486,9 +499,9 @@ async function checkAndNotifyNewTasks() {
       try {
         await Promise.race([
           browserAPI.tabs.reload(sauTab.id),
-          new Promise((_, reject) => 
+          new Promise((_, reject) =>
             setTimeout(() => reject(new Error("Reload timeout")), 5000)
-          )
+          ),
         ]);
         // Não precisamos injetar scripts aqui, pois o webNavigation.onCompleted Listener fará isso após o reload.
         return; // Sai da função, pois o reload vai disparar um novo ciclo de injeção.
@@ -502,9 +515,11 @@ async function checkAndNotifyNewTasks() {
     // Se a aba não for a de pesquisa de tarefas (ex: home) ou o reload falhou,
     // ou se a aba foi recém-criada/navegada para, injeta os scripts.
     const injectionSuccess = await injectScriptsWithTimeout(sauTab.id);
-    
+
     if (!injectionSuccess) {
-      backgroundLogger.warn("Falha na injeção de scripts. Tentando login automático como fallback.");
+      backgroundLogger.warn(
+        "Falha na injeção de scripts. Tentando login automático como fallback."
+      );
       await performAutomaticLogin();
     }
   } else {
@@ -552,10 +567,7 @@ async function checkForExistingLoginTab() {
  * Abre uma nova aba para a página de login e injeta um script para preencher e submeter o formulário.
  */
 async function performAutomaticLogin() {
-  const data = await getConfigs([
-    "sauUsername",
-    "sauPassword",
-  ]);
+  const data = await getConfigs(["sauUsername", "sauPassword"]);
   const username = data.sauUsername;
   const password = data.sauPassword;
 
@@ -646,16 +658,16 @@ async function performAutomaticLogin() {
                 passwordInput.value = pass;
                 loginForm.submit();
                 // Logs no console da página (não do Service Worker)
-                backgroundLogger.info(
+                console.log(
                   "Content Script (Login): Credenciais preenchidas e formulário submetido."
                 );
               } else {
-                backgroundLogger.error(
+                console.error(
                   "Content Script (Login): Campos de login (IDs: usuario, senha) não encontrados na página do SAU."
                 );
               }
             } else {
-              backgroundLogger.error(
+              console.error(
                 'Content Script (Login): Formulário de login (id="loginForm") não encontrado na página do SAU.'
               );
             }
@@ -694,7 +706,7 @@ async function performAutomaticLogin() {
  */
 function performantDeepCopy(obj) {
   // Use structuredClone se disponível (mais performático)
-  if (typeof structuredClone !== 'undefined') {
+  if (typeof structuredClone !== "undefined") {
     return structuredClone(obj);
   }
   // Fallback para JSON (menos performático mas compatível)
@@ -726,7 +738,8 @@ async function handleNewTasks(newTasks) {
       );
       const isAlreadyKnown = isAlreadyKnownIndex !== -1;
       const isIgnored = ignoredTasks[taskId];
-      const isSnoozed = snoozedTasks[taskId] && snoozedTasks[taskId] > Date.now();
+      const isSnoozed =
+        snoozedTasks[taskId] && snoozedTasks[taskId] > Date.now();
       const isOpened = openedTasks[taskId];
 
       // Se é tarefa conhecida e não está ignorada/snoozed/aberta, verifica renotificação
@@ -743,14 +756,23 @@ async function handleNewTasks(newTasks) {
         isIgnored,
         isSnoozed,
         isOpened,
-        shouldRenotify
+        shouldRenotify,
       };
     })
   );
 
   // Processa resultados das verificações
   for (const check of renotificationChecks) {
-    const { newTask, taskId, isAlreadyKnown, isAlreadyKnownIndex, isIgnored, isSnoozed, isOpened, shouldRenotify } = check;
+    const {
+      newTask,
+      taskId,
+      isAlreadyKnown,
+      isAlreadyKnownIndex,
+      isIgnored,
+      isSnoozed,
+      isOpened,
+      shouldRenotify,
+    } = check;
 
     backgroundLogger.debug(
       `Processando tarefa ${taskId}: isAlreadyKnown=${isAlreadyKnown}, isIgnored=${isIgnored}, isSnoozed=${isSnoozed}, isOpened=${isOpened}`
@@ -806,7 +828,7 @@ async function handleNewTasks(newTasks) {
       `Disparando notificação para ${tasksToNotify.length} nova(s) tarefa(s).`,
       tasksToNotify
     );
-    
+
     // Rate limiting para notificações
     const now = Date.now();
     if (now - lastNotificationTime >= NOTIFICATION_COOLDOWN) {
@@ -824,13 +846,23 @@ async function handleNewTasks(newTasks) {
           buttons: [{ title: "Abrir Todas" }, { title: "Ignorar Todas" }],
         });
         lastNotificationTime = now; // Atualiza timestamp da última notificação
-        backgroundLogger.info("Notificação do navegador criada:", notificationId);
+        backgroundLogger.info(
+          "Notificação do navegador criada:",
+          notificationId
+        );
       } catch (error) {
-        backgroundLogger.error("Erro ao criar notificação do navegador:", error);
+        backgroundLogger.error(
+          "Erro ao criar notificação do navegador:",
+          error
+        );
       }
     } else {
-      const remainingCooldown = Math.ceil((NOTIFICATION_COOLDOWN - (now - lastNotificationTime)) / 1000);
-      backgroundLogger.debug(`Notificação suprimida devido ao rate limiting. Aguarde ${remainingCooldown}s`);
+      const remainingCooldown = Math.ceil(
+        (NOTIFICATION_COOLDOWN - (now - lastNotificationTime)) / 1000
+      );
+      backgroundLogger.debug(
+        `Notificação suprimida devido ao rate limiting. Aguarde ${remainingCooldown}s`
+      );
     }
 
     // Envia uma mensagem para o popup (se aberto) para que ele possa atualizar sua lista de tarefas
