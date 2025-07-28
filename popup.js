@@ -140,11 +140,11 @@ async function displayTasks(tasks, displaySettings = null) {
   const tasksList = document.getElementById("tasks-list");
 
   // Limpa a lista existente de forma segura
-  safelyPopulateContainer(tasksList, []);
+  await safelyPopulateContainer(tasksList, []);
 
   // Se não houver tarefas, exibe uma mensagem
   if (tasks.length === 0) {
-    const noTasksP = createSafeElement("p", "Nenhuma tarefa nova encontrada.", {
+    const noTasksP = await createSafeElement("p", "Nenhuma tarefa nova encontrada.", {
       class: "no-tasks",
     });
     tasksList.appendChild(noTasksP);
@@ -165,18 +165,18 @@ async function displayTasks(tasks, displaySettings = null) {
   }
 
   // Itera sobre as tarefas e cria elementos HTML para cada uma de forma segura
-  tasks.forEach(async (task) => {
+  for (const task of tasks) {
     // Sanitiza os dados da tarefa
-    const sanitizedTask = sanitizeTaskData(task);
+    const sanitizedTask = await sanitizeTaskData(task);
     if (!sanitizedTask) {
       await popupLogger.warn(
         `Tarefa inválida ignorada: ${task?.id || "unknown"}`
       );
-      return;
+      continue;
     }
 
     // Cria o elemento da tarefa de forma segura
-    const taskElement = createSafeTaskElement(sanitizedTask, displaySettings);
+    const taskElement = await createSafeTaskElement(sanitizedTask, displaySettings);
     tasksList.appendChild(taskElement);
 
     // Adiciona event listeners para os botões de ação de cada tarefa
@@ -225,7 +225,7 @@ async function displayTasks(tasks, displaySettings = null) {
         e.target.closest(".task-item").remove(); // Remove o item da lista no popup
         // Se não houver mais tarefas, exibe a mensagem de "nenhuma tarefa"
         if (tasksList.children.length === 0) {
-          const noTasksP = createSafeElement(
+          const noTasksP = await createSafeElement(
             "p",
             "Nenhuma tarefa nova encontrada.",
             { class: "no-tasks" }
@@ -417,7 +417,7 @@ async function applySnooze(taskId, minutes) {
   // Se não houver mais tarefas, exibe a mensagem de "nenhuma tarefa"
   const tasksList = document.getElementById("tasks-list");
   if (tasksList.children.length === 0) {
-    const noTasksP = createSafeElement("p", "Nenhuma tarefa nova encontrada.", {
+    const noTasksP = await createSafeElement("p", "Nenhuma tarefa nova encontrada.", {
       class: "no-tasks",
     });
     tasksList.appendChild(noTasksP);
