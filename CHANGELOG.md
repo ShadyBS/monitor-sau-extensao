@@ -4,6 +4,9 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 ## [Unreleased]
 
 ### Fixed
+- **background.js**: Implementado cooldown para evitar múltiplas abas de login sem credenciais.
+
+### Fixed
 
 - **Erro de Registro do Service Worker**: Corrigido erro "Service worker registration failed. Status code: 3" ao simplificar a inicialização da `browserAPI` em `background.js`, removendo uma função que lançava um erro fatal durante a inicialização.
 - **Erro de Script Injetado**: Prevenido um erro de `ReferenceError` no script de login automático ao substituir chamadas ao `backgroundLogger` (que não existe no contexto da página) por `console.log` e `console.error`.

@@ -604,9 +604,9 @@ async function performAutomaticLogin() {
     // Verifica se já existe uma aba de login aberta
     const hasExistingLoginTab = await checkForExistingLoginTab();
 
-    // Só abre uma nova aba se:
-    // 1. Não há aba de login existente E
-    // 2. Passou tempo suficiente desde a última aba aberta (cooldown)
+    // Verifica se já existe uma aba de login aberta
+    const hasExistingLoginTab = await checkForExistingLoginTab();
+
     if (!hasExistingLoginTab && timeSinceLastLoginTab > LOGIN_TAB_COOLDOWN) {
       await backgroundLogger.info(
         "Abrindo nova aba de login para configuração manual de credenciais"
