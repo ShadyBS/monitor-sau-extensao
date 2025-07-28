@@ -248,7 +248,7 @@ async function displayTasks(tasks, displaySettings = null) {
         // Mostra o dropdown de opções de snooze
         await showSnoozeDropdown(e.target, taskId);
       });
-  });
+  }
 }
 
 /**
