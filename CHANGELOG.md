@@ -3,6 +3,31 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Timeout para Abas Travadas**: Implementado sistema de timeout para detectar e lidar com abas do SAU que ficam não responsivas
+- **Verificação de Responsividade**: Adicionada verificação de ping para detectar se abas estão travadas antes de tentar operações
+- **Timeout de Injeção de Scripts**: Implementado timeout de 10 segundos para operações de injeção de scripts
+- **Timeout de Reload**: Adicionado timeout de 5 segundos para operações de reload de abas
+- **Fallback Robusto**: Melhorado sistema de fallback quando abas ficam inacessíveis ou travadas
+- **Detecção de Abas Fechadas**: Melhorada detecção de abas que foram fechadas durante operações
+
+### Added
+
+- **Sistema de Ping**: Implementado sistema de ping/pong para verificar responsividade de abas
+- **Timeouts Configuráveis**: Constantes para timeouts de diferentes operações (injeção, reload, ping)
+- **Logs Detalhados**: Adicionados logs específicos para situações de timeout e abas não responsivas
+- **Recuperação Automática**: Sistema automático de recuperação quando abas ficam travadas
+
+### Technical Details
+
+- Adicionada função `isTabResponsive()` para verificar se aba responde a mensagens
+- Implementada função `injectScriptsWithTimeout()` com timeout de 10 segundos
+- Criada constante `SCRIPT_INJECTION_TIMEOUT` para controlar timeout de injeção
+- Adicionado tratamento de mensagem "ping" no content script
+- Melhorada lógica de fallback em `checkAndNotifyNewTasks()` para lidar com abas travadas
+- Implementados timeouts usando `Promise.race()` para operações críticas
+
 ## [1.1.3] - 2025-07-25
 
 ### Fixed

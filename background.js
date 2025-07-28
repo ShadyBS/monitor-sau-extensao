@@ -356,6 +356,77 @@ browserAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 /**
+ * Timeout para operações de injeção de script (10 segundos)
+ */
+const SCRIPT_INJECTION_TIMEOUT = 10000;
+
+/**
+ * Verifica se uma aba está responsiva tentando enviar uma mensagem simples
+ * @param {number} tabId - ID da aba a ser verificada
+ * @returns {Promise<boolean>} - True se a aba está responsiva
+ */
+async function isTabResponsive(tabId) {
+  try {
+    // Tenta enviar uma mensagem de ping para a aba com timeout
+    const response = await Promise.race([
+      browserAPI.tabs.sendMessage(tabId, { action: "ping" }),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("Tab ping timeout")), 3000)
+      )
+    ]);
+    return true;
+  } catch (error) {
+    backgroundLogger.debug(`Aba ${tabId} não está responsiva: ${error.message}`);
+    return false;
+  }
+}
+
+/**
+ * Injeta scripts com timeout e verificação de responsividade
+ * @param {number} tabId - ID da aba onde injetar os scripts
+ * @returns {Promise<boolean>} - True se a injeção foi bem-sucedida
+ */
+async function injectScriptsWithTimeout(tabId) {
+  try {
+    // Verifica se a aba ainda existe
+    await browserAPI.tabs.get(tabId);
+    
+    // Injeta scripts com timeout
+    await Promise.race([
+      Promise.all([
+        // Injeta o content script principal no contexto ISOLADO (padrão)
+        browserAPI.scripting.executeScript({
+          target: { tabId },
+          files: ["content.js"],
+        }),
+        // Injeta o script interceptor no contexto da PÁGINA (MAIN)
+        browserAPI.scripting.executeScript({
+          target: { tabId },
+          files: ["interceptor.js"],
+          world: "MAIN",
+          injectImmediately: true,
+        })
+      ]),
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("Script injection timeout")), SCRIPT_INJECTION_TIMEOUT)
+      )
+    ]);
+    
+    backgroundLogger.info(`Content scripts injetados com sucesso na aba ${tabId}.`);
+    return true;
+  } catch (error) {
+    if (error.message === "Script injection timeout") {
+      backgroundLogger.warn(`Timeout ao injetar scripts na aba ${tabId} - aba pode estar travada`);
+    } else if (error.message.includes("No tab with id")) {
+      backgroundLogger.debug(`Aba ${tabId} foi fechada durante a injeção`);
+    } else {
+      backgroundLogger.error(`Erro ao injetar scripts na aba ${tabId}:`, error);
+    }
+    return false;
+  }
+}
+
+/**
  * Função principal para verificar novas tarefas e notificar o usuário.
  * Tenta encontrar uma aba do SAU logada, caso contrário, tenta o login automático.
  */
@@ -384,12 +455,40 @@ async function checkAndNotifyNewTasks() {
 
   // Se uma aba do SAU logada for encontrada
   if (sauTab) {
+    // Verifica se a aba está responsiva antes de tentar operações
+    const isResponsive = await isTabResponsive(sauTab.id);
+    
+    if (!isResponsive) {
+      backgroundLogger.warn(`Aba SAU ${sauTab.id} não está responsiva. Tentando recarregar...`);
+      
+      try {
+        await Promise.race([
+          browserAPI.tabs.reload(sauTab.id),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error("Reload timeout")), 5000)
+          )
+        ]);
+        backgroundLogger.info(`Aba ${sauTab.id} recarregada com sucesso`);
+        return; // Sai da função, o webNavigation.onCompleted fará a injeção
+      } catch (error) {
+        backgroundLogger.error(`Erro ao recarregar aba não responsiva ${sauTab.id}:`, error);
+        // Se não conseguir recarregar, tenta login automático
+        await performAutomaticLogin();
+        return;
+      }
+    }
+
     // Se a aba encontrada for a página de pesquisa de tarefas, recarrega-a para garantir dados atualizados.
     // Isso também acionará a reinjeção do content script via webNavigation.onCompleted.
     if (sauTab.url.startsWith(SAU_PREPARAR_PESQUISAR_TAREFA_URL)) {
       backgroundLogger.info(`Recarregando aba de tarefas SAU: ${sauTab.url}`);
       try {
-        await browserAPI.tabs.reload(sauTab.id);
+        await Promise.race([
+          browserAPI.tabs.reload(sauTab.id),
+          new Promise((_, reject) => 
+            setTimeout(() => reject(new Error("Reload timeout")), 5000)
+          )
+        ]);
         // Não precisamos injetar scripts aqui, pois o webNavigation.onCompleted Listener fará isso após o reload.
         return; // Sai da função, pois o reload vai disparar um novo ciclo de injeção.
       } catch (error) {
@@ -401,24 +500,10 @@ async function checkAndNotifyNewTasks() {
 
     // Se a aba não for a de pesquisa de tarefas (ex: home) ou o reload falhou,
     // ou se a aba foi recém-criada/navegada para, injeta os scripts.
-    try {
-      // Injeta o content script principal no contexto ISOLADO (padrão)
-      await browserAPI.scripting.executeScript({
-        target: { tabId: sauTab.id },
-        files: ["content.js"],
-      });
-      // Injeta o script interceptor no contexto da PÁGINA (MAIN)
-      await browserAPI.scripting.executeScript({
-        target: { tabId: sauTab.id },
-        files: ["interceptor.js"],
-        world: "MAIN",
-        injectImmediately: true, // Tenta injetar o mais rápido possível
-      });
-      backgroundLogger.info("Content script injetado na aba SAU.");
-    } catch (error) {
-      backgroundLogger.error("Erro ao injetar content script:", error);
-      // Se a injeção falhar, pode ser que a aba não esteja mais acessível ou logada.
-      // Tenta o login automático novamente como fallback.
+    const injectionSuccess = await injectScriptsWithTimeout(sauTab.id);
+    
+    if (!injectionSuccess) {
+      backgroundLogger.warn("Falha na injeção de scripts. Tentando login automático como fallback.");
       await performAutomaticLogin();
     }
   } else {

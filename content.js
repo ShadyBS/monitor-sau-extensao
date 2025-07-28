@@ -609,7 +609,7 @@
     setupMutationObserver();
 
     // Adiciona um listener para mensagens enviadas do background script para este content script.
-    // Isso é usado para injetar a UI de notificação visual.
+    // Isso é usado para injetar a UI de notificação visual e responder a pings de responsividade.
     browserAPI.runtime.onMessage.addListener(
       (message, sender, sendResponse) => {
         // O listener padrão e seguro para comunicação entre background e content scripts.
@@ -619,6 +619,11 @@
           injectNotificationUI(message.tasks);
           // Opcional: responder ao background que a ação foi concluída.
           // sendResponse({ status: "UI Injetada com sucesso" });
+        } else if (message.action === "ping") {
+          // Responde ao ping de verificação de responsividade
+          contentLogger.debug("Ping recebido do background script");
+          sendResponse({ status: "pong", timestamp: Date.now() });
+          return true; // Indica que a resposta será enviada de forma assíncrona
         }
       }
     );
