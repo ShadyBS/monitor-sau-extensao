@@ -39,9 +39,9 @@ class TooltipSystem {
         padding: var(--spacing-md, 12px);
         box-shadow: var(--shadow-heavy, 0 4px 12px rgba(0,0,0,0.15));
         z-index: 10000;
-        max-width: 300px;
-        font-size: var(--font-size-sm, 14px);
-        line-height: 1.4;
+        max-width: 320px;
+        font-size: var(--font-size-md, 16px);
+        line-height: 1.5;
         color: var(--text-primary, #333333);
         opacity: 0;
         transform: translateY(-5px);
@@ -56,9 +56,9 @@ class TooltipSystem {
 
       .tooltip-title {
         font-weight: bold;
-        margin-bottom: var(--spacing-xs, 4px);
+        margin-bottom: var(--spacing-sm, 8px);
         color: var(--text-heading, #1a1a1a);
-        font-size: var(--font-size-md, 16px);
+        font-size: var(--font-size-lg, 18px);
       }
 
       .tooltip-content {

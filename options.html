@@ -12,22 +12,18 @@
 
       <section class="card">
         <h2>Login Automático 
-          <button class="help-button" data-help="login-auto" title="Clique para obter ajuda sobre login automático">?</button>
+          <button class="help-button" data-help="login-auto" title="Ajuda sobre Login Automático">?</button>
         </h2>
         <p>
           Insira suas credenciais do SAU para login automático. Elas serão
           armazenadas de forma segura no navegador.
         </p>
         <div class="form-group">
-          <label for="username">Usuário: 
-            <button class="help-button" data-help="username" title="Ajuda sobre o campo usuário">?</button>
-          </label>
+          <label for="username">Usuário:</label>
           <input type="text" id="username" placeholder="Seu usuário SAU" />
         </div>
         <div class="form-group">
-          <label for="password">Senha: 
-            <button class="help-button" data-help="password" title="Ajuda sobre o campo senha">?</button>
-          </label>
+          <label for="password">Senha:</label>
           <input type="password" id="password" placeholder="Sua senha SAU" />
         </div>
         <button id="saveLogin">Salvar Credenciais</button>
@@ -36,43 +32,33 @@
 
       <section class="card">
         <h2>Configurações de Notificação 
-          <button class="help-button" data-help="notifications" title="Clique para obter ajuda sobre notificações">?</button>
+          <button class="help-button" data-help="notifications" title="Ajuda sobre Notificações">?</button>
         </h2>
         <div class="form-group">
-          <label for="checkInterval">Intervalo de Verificação (segundos): 
-            <button class="help-button" data-help="check-interval" title="Ajuda sobre intervalo de verificação">?</button>
-          </label>
+          <label for="checkInterval">Intervalo de Verificação (segundos):</label>
           <input type="number" id="checkInterval" min="10" value="30" />
         </div>
         
-        <h3>Renotificação de Tarefas Pendentes 
-          <button class="help-button" data-help="renotification" title="Ajuda sobre renotificação">?</button>
-        </h3>
+        <h3>Renotificação de Tarefas Pendentes</h3>
         <div class="form-group">
           <label>
             <input type="checkbox" id="enableRenotification">
             Ativar renotificação para tarefas pendentes
-            <button class="help-button" data-help="enable-renotification" title="Ajuda sobre ativar renotificação">?</button>
           </label>
         </div>
         <div class="form-group">
-          <label for="renotificationInterval">Intervalo de Renotificação (minutos): 
-            <button class="help-button" data-help="renotification-interval" title="Ajuda sobre intervalo de renotificação">?</button>
-          </label>
+          <label for="renotificationInterval">Intervalo de Renotificação (minutos):</label>
           <input type="number" id="renotificationInterval" min="1" value="30" />
-          <small>Tempo para renotificar sobre tarefas pendentes que não tiveram ação</small>
+          <small>Tempo para renotificar sobre tarefas pendentes que não tiveram ação.</small>
         </div>
         
-        <h3>Renomear Abas do SIGSS 
-          <button class="help-button" data-help="sigss-rename" title="Ajuda sobre renomeação de abas SIGSS">?</button>
-        </h3>
+        <h3>Renomear Abas do SIGSS</h3>
         <div class="form-group">
           <label>
             <input type="checkbox" id="enableSigssTabRename" checked>
             Renomear abas do SIGSS com o título da página
-            <button class="help-button" data-help="enable-sigss-rename" title="Ajuda sobre ativar renomeação SIGSS">?</button>
           </label>
-          <small>Substitui o título da aba pelo texto do elemento .sigss-title quando disponível</small>
+          <small>Substitui o título da aba pelo texto do elemento .sigss-title quando disponível.</small>
         </div>
         
         <button id="saveSettings">Salvar Configurações</button>
@@ -81,15 +67,13 @@
 
       <section class="card">
         <h2>Configurações de "Lembrar Mais Tarde" 
-          <button class="help-button" data-help="snooze-settings" title="Ajuda sobre configurações de snooze">?</button>
+          <button class="help-button" data-help="snooze-settings" title="Ajuda sobre "Lembrar Mais Tarde"">?</button>
         </h2>
         <p>
           Configure as opções de tempo que aparecerão no dropdown quando o usuário clicar em "Lembrar Mais Tarde".
         </p>
         
-        <h3>Opções Pré-configuradas 
-          <button class="help-button" data-help="snooze-options" title="Ajuda sobre opções pré-configuradas">?</button>
-        </h3>
+        <h3>Opções Pré-configuradas</h3>
         <div id="snooze-options-container">
           <!-- Opções serão carregadas dinamicamente -->
         </div>
@@ -98,14 +82,11 @@
           <button type="button" id="addSnoozeOption" class="btn-secondary">+ Adicionar Nova Opção</button>
         </div>
         
-        <h3>Configurações Gerais 
-          <button class="help-button" data-help="snooze-general" title="Ajuda sobre configurações gerais de snooze">?</button>
-        </h3>
+        <h3>Configurações Gerais</h3>
         <div class="form-group">
-          <label>
+          <label class="checkbox-label">
             <input type="checkbox" id="allowCustomSnooze" checked>
-            Permitir tempo personalizado (usuário pode inserir tempo customizado)
-            <button class="help-button" data-help="custom-snooze" title="Ajuda sobre tempo personalizado">?</button>
+            <span>Permitir tempo personalizado (usuário pode inserir tempo customizado)</span>
           </label>
         </div>
         
@@ -115,15 +96,13 @@
 
       <section class="card">
         <h2>Exibição de Tarefas 
-          <button class="help-button" data-help="task-display" title="Ajuda sobre exibição de tarefas">?</button>
+          <button class="help-button" data-help="task-display" title="Ajuda sobre Exibição de Tarefas">?</button>
         </h2>
         <p>
           Configure quais informações devem aparecer no cabeçalho das tarefas e quais devem aparecer apenas nos detalhes expandidos.
         </p>
         
-        <h3>Informações do Cabeçalho 
-          <button class="help-button" data-help="header-info" title="Ajuda sobre informações do cabeçalho">?</button>
-        </h3>
+        <h3>Informações do Cabeçalho</h3>
         <p>Selecione as informações que devem aparecer sempre visíveis:</p>
         <div class="form-group">
           <label>
@@ -141,34 +120,28 @@
           <label>
             <input type="checkbox" id="header-dataEnvio">
             Data de Envio
-            <button class="help-button" data-help="data-envio" title="Ajuda sobre data de envio">?</button>
           </label>
         </div>
         <div class="form-group">
           <label>
             <input type="checkbox" id="header-posicao">
             Posição na Fila
-            <button class="help-button" data-help="posicao-fila" title="Ajuda sobre posição na fila">?</button>
           </label>
         </div>
         <div class="form-group">
           <label>
             <input type="checkbox" id="header-solicitante">
             Solicitante
-            <button class="help-button" data-help="solicitante" title="Ajuda sobre solicitante">?</button>
           </label>
         </div>
         <div class="form-group">
           <label>
             <input type="checkbox" id="header-unidade">
             Unidade
-            <button class="help-button" data-help="unidade" title="Ajuda sobre unidade">?</button>
           </label>
         </div>
         
-        <h3>Informações dos Detalhes 
-          <button class="help-button" data-help="details-info" title="Ajuda sobre informações dos detalhes">?</button>
-        </h3>
+        <h3>Informações dos Detalhes</h3>
         <p>As informações não selecionadas acima aparecerão apenas nos detalhes expandidos.</p>
         
         <button id="saveDisplaySettings">Salvar Configurações de Exibição</button>
@@ -177,12 +150,10 @@
 
       <section class="card">
         <h2>Configurações de Log 
-          <button class="help-button" data-help="log-settings" title="Ajuda sobre configurações de log">?</button>
+          <button class="help-button" data-help="log-settings" title="Ajuda sobre Configurações de Log">?</button>
         </h2>
         <div class="form-group">
-          <label for="logLevel">Nível de Log: 
-            <button class="help-button" data-help="log-level" title="Ajuda sobre níveis de log">?</button>
-          </label>
+          <label for="logLevel">Nível de Log:</label>
           <select id="logLevel">
             <option value="ERROR">ERROR</option>
             <option value="WARN">WARN</option>
@@ -192,24 +163,19 @@
           </select>
         </div>
         <button id="saveLogLevel">Salvar Nível de Log</button>
-        <button id="exportLogs">Exportar Logs 
-          <button class="help-button" data-help="export-logs" title="Ajuda sobre exportar logs">?</button>
-        </button>
+        <button id="exportLogs">Exportar Logs</button>
         <p id="logLevelStatus" class="status-message"></p>
       </section>
 
       <section class="card">
         <h2>Desenvolvimento 
-          <button class="help-button" data-help="development" title="Ajuda sobre ferramentas de desenvolvimento">?</button>
+          <button class="help-button" data-help="development" title="Ajuda sobre Desenvolvimento">?</button>
         </h2>
         <p>
           Use este botão para limpar todas as tarefas salvas (conhecidas,
           ignoradas e "snoozed"). Útil para testar notificações novamente.
         </p>
-        <button id="resetTasks" class="btn-danger">
-          Resetar Memória de Tarefas
-          <button class="help-button" data-help="reset-tasks" title="Ajuda sobre resetar memória de tarefas">?</button>
-        </button>
+        <button id="resetTasks" class="btn-danger">Resetar Memória de Tarefas</button>
         <p id="resetStatus" class="status-message"></p>
       </section>
     </div>
