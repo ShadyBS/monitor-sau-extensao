@@ -9,6 +9,9 @@ const SAU_PREPARAR_PESQUISAR_TAREFA_URL =
 // Importa o logger e o instancia para o contexto do background script
 import { logger } from "./logger.js";
 const backgroundLogger = logger('[Background]');
+
+// Importa o config manager para sincronização de configurações
+import { migrateToSync } from "./config-manager.js";
 /**
  * Determina qual content script usar baseado na URL da aba
  * @param {number} tabId - ID da aba
@@ -1022,7 +1025,7 @@ browserAPI.notifications.onButtonClicked.addListener(
 /**
  * Adiciona um listener para o evento `webNavigation.onCompleted`.
  * Este evento é disparado quando uma navegação é concluída em uma aba.
- * Usamos isso para injetar o content script nas páginas do SAU.
+ * Usamos isso para injetar o content script nas páginas do SAU e SIGSS.
  */
 browserAPI.webNavigation.onCompleted.addListener(
   async (details) => {
@@ -1032,6 +1035,9 @@ browserAPI.webNavigation.onCompleted.addListener(
       details.url.startsWith(SAU_HOME_URL) ||
       details.url.startsWith(SAU_PREPARAR_PESQUISAR_TAREFA_URL);
 
+    // Verifica se é uma página do SIGSS
+    const isSigssPage = /sigss/i.test(details.url);
+
     if (isSauPage) {
       backgroundLogger.info(
         `Navegação completa para uma página SAU: ${details.url}. Injetando content script.`
@@ -1040,7 +1046,7 @@ browserAPI.webNavigation.onCompleted.addListener(
         // Injeta o content script principal no contexto ISOLADO (padrão)
         await browserAPI.scripting.executeScript({
           target: { tabId: details.tabId },
-          files: [await getContentScriptForTab(tabId)],
+          files: [await getContentScriptForTab(details.tabId)],
         });
         // Injeta o script interceptor no contexto da PÁGINA (MAIN)
         // para que ele possa sobrescrever o XMLHttpRequest da página.
@@ -1064,10 +1070,35 @@ browserAPI.webNavigation.onCompleted.addListener(
           error
         );
       }
+    } else if (isSigssPage) {
+      backgroundLogger.info(
+        `Navegação completa para uma página SIGSS: ${details.url}. Injetando content script SIGSS.`
+      );
+      try {
+        // Injeta o content script do SIGSS no contexto ISOLADO (padrão)
+        await browserAPI.scripting.executeScript({
+          target: { tabId: details.tabId },
+          files: ['content-sigss.js'],
+        });
+        backgroundLogger.info(
+          `Content script SIGSS injetado na aba ${details.tabId}.`
+        );
+      } catch (error) {
+        backgroundLogger.error(
+          `Erro ao injetar content script SIGSS na aba ${details.tabId}:`,
+          error
+        );
+      }
     }
   },
-  { url: [{ urlMatches: "https://egov.santos.sp.gov.br/sau/*" }] }
-); // Filtra para URLs do SAU
+  { 
+    url: [
+      { urlMatches: "https://egov.santos.sp.gov.br/sau/*" },
+      { urlMatches: "http://c1863prd.cloudmv.com.br/sigss/*" },
+      { urlMatches: "http://c1863tst1.cloudmv.com.br/sigss/*" }
+    ] 
+  }
+); // Filtra para URLs do SAU e SIGSS
 
 /**
  * Listener para quando abas são removidas/fechadas.
@@ -1093,8 +1124,16 @@ loadPersistentData()
     // garantindo que o logger esteja pronto antes de qualquer log mais detalhado.
     backgroundLogger
       .initialize()
-      .then(() => {
+      .then(async () => {
         backgroundLogger.info("Background Service Worker iniciado."); // Agora este log será com o nível configurado
+
+        // Tenta migrar configurações para sync se disponível
+        try {
+          await migrateToSync();
+          backgroundLogger.info("Migração de configurações para sync concluída");
+        } catch (error) {
+          backgroundLogger.warn("Erro na migração para sync:", error);
+        }
 
         browserAPI.storage.local.get("checkInterval").then((data) => {
           const interval = data.checkInterval || 30; // Padrão: 30 segundos

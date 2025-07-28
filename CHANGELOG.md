@@ -3,28 +3,27 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 ## [Unreleased]
 
+### Fixed
+- **Background Script Error**: Corrigido erro crítico `ReferenceError: tabId is not defined` na linha 1043 do background.js que impedia a injeção correta de content scripts
+- **SIGSS Tab Renaming**: Corrigido problema onde títulos das abas do SIGSS não estavam sendo renomeados devido a falta de injeção do content script apropriado
+- **WebNavigation Listener**: Adicionado suporte para páginas do SIGSS no listener de navegação, permitindo injeção automática do content-sigss.js
+- **Sync Configuration Migration**: Implementada migração automática de configurações para chrome.storage.sync na inicialização da extensão
+- **Cross-Device Sync**: Corrigido problema onde configurações salvas no sync não eram carregadas após reinstalação da extensão
+
 ### Added
-- **Renomear Abas do SIGSS**: Nova funcionalidade para renomear automaticamente as abas do SIGSS com o título da página (habilitada por padrão)
-- **Configuração de Renomear Abas**: Adicionada opção nas configurações para habilitar/desabilitar a funcionalidade de renomear abas do SIGSS
-- **Observer Inteligente para SIGSS**: Sistema de observação de mudanças no DOM específico para detectar alterações no elemento .sigss-title
-- **Compatibilidade Cross-Browser**: Funcionalidade funciona tanto no Chrome quanto no Firefox com fallback automático entre storage.sync e storage.local
+- **Automatic Config Migration**: Sistema automático de migração de configurações do storage local para sync quando disponível
+- **SIGSS URL Support**: Adicionado suporte completo para URLs do SIGSS no webNavigation listener
+- **Enhanced Error Handling**: Melhorado tratamento de erros na injeção de scripts com logs mais detalhados
 
 ### Changed
-- **Arquitetura Modular**: Refatorado content scripts para separação de responsabilidades - `content.js` para SAU e `content-sigss.js` para SIGSS
-- **Injeção Inteligente**: Background script agora injeta o content script apropriado baseado na URL da página
-- **Manutenibilidade**: Cada funcionalidade agora tem seu próprio arquivo, facilitando manutenção e testes
-
-### Fixed
-- **Config Manager**: Adicionada configuração `enableSigssTabRename` ao DEFAULT_CONFIG para garantir valor padrão correto
-- **Manifest Permissions**: Adicionadas permissões para URLs do SIGSS (c1863prd.cloudmv.com.br e c1863tst1.cloudmv.com.br) nos manifests Chrome e Firefox
+- **Content Script Injection**: Melhorada lógica de injeção de content scripts baseada na URL da página
+- **Configuration Loading**: Sistema de configuração agora prioriza storage.sync com fallback para local storage
 
 ### Technical Details
-- Implementada detecção automática de páginas do SIGSS baseada na URL
-- Sistema de MutationObserver otimizado com requestAnimationFrame para performance
-- Configuração sincronizada entre dispositivos quando disponível
-- Listener para mudanças em tempo real nas configurações
-- Cleanup automático de recursos quando a página é descarregada
-- Logging detalhado para debugging e monitoramento
+- Corrigido uso incorreto de `tabId` em vez de `details.tabId` no webNavigation listener
+- Adicionadas URLs do SIGSS (c1863prd.cloudmv.com.br e c1863tst1.cloudmv.com.br) ao filtro de navegação
+- Implementada chamada automática de `migrateToSync()` na inicialização do background script
+- Melhorada detecção de páginas SIGSS com regex case-insensitive
 ## [1.1.5] - 2025-07-28
 
 ### Changed
