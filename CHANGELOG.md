@@ -3,10 +3,10 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 ## [Unreleased]
 
-### Fixed
-- **Sincronização de Versões**: Corrigida discrepância entre versões do package.json e manifests para release v1.1.5
+## [1.1.5] - 2025-07-28
 
-## [1.1.5] - 2025-01-28
+### Fixed
+- **Sincronização de Versões**: Corrigida discrepância entre versões do package.json e manifests para release v1.1.5## [1.1.5] - 2025-01-28
 
 ### Fixed
 - **Build Script Missing File**: Corrigido problema crítico onde popup funcionava no modo desenvolvimento mas falhava no ZIP empacotado devido ao arquivo config-manager.js não estar incluído na lista sourceFiles do script de build
