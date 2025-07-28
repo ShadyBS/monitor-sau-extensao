@@ -20,6 +20,7 @@ Este documento contém instruções específicas que devem ser adicionadas a tod
 - Checklist de qualidade
 
 **Comando para ler o guia:**
+
 ```
 Leia o arquivo c:\monitor-sau-extensao\agents.md
 ```
@@ -31,6 +32,7 @@ Leia o arquivo c:\monitor-sau-extensao\agents.md
 Este é um projeto de **extensão para navegador** (Chrome e Firefox) com as seguintes características:
 
 ### Tecnologias Principais
+
 - **Manifest V3** (Chrome e Firefox)
 - **JavaScript ES6+** com módulos
 - **APIs de Extensão** compatíveis entre navegadores
@@ -38,6 +40,7 @@ Este é um projeto de **extensão para navegador** (Chrome e Firefox) com as seg
 - **Sistema de sanitização** de segurança (`sanitizer.js`)
 
 ### Arquivos Críticos
+
 - `manifest.json` e `manifest-firefox.json` (devem estar sincronizados)
 - `background.js` (Service Worker principal)
 - `content.js` (Script injetado nas páginas)
@@ -49,6 +52,7 @@ Este é um projeto de **extensão para navegador** (Chrome e Firefox) com as seg
 ## 3. PRÁTICAS DE CÓDIGO OBRIGATÓRIAS
 
 ### APIs de Extensão
+
 ```javascript
 // ✅ SEMPRE use compatibilidade Chrome/Firefox
 const browserAPI = globalThis.browser || globalThis.chrome;
@@ -59,23 +63,27 @@ chrome.storage.local.set({ key: value });
 ```
 
 ### Sistema de Logging
+
 ```javascript
 // ✅ SEMPRE use o sistema de logging
-import { logger } from './logger.js';
-const myLogger = logger('[ModuleName]');
-myLogger.info('Mensagem informativa');
-myLogger.warn('Aviso importante');
-myLogger.error('Erro crítico');
+import { logger } from "./logger.js";
+const myLogger = logger("[ModuleName]");
+myLogger.info("Mensagem informativa");
+myLogger.warn("Aviso importante");
+myLogger.error("Erro crítico");
 
 // ❌ NUNCA use console.log diretamente
-console.log('Debug info'); // PROIBIDO
+console.log("Debug info"); // PROIBIDO
 ```
 
 ### Segurança e Sanitização
+
 ```javascript
 // ✅ SEMPRE use sanitizer.js para DOM
-import { createSafeElement, sanitizeTaskData } from './sanitizer.js';
-const safeElement = createSafeElement('div', 'Texto seguro', { class: 'task-item' });
+import { createSafeElement, sanitizeTaskData } from "./sanitizer.js";
+const safeElement = createSafeElement("div", "Texto seguro", {
+  class: "task-item",
+});
 const task = sanitizeTaskData(rawTaskData);
 
 // ❌ NUNCA use innerHTML com dados não sanitizados
@@ -89,6 +97,7 @@ element.innerHTML = userInput; // VULNERÁVEL A XSS
 ### Para CADA modificação, siga esta sequência:
 
 1. **Validar ambiente:**
+
    ```bash
    npm run validate
    ```
@@ -98,15 +107,17 @@ element.innerHTML = userInput; // VULNERÁVEL A XSS
 3. **Codificar** seguindo padrões do `agents.md`
 
 4. **Testar com scripts:**
+
    ```bash
    npm run build          # Build completo
-   npm run build:chrome   # Apenas Chrome  
+   npm run build:chrome   # Apenas Chrome
    npm run build:firefox  # Apenas Firefox
    ```
 
 5. **Atualizar CHANGELOG.md** na seção `[Unreleased]`
 
 6. **Versionar** (se necessário):
+
    ```bash
    npm run version:patch  # Bugfixes
    npm run version:minor  # Novas funcionalidades
@@ -126,6 +137,7 @@ element.innerHTML = userInput; // VULNERÁVEL A XSS
 **SEMPRE** use o padrão Conventional Commits para mensagens de commit:
 
 ### Formato
+
 ```
 <tipo>(<escopo>): <descrição>
 
@@ -135,6 +147,7 @@ element.innerHTML = userInput; // VULNERÁVEL A XSS
 ```
 
 ### Tipos Principais
+
 - `feat`: Nova funcionalidade
 - `fix`: Correção de bug
 - `docs`: Mudanças na documentação
@@ -144,6 +157,7 @@ element.innerHTML = userInput; // VULNERÁVEL A XSS
 - `chore`: Tarefas de manutenção
 
 ### Escopos Comuns
+
 - `popup`: Interface do popup
 - `background`: Service Worker
 - `content`: Content script
@@ -152,6 +166,7 @@ element.innerHTML = userInput; // VULNERÁVEL A XSS
 - `security`: Correções de segurança
 
 ### Exemplos
+
 ```bash
 git commit -m "feat(popup): adicionar sistema de snooze configurável"
 git commit -m "fix(background): corrigir vazamento de memória no monitoramento"
@@ -175,19 +190,23 @@ git commit -m "chore(release): v1.2.0"
    - `### Security` - Correções de segurança
 
 ### Exemplo de entrada:
+
 ```markdown
 ## [Unreleased]
 
 ### Added
+
 - Sistema de snooze configurável no popup
 - Validação de URLs antes de abrir tarefas
 - Opções de tempo personalizado para "Lembrar Mais Tarde"
 
 ### Fixed
+
 - Correção de vazamento de memória no background script
 - Sincronização entre manifests Chrome e Firefox
 
 ### Security
+
 - Implementação de sanitização de dados de entrada
 - Validação de origem em mensagens entre contextos
 ```
@@ -206,7 +225,7 @@ git commit -m "chore(release): v1.2.0"
 - [ ] APIs compatíveis usando `browserAPI`
 - [ ] Manipulação segura do DOM usando `sanitizer.js`
 - [ ] Commit message segue Conventional Commits
-- [ ] Build gera ZIPs v��lidos
+- [ ] Build gera ZIPs válidos
 - [ ] Documentação atualizada se necessário
 
 ---
@@ -216,6 +235,7 @@ git commit -m "chore(release): v1.2.0"
 **SEMPRE use os scripts fornecidos:**
 
 ### Build e Qualidade
+
 ```bash
 npm run build          # Build completo (Chrome + Firefox)
 npm run build:chrome   # Build apenas Chrome
@@ -225,6 +245,7 @@ npm run clean          # Limpeza de arquivos temporários
 ```
 
 ### Versionamento
+
 ```bash
 npm run version:patch  # 1.0.0 → 1.0.1 (bugfixes)
 npm run version:minor  # 1.0.0 → 1.1.0 (novas funcionalidades)
@@ -233,6 +254,7 @@ node scripts/version.js info  # Mostrar versões atuais
 ```
 
 ### Release
+
 ```bash
 npm run release        # Release completo no GitHub
 npm run release -- -y  # Release sem confirmação
@@ -245,11 +267,13 @@ npm run release -- -y  # Release sem confirmação
 ### O projeto inclui automação para commits de release:
 
 1. **Scripts de versionamento** criam commits automaticamente:
+
    ```bash
    npm run version:patch  # Cria commit: "chore(release): v1.0.1"
    ```
 
 2. **Script de release** cria tags e commits:
+
    ```bash
    npm run release  # Cria tag e commit de release
    ```
@@ -261,9 +285,10 @@ npm run release -- -y  # Release sem confirmação
 ## 10. SEGURANÇA - PRÁTICAS OBRIGATÓRIAS
 
 ### Validação de Entrada
+
 ```javascript
 // ✅ SEMPRE valide e sanitize dados
-import { sanitizeTaskData } from './sanitizer.js';
+import { sanitizeTaskData } from "./sanitizer.js";
 const task = sanitizeTaskData(rawTaskData);
 
 // ✅ Valide URLs
@@ -271,11 +296,12 @@ try {
   new URL(taskLink);
 } catch (error) {
   logger.warn(`URL inválida: ${taskLink}`);
-  taskLink = '#'; // Fallback seguro
+  taskLink = "#"; // Fallback seguro
 }
 ```
 
 ### Comunicação Entre Contextos
+
 ```javascript
 // ✅ SEMPRE valide origem de mensagens
 window.addEventListener("message", (event) => {
@@ -288,10 +314,13 @@ window.addEventListener("message", (event) => {
 ```
 
 ### Manipulação do DOM
+
 ```javascript
 // ✅ Use createSafeElement
-import { createSafeElement } from './sanitizer.js';
-const element = createSafeElement('div', 'Texto seguro', { class: 'safe-class' });
+import { createSafeElement } from "./sanitizer.js";
+const element = createSafeElement("div", "Texto seguro", {
+  class: "safe-class",
+});
 
 // ❌ NUNCA use innerHTML com dados não sanitizados
 element.innerHTML = userInput; // PROIBIDO
@@ -302,13 +331,14 @@ element.innerHTML = userInput; // PROIBIDO
 ## 11. COMPATIBILIDADE CHROME/FIREFOX
 
 ### APIs de Extensão
+
 ```javascript
 // ✅ SEMPRE use wrapper compatível
 const browserAPI = globalThis.browser || globalThis.chrome;
 
 // ✅ Para storage
 await browserAPI.storage.local.set({ key: value });
-const data = await browserAPI.storage.local.get(['key']);
+const data = await browserAPI.storage.local.get(["key"]);
 
 // ✅ Para tabs
 const tabs = await browserAPI.tabs.query({ active: true, currentWindow: true });
@@ -318,6 +348,7 @@ await browserAPI.notifications.create(id, options);
 ```
 
 ### Manifests
+
 - **SEMPRE** mantenha `manifest.json` e `manifest-firefox.json` sincronizados
 - **USE** os scripts de build que fazem isso automaticamente
 - **TESTE** em ambos os navegadores
@@ -327,6 +358,7 @@ await browserAPI.notifications.create(id, options);
 ## 12. DEBUGGING E TROUBLESHOOTING
 
 ### Ferramentas Disponíveis
+
 ```bash
 # Validação completa
 npm run validate
@@ -339,6 +371,7 @@ node scripts/version.js info
 ```
 
 ### Logs da Extensão
+
 - **Chrome:** `chrome://extensions/` → Developer mode → Inspect views
 - **Firefox:** `about:debugging` → This Firefox → Inspect
 - **Sistema:** Use `logger.js` com níveis apropriados
@@ -359,6 +392,7 @@ node scripts/version.js info
 8. **VERIFICAR** checklist pré-commit
 
 ### Comandos Essenciais
+
 ```bash
 # Antes de começar
 npm run validate

@@ -38,7 +38,7 @@ Esta é uma **extensão para navegador** (Chrome e Firefox) com estrutura espec�
 │   └── monitor-sau-firefox.zip # Build para Firefox
 ├── scripts/                   # Scripts de automação
 │   ├── build.js              # Build para Chrome/Firefox
-│   ├���─ version.js            # Gerenciamento de versões
+│   ├── version.js            # Gerenciamento de versões
 │   ├── release.js            # Release automatizado
 │   ├── validate.js           # Validações de qualidade
 │   └── clean.js              # Limpeza de arquivos
@@ -70,6 +70,7 @@ Esta é uma **extensão para navegador** (Chrome e Firefox) com estrutura espec�
 ```
 
 **Regras Importantes:**
+
 - **NÃO modifique** arquivos em `.dist/` - são gerados automaticamente
 - **Sempre analise** os arquivos existentes para entender padrões
 - **Use o sistema de logging** (`logger.js`) em vez de `console.log`
@@ -97,6 +98,7 @@ Esta é uma **extensão para navegador** (Chrome e Firefox) com estrutura espec�
 ### Passo 1: Entender a Tarefa
 
 Analise cuidadosamente a solicitação. Para extensões de navegador, considere:
+
 - Compatibilidade entre Chrome e Firefox
 - Limitações do Manifest V3
 - Permissões necessárias
@@ -105,6 +107,7 @@ Analise cuidadosamente a solicitação. Para extensões de navegador, considere:
 ### Passo 2: Validar Ambiente
 
 Antes de começar, execute:
+
 ```bash
 npm run validate  # Verifica qualidade e segurança
 ```
@@ -120,34 +123,42 @@ Adote as seguintes práticas específicas para extensões:
 - **Manifests:** Mantenha sincronizados `manifest.json` e `manifest-firefox.json`
 
 **Exemplo de código compatível:**
+
 ```javascript
 // ✅ Correto - compatível com Chrome e Firefox
 const browserAPI = globalThis.browser || globalThis.chrome;
 await browserAPI.storage.local.set({ key: value });
 
 // ✅ Correto - usando sistema de logging
-import { logger } from './logger.js';
-const myLogger = logger('[MyModule]');
-myLogger.info('Operação realizada com sucesso');
+import { logger } from "./logger.js";
+const myLogger = logger("[MyModule]");
+myLogger.info("Operação realizada com sucesso");
 
 // ✅ Correto - manipulação segura do DOM
-import { createSafeElement, sanitizeTaskData } from './sanitizer.js';
-const safeElement = createSafeElement('div', 'Texto seguro', { class: 'task-item' });
+import { createSafeElement, sanitizeTaskData } from "./sanitizer.js";
+const safeElement = createSafeElement("div", "Texto seguro", {
+  class: "task-item",
+});
 
 // ❌ Incorreto - apenas Chrome
 chrome.storage.local.set({ key: value });
 
 // ❌ Incorreto - logging direto
-console.log('Debug info');
+console.log("Debug info");
 
 // ❌ Incorreto - vulnerável a XSS
 element.innerHTML = userInput;
 ```
 
 **Práticas de Segurança Obrigatórias:**
+
 ```javascript
 // ✅ Use sanitizer.js para manipulação do DOM
-import { createSafeElement, sanitizeTaskData, safelyPopulateContainer } from './sanitizer.js';
+import {
+  createSafeElement,
+  sanitizeTaskData,
+  safelyPopulateContainer,
+} from "./sanitizer.js";
 
 // ✅ Sempre sanitize dados de entrada
 const task = sanitizeTaskData(rawTaskData);
@@ -166,13 +177,14 @@ try {
   new URL(taskLink); // Valida formato da URL
 } catch (error) {
   logger.warn(`URL inválida: ${taskLink}`);
-  taskLink = '#'; // Fallback seguro
+  taskLink = "#"; // Fallback seguro
 }
 ```
 
 ### Passo 4: Testar com Scripts
 
 Use os scripts automatizados:
+
 ```bash
 npm run build          # Build para ambos navegadores
 npm run build:chrome   # Build apenas Chrome
@@ -209,6 +221,7 @@ git commit -m "feat(popup): adicionar dropdown de snooze configurável"
 Este projeto possui scripts robustos para automação. **Use-os sempre:**
 
 ### Scripts de Build
+
 ```bash
 npm run build          # Build completo (Chrome + Firefox)
 npm run build:chrome   # Apenas Chrome
@@ -217,12 +230,14 @@ npm run clean          # Limpar arquivos temporários
 ```
 
 ### Scripts de Qualidade
+
 ```bash
 npm run validate       # Validações completas
 npm run validate -- --fix  # Corrigir problemas automaticamente
 ```
 
 ### Scripts de Versionamento
+
 ```bash
 npm run version:patch  # 1.0.0 → 1.0.1
 npm run version:minor  # 1.0.0 → 1.1.0
@@ -231,6 +246,7 @@ node scripts/version.js info  # Mostrar versões atuais
 ```
 
 ### Scripts de Release
+
 ```bash
 npm run release        # Release completo no GitHub
 npm run release -- -y  # Release sem confirmação
@@ -252,6 +268,7 @@ Antes de submeter código, verifique:
 - **Build:** Scripts de build passam sem erros?
 
 ### Checklist de Extensão
+
 - [ ] Testado em Chrome e Firefox
 - [ ] Manifests sincronizados
 - [ ] Logging usando `logger.js`
@@ -276,11 +293,11 @@ Antes de submeter código, verifique:
  */
 async function injectScript(tabId, scriptPath) {
   const browserAPI = globalThis.browser || globalThis.chrome;
-  
+
   try {
     await browserAPI.scripting.executeScript({
       target: { tabId },
-      files: [scriptPath]
+      files: [scriptPath],
     });
   } catch (error) {
     // Aba pode ter sido fechada ou não ter permissão
@@ -292,6 +309,7 @@ async function injectScript(tabId, scriptPath) {
 ### Documentação de APIs
 
 Para funções que interagem com APIs de extensão, documente:
+
 - Permissões necessárias
 - Compatibilidade de navegadores
 - Tratamento de erros
@@ -309,10 +327,12 @@ Para funções que interagem com APIs de extensão, documente:
 ### Problemas Comuns
 
 1. **Manifest V3 Limitations:**
+
    - Service Workers em vez de background pages
    - APIs assíncronas obrigatórias
 
 2. **Compatibilidade Chrome/Firefox:**
+
    - Use `browserAPI` wrapper
    - Teste em ambos navegadores
    - Verifique diferenças de API
@@ -333,17 +353,20 @@ Para funções que interagem com APIs de extensão, documente:
 ## 9. Recursos Úteis
 
 ### Documentação de Extensões
+
 - [Chrome Extension Manifest V3](https://developer.chrome.com/docs/extensions/mv3/)
 - [Firefox WebExtensions](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions)
 - [Browser Extension APIs](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API)
 
 ### Ferramentas do Projeto
+
 - [Conventional Commits](https://www.conventionalcommits.org/)
 - [Keep a Changelog](https://keepachangelog.com/)
 - [Semantic Versioning](https://semver.org/)
 - [GitHub CLI](https://cli.github.com/)
 
 ### Validação e Qualidade
+
 - Scripts de validação personalizados
 - GitHub Actions para CI/CD
 - Verificações de segurança automatizadas
@@ -430,11 +453,13 @@ Obrigado por sua contribuição!
 **Soluções:**
 
 **Método 1 - Edição Direta (Preferido):**
+
 1. Leia o arquivo primeiro: `read_file CHANGELOG.md`
 2. Identifique a seção `[Unreleased]` exata
 3. Use `replace_in_file` com texto exato encontrado
 
 **Método 2 - Adição via Terminal (Fallback):**
+
 ```bash
 # Se a edição direta falhar, use comandos echo:
 echo "" >> CHANGELOG.md
@@ -443,6 +468,7 @@ echo "- **Sua Correção**: Descrição da correção implementada" >> CHANGELOG
 ```
 
 **Método 3 - Adição no Final:**
+
 ```bash
 # Adicione nova versão no final do arquivo
 echo "" >> CHANGELOG.md
@@ -459,11 +485,13 @@ echo "- **Sua Correção**: Descrição detalhada" >> CHANGELOG.md
 **Sequência Obrigatória:**
 
 1. **Verificar Status:**
+
 ```bash
 git status  # Veja quais arquivos foram modificados
 ```
 
 2. **Adicionar Arquivos:**
+
 ```bash
 git add .  # Adiciona todos os arquivos modificados
 # OU específicos:
@@ -471,6 +499,7 @@ git add background.js CHANGELOG.md
 ```
 
 3. **Commit com Conventional Commits:**
+
 ```bash
 # Para correções de bugs:
 git commit -m "fix(background): corrigir múltiplas abas de login sem credenciais"
@@ -485,8 +514,9 @@ git commit -m "docs(changelog): atualizar com correções de login"
 ### Categorias do CHANGELOG
 
 **Use sempre estas categorias:**
+
 - `### Added` - Novas funcionalidades
-- `### Changed` - Mudanças em funcionalidades existentes  
+- `### Changed` - Mudanças em funcionalidades existentes
 - `### Fixed` - Correções de bugs
 - `### Removed` - Funcionalidades removidas
 - `### Security` - Correções de segurança
@@ -562,6 +592,7 @@ git commit -m "docs(changelog): documentar correção de múltiplas abas de logi
 #### Problemas Críticos a Evitar
 
 **Bloqueio da UI Principal:**
+
 ```javascript
 // ❌ Incorreto - bloqueia a UI
 for (const task of tasks) {
@@ -575,6 +606,7 @@ const results = await Promise.all(
 ```
 
 **Rate Limiting Obrigatório:**
+
 ```javascript
 // ✅ Implemente cooldown para notificações
 let lastNotificationTime = 0;
@@ -603,7 +635,7 @@ if (Date.now() - lastNotificationTime >= NOTIFICATION_COOLDOWN) {
 Monitor SAU Extension (Manifest V3)
 ├── background.js              # Service Worker principal
 ├── content.js                 # Monitora páginas SAU
-├── content-sigss.js           # Monitora páginas SIGSS  
+├── content-sigss.js           # Monitora páginas SIGSS
 ├── interceptor.js             # Intercepta requisições
 ├── sanitizer.js               # Segurança e sanitização
 ├── logger.js                  # Sistema de logging
@@ -623,19 +655,19 @@ Monitor SAU Extension (Manifest V3)
 ```javascript
 // Permissions atuais no manifest.json
 const permissions = [
-  "storage",        // Armazenamento de configurações
-  "notifications",  // Notificações do sistema
-  "tabs",          // Gerenciamento de abas
-  "alarms",        // Alarmes para verificações periódicas
-  "scripting",     // Injeção de scripts (Manifest V3)
-  "webNavigation"  // Navegação entre páginas
+  "storage", // Armazenamento de configurações
+  "notifications", // Notificações do sistema
+  "tabs", // Gerenciamento de abas
+  "alarms", // Alarmes para verificações periódicas
+  "scripting", // Injeção de scripts (Manifest V3)
+  "webNavigation", // Navegação entre páginas
 ];
 
 // Host permissions específicas
 const hostPermissions = [
-  "https://egov.santos.sp.gov.br/sau/*",     // SAU principal
-  "http://c1863prd.cloudmv.com.br/sigss/*",  // SIGSS produção
-  "http://c1863tst1.cloudmv.com.br/sigss/*"  // SIGSS teste
+  "https://egov.santos.sp.gov.br/sau/*", // SAU principal
+  "http://c1863prd.cloudmv.com.br/sigss/*", // SIGSS produção
+  "http://c1863tst1.cloudmv.com.br/sigss/*", // SIGSS teste
 ];
 ```
 
@@ -644,13 +676,13 @@ const hostPermissions = [
 ```javascript
 // Fluxo principal de monitoramento
 const monitoringFlow = {
-  1: 'background.js monitora abas SAU/SIGSS',
-  2: 'content.js/content-sigss.js extraem dados das páginas',
-  3: 'interceptor.js captura requisições AJAX',
-  4: 'sanitizer.js limpa e valida dados',
-  5: 'logger.js registra atividades',
-  6: 'popup.js exibe status e controles',
-  7: 'options.js gerencia configurações'
+  1: "background.js monitora abas SAU/SIGSS",
+  2: "content.js/content-sigss.js extraem dados das páginas",
+  3: "interceptor.js captura requisições AJAX",
+  4: "sanitizer.js limpa e valida dados",
+  5: "logger.js registra atividades",
+  6: "popup.js exibe status e controles",
+  7: "options.js gerencia configurações",
 };
 ```
 
@@ -658,19 +690,19 @@ const monitoringFlow = {
 
 ```javascript
 // ✅ Padrão de logging usado no projeto
-import { logger } from './logger.js';
-const log = logger('[ModuleName]');
-log.info('Operação realizada');
-log.warn('Aviso importante');
-log.error('Erro detectado', error);
+import { logger } from "./logger.js";
+const log = logger("[ModuleName]");
+log.info("Operação realizada");
+log.warn("Aviso importante");
+log.error("Erro detectado", error);
 
 // ✅ Padrão de sanitização
-import { sanitizeTaskData, createSafeElement } from './sanitizer.js';
+import { sanitizeTaskData, createSafeElement } from "./sanitizer.js";
 const cleanTask = sanitizeTaskData(rawTaskData);
-const safeElement = createSafeElement('div', cleanTask.title);
+const safeElement = createSafeElement("div", cleanTask.title);
 
 // ✅ Padrão de configuração
-import { ConfigManager } from './config-manager.js';
+import { ConfigManager } from "./config-manager.js";
 const config = new ConfigManager();
 const settings = await config.getSettings();
 ```
@@ -680,19 +712,21 @@ const settings = await config.getSettings();
 ```javascript
 // Validação de URLs SAU/SIGSS
 function isValidSauUrl(url) {
-  return url.includes('egov.santos.sp.gov.br/sau/');
+  return url.includes("egov.santos.sp.gov.br/sau/");
 }
 
 function isValidSigssUrl(url) {
-  return url.includes('cloudmv.com.br/sigss/');
+  return url.includes("cloudmv.com.br/sigss/");
 }
 
 // Validação de dados de tarefa
 function validateTaskData(task) {
-  return task && 
-         typeof task.id === 'string' && 
-         typeof task.title === 'string' &&
-         task.title.length > 0;
+  return (
+    task &&
+    typeof task.id === "string" &&
+    typeof task.title === "string" &&
+    task.title.length > 0
+  );
 }
 ```
 
