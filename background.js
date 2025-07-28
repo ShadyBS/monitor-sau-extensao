@@ -54,7 +54,7 @@ async function loadPersistentData() {
     openedTasks = data.openedTasks || {}; // Inicializa o novo estado
     lastCheckTimestamp = data.lastCheckTimestamp || 0;
     taskNotificationTimestamps = data.taskNotificationTimestamps || {}; // Inicializa timestamps
-    backgroundLogger.info("Dados persistentes carregados:", {
+    await backgroundLogger.info("Dados persistentes carregados:", {
       lastKnownTasks: lastKnownTasks.length, // Log apenas o tamanho para evitar logs muito grandes
       ignoredTasks: Object.keys(ignoredTasks).length,
       snoozedTasks: Object.keys(snoozedTasks).length,
@@ -63,9 +63,9 @@ async function loadPersistentData() {
         .length,
       lastCheckTimestamp,
     });
-    backgroundLogger.debug("Conteúdo de lastKnownTasks:", lastKnownTasks); // Log o conteúdo completo para depuração
+    await backgroundLogger.debug("Conteúdo de lastKnownTasks:", lastKnownTasks); // Log o conteúdo completo para depuração
   } catch (error) {
-    backgroundLogger.error("Erro ao carregar dados persistentes:", error);
+    await backgroundLogger.error("Erro ao carregar dados persistentes:", error);
   }
 }
 
@@ -73,7 +73,7 @@ async function loadPersistentData() {
  * Atualiza o contador (badge) no ícone da extensão.
  * Exibe o número de tarefas pendentes (não ignoradas, "snoozed" ou abertas).
  */
-function updateBadge() {
+async function updateBadge() {
   const pendingTasksCount = lastKnownTasks.filter(
     (task) =>
       !ignoredTasks[task.id] &&
@@ -88,7 +88,7 @@ function updateBadge() {
   } else {
     browserAPI.action.setBadgeText({ text: "" }); // Limpa o badge se não houver tarefas
   }
-  backgroundLogger.debug(`Badge atualizado para: ${pendingTasksCount}`);
+  await backgroundLogger.debug(`Badge atualizado para: ${pendingTasksCount}`);
 }
 
 /**
@@ -104,9 +104,9 @@ async function savePersistentData() {
       lastCheckTimestamp: lastCheckTimestamp,
       taskNotificationTimestamps: taskNotificationTimestamps, // Salva timestamps de notificação
     });
-    backgroundLogger.info("Dados persistentes salvos.");
+    await backgroundLogger.info("Dados persistentes salvos.");
   } catch (error) {
-    backgroundLogger.error("Erro ao salvar dados persistentes:", error);
+    await backgroundLogger.error("Erro ao salvar dados persistentes:", error);
   }
 }
 
@@ -145,7 +145,7 @@ async function checkIfShouldRenotify(taskId) {
     const shouldRenotify =
       timeSinceLastNotification >= renotificationIntervalMs;
 
-    backgroundLogger.debug(
+    await backgroundLogger.debug(
       `Verificação de renotificação para tarefa ${taskId}: ` +
         `enableRenotification=${enableRenotification}, ` +
         `timeSinceLastNotification=${Math.round(
@@ -157,7 +157,7 @@ async function checkIfShouldRenotify(taskId) {
 
     return shouldRenotify;
   } catch (error) {
-    backgroundLogger.error("Erro ao verificar renotificação:", error);
+    await backgroundLogger.error("Erro ao verificar renotificação:", error);
     return false;
   }
 }
@@ -173,7 +173,7 @@ async function scheduleNextCheck(intervalInSeconds) {
   browserAPI.alarms.create("checkTasks", {
     periodInMinutes: intervalInSeconds / 60,
   });
-  backgroundLogger.info(
+  await backgroundLogger.info(
     `Próxima verificação agendada para daqui a ${intervalInSeconds} segundos.`
   );
 }
@@ -184,7 +184,7 @@ async function scheduleNextCheck(intervalInSeconds) {
  */
 browserAPI.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name === "checkTasks") {
-    backgroundLogger.info(
+    await backgroundLogger.info(
       'Alarme "checkTasks" disparado. Verificando tarefas...'
     );
     await checkAndNotifyNewTasks();
@@ -196,84 +196,115 @@ browserAPI.alarms.onAlarm.addListener(async (alarm) => {
  * Gerencia ações como atualizar o alarme, iniciar verificação manual,
  * obter últimas tarefas, ignorar/snooze tarefas, lidar com novas tarefas encontradas e obter logs.
  */
-browserAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  backgroundLogger.debug("Mensagem recebida no background:", request);
+browserAPI.runtime.onMessage.addListener(
+  async (request, sender, sendResponse) => {
+    await backgroundLogger.debug("Mensagem recebida no background:", request);
 
-  switch (request.action) {
-    case "updateAlarm":
-      // Recarrega os dados e agenda o alarme com o novo intervalo
-      loadPersistentData().then(() => {
-        browserAPI.storage.local.get("checkInterval").then((data) => {
-          const interval = data.checkInterval || 30; // Padrão: 30 segundos
-          scheduleNextCheck(interval);
+    switch (request.action) {
+      case "updateAlarm":
+        // Recarrega os dados e agenda o alarme com o novo intervalo
+        loadPersistentData().then(() => {
+          browserAPI.storage.local.get("checkInterval").then((data) => {
+            const interval = data.checkInterval || 30; // Padrão: 30 segundos
+            scheduleNextCheck(interval);
+          });
         });
-      });
-      break;
-    case "manualCheck":
-      // Inicia uma verificação manual de tarefas
-      backgroundLogger.info("Verificação manual solicitada.");
-      checkAndNotifyNewTasks();
-      break;
-    case "getLatestTasks":
-      // Retorna as tarefas que não foram ignoradas, abertas ou estão prontas para serem "lembradas"
-      const currentPendingTasks = lastKnownTasks.filter(
-        (task) =>
-          !ignoredTasks[task.id] &&
-          !openedTasks[task.id] && // Filtra tarefas abertas
-          (!snoozedTasks[task.id] || snoozedTasks[task.id] <= Date.now())
-      );
-      backgroundLogger.debug(
-        "Retornando últimas tarefas para popup:",
-        currentPendingTasks.length,
-        currentPendingTasks
-      );
-      sendResponse({
-        newTasks: currentPendingTasks,
-        message: `Última verificação: ${new Date(
-          lastCheckTimestamp
-        ).toLocaleTimeString()}`,
-        lastCheck: lastCheckTimestamp,
-      });
-      break;
-    case "ignoreTask":
-      // Marca uma tarefa como ignorada e salva o estado
-      ignoredTasks[request.taskId] = true;
-      // Remove de openedTasks e snoozedTasks se estiver lá
-      delete openedTasks[request.taskId];
-      delete snoozedTasks[request.taskId];
-      savePersistentData();
-      updateBadge(); // Atualiza o contador no ícone
-      backgroundLogger.info(`Tarefa ${request.taskId} ignorada.`);
-      // Notifica o popup para atualizar sua lista
-      try {
-        browserAPI.runtime.sendMessage({
-          action: "updatePopup",
-          newTasks: lastKnownTasks.filter(
-            (task) =>
-              !ignoredTasks[task.id] &&
-              !openedTasks[task.id] && // Filtra tarefas abertas
-              (!snoozedTasks[task.id] || snoozedTasks[task.id] <= Date.now())
-          ),
-        });
-      } catch (error) {
-        backgroundLogger.debug(
-          "Popup não está aberto para receber atualização:",
-          error.message
+        break;
+      case "manualCheck":
+        // Inicia uma verificação manual de tarefas
+        await backgroundLogger.info("Verificação manual solicitada.");
+        await checkAndNotifyNewTasks();
+        break;
+      case "getLatestTasks":
+        // Retorna as tarefas que não foram ignoradas, abertas ou estão prontas para serem "lembradas"
+        const currentPendingTasks = lastKnownTasks.filter(
+          (task) =>
+            !ignoredTasks[task.id] &&
+            !openedTasks[task.id] && // Filtra tarefas abertas
+            (!snoozedTasks[task.id] || snoozedTasks[task.id] <= Date.now())
         );
-      }
-      break;
-    case "snoozeTask":
-      // Marca uma tarefa para ser lembrada mais tarde e salva o estado
-      browserAPI.storage.local.get("snoozeTime").then((data) => {
-        const snoozeMinutes = request.snoozeMinutes || 15;
-        snoozedTasks[request.taskId] = Date.now() + snoozeMinutes * 60 * 1000;
-        // Remove de openedTasks e ignoredTasks se estiver lá
+        await backgroundLogger.debug(
+          "Retornando últimas tarefas para popup:",
+          currentPendingTasks.length,
+          currentPendingTasks
+        );
+        sendResponse({
+          newTasks: currentPendingTasks,
+          message: `Última verificação: ${new Date(
+            lastCheckTimestamp
+          ).toLocaleTimeString()}`,
+          lastCheck: lastCheckTimestamp,
+        });
+        break;
+      case "ignoreTask":
+        // Marca uma tarefa como ignorada e salva o estado
+        ignoredTasks[request.taskId] = true;
+        // Remove de openedTasks e snoozedTasks se estiver lá
         delete openedTasks[request.taskId];
+        delete snoozedTasks[request.taskId];
+        await savePersistentData();
+        await updateBadge(); // Atualiza o contador no ícone
+        await backgroundLogger.info(`Tarefa ${request.taskId} ignorada.`);
+        // Notifica o popup para atualizar sua lista
+        try {
+          browserAPI.runtime.sendMessage({
+            action: "updatePopup",
+            newTasks: lastKnownTasks.filter(
+              (task) =>
+                !ignoredTasks[task.id] &&
+                !openedTasks[task.id] && // Filtra tarefas abertas
+                (!snoozedTasks[task.id] || snoozedTasks[task.id] <= Date.now())
+            ),
+          });
+        } catch (error) {
+          await backgroundLogger.debug(
+            "Popup não está aberto para receber atualização:",
+            error.message
+          );
+        }
+        break;
+      case "snoozeTask":
+        // Marca uma tarefa para ser lembrada mais tarde e salva o estado
+        browserAPI.storage.local.get("snoozeTime").then(async (data) => {
+          const snoozeMinutes = request.snoozeMinutes || 15;
+          snoozedTasks[request.taskId] = Date.now() + snoozeMinutes * 60 * 1000;
+          // Remove de openedTasks e ignoredTasks se estiver lá
+          delete openedTasks[request.taskId];
+          delete ignoredTasks[request.taskId];
+          await savePersistentData();
+          await updateBadge(); // Atualiza o contador no ícone
+          await backgroundLogger.info(
+            `Tarefa ${request.taskId} snoozed por ${snoozeMinutes} minutos.`
+          );
+          // Notifica o popup para atualizar sua lista
+          try {
+            browserAPI.runtime.sendMessage({
+              action: "updatePopup",
+              newTasks: lastKnownTasks.filter(
+                (task) =>
+                  !ignoredTasks[task.id] &&
+                  !openedTasks[task.id] && // Filtra tarefas abertas
+                  (!snoozedTasks[task.id] ||
+                    snoozedTasks[task.id] <= Date.now())
+              ),
+            });
+          } catch (error) {
+            await backgroundLogger.debug(
+              "Popup não está aberto para receber atualização:",
+              error.message
+            );
+          }
+        });
+        break;
+      case "markTaskAsOpened": // NOVO CASE: Marcar tarefa como aberta
+        openedTasks[request.taskId] = true;
+        // Remove de ignoredTasks e snoozedTasks se estiver lá
         delete ignoredTasks[request.taskId];
-        savePersistentData();
-        updateBadge(); // Atualiza o contador no ícone
-        backgroundLogger.info(
-          `Tarefa ${request.taskId} snoozed por ${snoozeMinutes} minutos.`
+        delete snoozedTasks[request.taskId];
+        await savePersistentData();
+        await updateBadge();
+        await backgroundLogger.info(
+          `Tarefa ${request.taskId} marcada como aberta.`
         );
         // Notifica o popup para atualizar sua lista
         try {
@@ -287,73 +318,50 @@ browserAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
             ),
           });
         } catch (error) {
-          backgroundLogger.debug(
+          await backgroundLogger.debug(
             "Popup não está aberto para receber atualização:",
             error.message
           );
         }
-      });
-      break;
-    case "markTaskAsOpened": // NOVO CASE: Marcar tarefa como aberta
-      openedTasks[request.taskId] = true;
-      // Remove de ignoredTasks e snoozedTasks se estiver lá
-      delete ignoredTasks[request.taskId];
-      delete snoozedTasks[request.taskId];
-      savePersistentData();
-      updateBadge();
-      backgroundLogger.info(`Tarefa ${request.taskId} marcada como aberta.`);
-      // Notifica o popup para atualizar sua lista
-      try {
-        browserAPI.runtime.sendMessage({
-          action: "updatePopup",
-          newTasks: lastKnownTasks.filter(
-            (task) =>
-              !ignoredTasks[task.id] &&
-              !openedTasks[task.id] && // Filtra tarefas abertas
-              (!snoozedTasks[task.id] || snoozedTasks[task.id] <= Date.now())
-          ),
-        });
-      } catch (error) {
-        backgroundLogger.debug(
-          "Popup não está aberto para receber atualização:",
-          error.message
+        break;
+      case "newTasksFound":
+        // Lida com as novas tarefas encontradas pelo content script
+        await backgroundLogger.debug(
+          "Mensagem 'newTasksFound' recebida. Tarefas:",
+          request.tasks
         );
-      }
-      break;
-    case "newTasksFound":
-      // Lida com as novas tarefas encontradas pelo content script
-      backgroundLogger.debug(
-        "Mensagem 'newTasksFound' recebida. Tarefas:",
-        request.tasks
-      );
-      handleNewTasks(request.tasks);
-      break;
-    case "openTab":
-      // Abre uma nova aba com a URL fornecida (não marca como aberta aqui, pois o clique do botão já fará isso)
-      browserAPI.tabs.create({ url: request.url });
-      backgroundLogger.info(`Abrindo nova aba: ${request.url}`);
-      break;
-    case "getLogs": // NOVO CASE PARA OBTER LOGS
-      backgroundLogger.info(
-        "Solicitação de logs recebida da página de opções."
-      );
-      sendResponse({ logs: backgroundLogger.getStoredLogs() });
-      break;
-    case "resetTaskMemory": // NOVO CASE PARA RESETAR A MEMÓRIA
-      backgroundLogger.warn("Resetando a memória de tarefas por solicitação.");
-      lastKnownTasks = [];
-      ignoredTasks = {};
-      snoozedTasks = {};
-      openedTasks = {}; // Reseta o novo estado também
-      taskNotificationTimestamps = {}; // Reseta timestamps de notificação
-      savePersistentData(); // Salva o estado limpo
-      updateBadge(); // Limpa o contador no ícone
-      sendResponse({ status: "Memória de tarefas resetada com sucesso." });
-      // Força uma nova verificação para repopular a lista se a página estiver aberta
-      checkAndNotifyNewTasks();
-      break;
+        await handleNewTasks(request.tasks);
+        break;
+      case "openTab":
+        // Abre uma nova aba com a URL fornecida (não marca como aberta aqui, pois o clique do botão já fará isso)
+        browserAPI.tabs.create({ url: request.url });
+        await backgroundLogger.info(`Abrindo nova aba: ${request.url}`);
+        break;
+      case "getLogs": // NOVO CASE PARA OBTER LOGS
+        await backgroundLogger.info(
+          "Solicitação de logs recebida da página de opções."
+        );
+        sendResponse({ logs: backgroundLogger.getStoredLogs() });
+        break;
+      case "resetTaskMemory": // NOVO CASE PARA RESETAR A MEMÓRIA
+        await backgroundLogger.warn(
+          "Resetando a memória de tarefas por solicitação."
+        );
+        lastKnownTasks = [];
+        ignoredTasks = {};
+        snoozedTasks = {};
+        openedTasks = {}; // Reseta o novo estado também
+        taskNotificationTimestamps = {}; // Reseta timestamps de notificação
+        await savePersistentData(); // Salva o estado limpo
+        await updateBadge(); // Limpa o contador no ícone
+        sendResponse({ status: "Memória de tarefas resetada com sucesso." });
+        // Força uma nova verificação para repopular a lista se a página estiver aberta
+        await checkAndNotifyNewTasks();
+        break;
+    }
+    return true;
   }
-});
+);
 
 /**
  * Timeout para operações de injeção de script (10 segundos)
@@ -376,7 +384,7 @@ async function isTabResponsive(tabId) {
     ]);
     return true;
   } catch (error) {
-    backgroundLogger.debug(
+    await backgroundLogger.debug(
       `Aba ${tabId} não está responsiva: ${error.message}`
     );
     return false;
@@ -417,19 +425,24 @@ async function injectScriptsWithTimeout(tabId) {
       ),
     ]);
 
-    backgroundLogger.info(
+    await backgroundLogger.info(
       `Content scripts injetados com sucesso na aba ${tabId}.`
     );
     return true;
   } catch (error) {
     if (error.message === "Script injection timeout") {
-      backgroundLogger.warn(
+      await backgroundLogger.warn(
         `Timeout ao injetar scripts na aba ${tabId} - aba pode estar travada`
       );
     } else if (error.message.includes("No tab with id")) {
-      backgroundLogger.debug(`Aba ${tabId} foi fechada durante a injeção`);
+      await backgroundLogger.debug(
+        `Aba ${tabId} foi fechada durante a injeção`
+      );
     } else {
-      backgroundLogger.error(`Erro ao injetar scripts na aba ${tabId}:`, error);
+      await backgroundLogger.error(
+        `Erro ao injetar scripts na aba ${tabId}:`,
+        error
+      );
     }
     return false;
   }
@@ -440,7 +453,7 @@ async function injectScriptsWithTimeout(tabId) {
  * Tenta encontrar uma aba do SAU logada, caso contrário, tenta o login automático.
  */
 async function checkAndNotifyNewTasks() {
-  backgroundLogger.info("Iniciando verificação de tarefas...");
+  await backgroundLogger.info("Iniciando verificação de tarefas...");
   lastCheckTimestamp = Date.now(); // Atualiza o timestamp da última verificação
   await savePersistentData(); // Salva o timestamp imediatamente
 
@@ -457,7 +470,7 @@ async function checkAndNotifyNewTasks() {
       tab.url.startsWith(SAU_PREPARAR_PESQUISAR_TAREFA_URL)
     ) {
       sauTab = tab;
-      backgroundLogger.debug(`Aba SAU encontrada: ${tab.url}`);
+      await backgroundLogger.debug(`Aba SAU encontrada: ${tab.url}`);
       break;
     }
   }
@@ -468,7 +481,7 @@ async function checkAndNotifyNewTasks() {
     const isResponsive = await isTabResponsive(sauTab.id);
 
     if (!isResponsive) {
-      backgroundLogger.warn(
+      await backgroundLogger.warn(
         `Aba SAU ${sauTab.id} não está responsiva. Tentando recarregar...`
       );
 
@@ -479,10 +492,10 @@ async function checkAndNotifyNewTasks() {
             setTimeout(() => reject(new Error("Reload timeout")), 5000)
           ),
         ]);
-        backgroundLogger.info(`Aba ${sauTab.id} recarregada com sucesso`);
+        await backgroundLogger.info(`Aba ${sauTab.id} recarregada com sucesso`);
         return; // Sai da função, o webNavigation.onCompleted fará a injeção
       } catch (error) {
-        backgroundLogger.error(
+        await backgroundLogger.error(
           `Erro ao recarregar aba não responsiva ${sauTab.id}:`,
           error
         );
@@ -495,7 +508,9 @@ async function checkAndNotifyNewTasks() {
     // Se a aba encontrada for a página de pesquisa de tarefas, recarrega-a para garantir dados atualizados.
     // Isso também acionará a reinjeção do content script via webNavigation.onCompleted.
     if (sauTab.url.startsWith(SAU_PREPARAR_PESQUISAR_TAREFA_URL)) {
-      backgroundLogger.info(`Recarregando aba de tarefas SAU: ${sauTab.url}`);
+      await backgroundLogger.info(
+        `Recarregando aba de tarefas SAU: ${sauTab.url}`
+      );
       try {
         await Promise.race([
           browserAPI.tabs.reload(sauTab.id),
@@ -506,7 +521,10 @@ async function checkAndNotifyNewTasks() {
         // Não precisamos injetar scripts aqui, pois o webNavigation.onCompleted Listener fará isso após o reload.
         return; // Sai da função, pois o reload vai disparar um novo ciclo de injeção.
       } catch (error) {
-        backgroundLogger.error(`Erro ao recarregar aba ${sauTab.id}:`, error);
+        await backgroundLogger.error(
+          `Erro ao recarregar aba ${sauTab.id}:`,
+          error
+        );
         // Se o reload falhar, tenta injetar os scripts como fallback.
         // Isso pode acontecer se a aba foi fechada ou ficou inacessível.
       }
@@ -517,13 +535,13 @@ async function checkAndNotifyNewTasks() {
     const injectionSuccess = await injectScriptsWithTimeout(sauTab.id);
 
     if (!injectionSuccess) {
-      backgroundLogger.warn(
+      await backgroundLogger.warn(
         "Falha na injeção de scripts. Tentando login automático como fallback."
       );
       await performAutomaticLogin();
     }
   } else {
-    backgroundLogger.info(
+    await backgroundLogger.info(
       "Nenhuma aba do SAU logada encontrada. Tentando login automático..."
     );
     await performAutomaticLogin();
@@ -545,16 +563,18 @@ async function checkForExistingLoginTab() {
       try {
         // Tenta acessar a aba para verificar se ainda existe
         await browserAPI.tabs.get(tab.id);
-        backgroundLogger.debug(`Aba de login existente encontrada: ${tab.id}`);
+        await backgroundLogger.debug(
+          `Aba de login existente encontrada: ${tab.id}`
+        );
         return true;
       } catch (error) {
         // Aba foi fechada, continua verificando outras
-        backgroundLogger.debug(`Aba de login ${tab.id} não existe mais`);
+        await backgroundLogger.debug(`Aba de login ${tab.id} não existe mais`);
       }
     }
     return false;
   } catch (error) {
-    backgroundLogger.error(
+    await backgroundLogger.error(
       "Erro ao verificar abas de login existentes:",
       error
     );
@@ -573,7 +593,7 @@ async function performAutomaticLogin() {
 
   // Se as credenciais não estiverem salvas, verifica se deve abrir uma nova aba
   if (!username || !password) {
-    backgroundLogger.warn(
+    await backgroundLogger.warn(
       "Credenciais de login não encontradas. Login automático não será realizado."
     );
 
@@ -588,7 +608,7 @@ async function performAutomaticLogin() {
     // 1. Não há aba de login existente E
     // 2. Passou tempo suficiente desde a última aba aberta (cooldown)
     if (!hasExistingLoginTab && timeSinceLastLoginTab > LOGIN_TAB_COOLDOWN) {
-      backgroundLogger.info(
+      await backgroundLogger.info(
         "Abrindo nova aba de login para configuração manual de credenciais"
       );
 
@@ -611,13 +631,15 @@ async function performAutomaticLogin() {
       lastLoginTabOpenedTimestamp = now;
       loginTabId = loginTab.id;
 
-      backgroundLogger.info(
+      await backgroundLogger.info(
         `Nova aba de login criada: ${loginTab.id} (em segundo plano)`
       );
     } else if (hasExistingLoginTab) {
-      backgroundLogger.debug("Aba de login já existe, não abrindo nova aba");
+      await backgroundLogger.debug(
+        "Aba de login já existe, não abrindo nova aba"
+      );
     } else {
-      backgroundLogger.debug(
+      await backgroundLogger.debug(
         `Cooldown ativo: ${Math.round(
           (LOGIN_TAB_COOLDOWN - timeSinceLastLoginTab) / 1000
         )}s restantes`
@@ -632,7 +654,7 @@ async function performAutomaticLogin() {
     url: SAU_LOGIN_URL,
     active: false, // PRINCIPAL MUDANÇA: Abre em segundo plano
   });
-  backgroundLogger.info(
+  await backgroundLogger.info(
     `Tentando login automático na aba ${loginTab.id} (em segundo plano).`
   );
 
@@ -675,18 +697,18 @@ async function performAutomaticLogin() {
           args: [username, password], // Passa as credenciais como argumentos para a função injetada
           world: "MAIN",
         })
-        .then(() => {
-          backgroundLogger.info(
+        .then(async () => {
+          await backgroundLogger.info(
             `Script de preenchimento de login injetado na aba ${loginTab.id}.`
           );
           // Após a submissão, a página navegará. O webNavigation.onCompleted capturará a próxima página do SAU.
         })
-        .catch((error) => {
-          backgroundLogger.error(
+        .catch(async (error) => {
+          await backgroundLogger.error(
             `Erro ao injetar script de login na aba ${loginTab.id}:`,
             error
           );
-          browserAPI.notifications.create({
+          await browserAPI.notifications.create({
             type: "basic",
             iconUrl: "icons/icon48.png",
             title: "Monitor SAU: Erro no Login Automático",
@@ -719,7 +741,7 @@ function performantDeepCopy(obj) {
  * @param {Array<Object>} newTasks - Um array de objetos de tarefa recém-encontradas.
  */
 async function handleNewTasks(newTasks) {
-  backgroundLogger.info(
+  await backgroundLogger.info(
     "Novas tarefas recebidas do content script:",
     newTasks.length,
     newTasks // Log completo das tarefas recebidas
@@ -774,7 +796,7 @@ async function handleNewTasks(newTasks) {
       shouldRenotify,
     } = check;
 
-    backgroundLogger.debug(
+    await backgroundLogger.debug(
       `Processando tarefa ${taskId}: isAlreadyKnown=${isAlreadyKnown}, isIgnored=${isIgnored}, isSnoozed=${isSnoozed}, isOpened=${isOpened}`
     );
 
@@ -788,7 +810,9 @@ async function handleNewTasks(newTasks) {
         lastNotifiedTimestamp: now,
       }); // Adiciona timestamp
       taskNotificationTimestamps[taskId] = now; // Registra timestamp de notificação
-      backgroundLogger.debug(`Tarefa ${taskId} é nova e será notificada.`);
+      await backgroundLogger.debug(
+        `Tarefa ${taskId} é nova e será notificada.`
+      );
     } else {
       // Se a tarefa já é conhecida, atualiza seus detalhes se for necessário (ex: posição, descrição)
       // E verifica se deve ser re-notificada
@@ -805,14 +829,14 @@ async function handleNewTasks(newTasks) {
         if (shouldRenotify) {
           tasksToNotify.push(newTask);
           taskNotificationTimestamps[taskId] = Date.now(); // Atualiza timestamp da renotificação
-          backgroundLogger.debug(`Tarefa ${taskId} será renotificada.`);
+          await backgroundLogger.debug(`Tarefa ${taskId} será renotificada.`);
         } else {
-          backgroundLogger.debug(
+          await backgroundLogger.debug(
             `Tarefa ${taskId} já conhecida, não ignorada, não snoozed e não aberta. Será considerada para o badge.`
           );
         }
       } else {
-        backgroundLogger.debug(
+        await backgroundLogger.debug(
           `Tarefa ${taskId} já conhecida e está ignorada, snoozed ou aberta.`
         );
       }
@@ -821,10 +845,10 @@ async function handleNewTasks(newTasks) {
 
   lastKnownTasks = updatedLastKnownTasks; // Atualiza a lista global de tarefas conhecidas
   await savePersistentData(); // Salva o estado atualizado no storage
-  updateBadge(); // Atualiza o contador no ícone com as novas tarefas
+  await updateBadge(); // Atualiza o contador no ícone com as novas tarefas
 
   if (tasksToNotify.length > 0) {
-    backgroundLogger.info(
+    await backgroundLogger.info(
       `Disparando notificação para ${tasksToNotify.length} nova(s) tarefa(s).`,
       tasksToNotify
     );
@@ -846,12 +870,12 @@ async function handleNewTasks(newTasks) {
           buttons: [{ title: "Abrir Todas" }, { title: "Ignorar Todas" }],
         });
         lastNotificationTime = now; // Atualiza timestamp da última notificação
-        backgroundLogger.info(
+        await backgroundLogger.info(
           "Notificação do navegador criada:",
           notificationId
         );
       } catch (error) {
-        backgroundLogger.error(
+        await backgroundLogger.error(
           "Erro ao criar notificação do navegador:",
           error
         );
@@ -860,7 +884,7 @@ async function handleNewTasks(newTasks) {
       const remainingCooldown = Math.ceil(
         (NOTIFICATION_COOLDOWN - (now - lastNotificationTime)) / 1000
       );
-      backgroundLogger.debug(
+      await backgroundLogger.debug(
         `Notificação suprimida devido ao rate limiting. Aguarde ${remainingCooldown}s`
       );
     }
@@ -874,7 +898,7 @@ async function handleNewTasks(newTasks) {
       });
     } catch (error) {
       // Popup pode não estar aberto, isso é normal
-      backgroundLogger.debug(
+      await backgroundLogger.debug(
         "Popup não está aberto para receber atualização:",
         error.message
       );
@@ -892,18 +916,18 @@ async function handleNewTasks(newTasks) {
           action: "showNotificationUI",
           tasks: tasksToNotify,
         });
-        backgroundLogger.info(
+        await backgroundLogger.info(
           "Comando para injetar UI de notificação enviado para content script."
         );
       } catch (error) {
-        backgroundLogger.error(
+        await backgroundLogger.error(
           "Erro ao injetar UI de notificação visual:",
           error.message
         );
       }
     }
   } else {
-    backgroundLogger.info("Nenhuma tarefa nova para notificar.");
+    await backgroundLogger.info("Nenhuma tarefa nova para notificar.");
     // Se não houver tarefas novas, ainda assim atualiza o popup para indicar que a verificação ocorreu
     try {
       browserAPI.runtime.sendMessage({
@@ -914,7 +938,7 @@ async function handleNewTasks(newTasks) {
         ).toLocaleTimeString()}`,
       });
     } catch (error) {
-      backgroundLogger.debug(
+      await backgroundLogger.debug(
         "Popup não está aberto para receber atualização:",
         error.message
       );
@@ -927,8 +951,8 @@ async function handleNewTasks(newTasks) {
  * Permite ao usuário interagir com as notificações (abrir, ignorar).
  */
 browserAPI.notifications.onButtonClicked.addListener(
-  (notificationId, buttonIndex) => {
-    backgroundLogger.info(
+  async (notificationId, buttonIndex) => {
+    await backgroundLogger.info(
       `Botão de notificação clicado: ${notificationId}, Botão ${buttonIndex}`
     );
     if (notificationId) {
@@ -945,10 +969,10 @@ browserAPI.notifications.onButtonClicked.addListener(
             browserAPI.tabs.create({ url: task.link });
           }
         });
-        savePersistentData(); // Salva o estado após marcar como aberta
-        updateBadge(); // Atualiza o badge
+        await savePersistentData(); // Salva o estado após marcar como aberta
+        await updateBadge(); // Atualiza o badge
         browserAPI.notifications.clear(notificationId); // Limpa a notificação após a ação
-        backgroundLogger.info(
+        await backgroundLogger.info(
           "Todas as tarefas da notificação abertas e notificação limpa."
         );
         // Notifica o popup para atualizar sua lista
@@ -958,7 +982,7 @@ browserAPI.notifications.onButtonClicked.addListener(
             newTasks: [],
           });
         } catch (error) {
-          backgroundLogger.debug(
+          await backgroundLogger.debug(
             "Popup não está aberto para receber atualização:",
             error.message
           );
@@ -969,9 +993,9 @@ browserAPI.notifications.onButtonClicked.addListener(
         lastKnownTasks.forEach((task) => {
           ignoredTasks[task.id] = true;
         });
-        savePersistentData(); // Salva o estado atualizado
+        await savePersistentData(); // Salva o estado atualizado
         browserAPI.notifications.clear(notificationId); // Limpa a notificação
-        backgroundLogger.info(
+        await backgroundLogger.info(
           "Todas as tarefas da notificação ignoradas e notificação limpa."
         );
         // Notifica o popup para limpar a lista de tarefas
@@ -981,7 +1005,7 @@ browserAPI.notifications.onButtonClicked.addListener(
             newTasks: [],
           });
         } catch (error) {
-          backgroundLogger.debug(
+          await backgroundLogger.debug(
             "Popup não está aberto para receber atualização:",
             error.message
           );
@@ -1005,7 +1029,7 @@ browserAPI.webNavigation.onCompleted.addListener(
       details.url.startsWith(SAU_PREPARAR_PESQUISAR_TAREFA_URL);
 
     if (isSauPage) {
-      backgroundLogger.info(
+      await backgroundLogger.info(
         `Navegação completa para uma página SAU: ${details.url}. Injetando content script.`
       );
       try {
@@ -1027,11 +1051,11 @@ browserAPI.webNavigation.onCompleted.addListener(
           target: { tabId: details.tabId },
           files: ["notification-ui.css"],
         });
-        backgroundLogger.info(
+        await backgroundLogger.info(
           `Content script e CSS de notificação injetados na aba ${details.tabId}.`
         );
       } catch (error) {
-        backgroundLogger.error(
+        await backgroundLogger.error(
           `Erro ao injetar content script ou CSS na aba ${details.tabId}:`,
           error
         );
@@ -1045,9 +1069,9 @@ browserAPI.webNavigation.onCompleted.addListener(
  * Listener para quando abas são removidas/fechadas.
  * Limpa o estado das abas de login quando elas são fechadas.
  */
-browserAPI.tabs.onRemoved.addListener((tabId) => {
+browserAPI.tabs.onRemoved.addListener(async (tabId) => {
   if (tabId === loginTabId) {
-    backgroundLogger.debug(
+    await backgroundLogger.debug(
       `Aba de login ${tabId} foi fechada, limpando estado`
     );
     loginTabId = null;
@@ -1060,6 +1084,6 @@ browserAPI.tabs.onRemoved.addListener((tabId) => {
  */
 loadPersistentData().then(async () => {
   const interval = await getConfig("checkInterval", 30); // Padrão: 30 segundos
-  scheduleNextCheck(interval);
-  updateBadge(); // Atualiza o badge na inicialização
+  await scheduleNextCheck(interval);
+  await updateBadge(); // Atualiza o badge na inicialização
 });

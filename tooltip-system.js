@@ -16,20 +16,20 @@ class TooltipSystem {
   /**
    * Inicializa o sistema de tooltips
    */
-  init() {
+  async init() {
     this.createTooltipStyles();
     this.setupEventListeners();
-    tooltipLogger.info("Sistema de tooltips inicializado");
+    await tooltipLogger.info("Sistema de tooltips inicializado");
   }
 
   /**
    * Cria os estilos CSS para tooltips
    */
   createTooltipStyles() {
-    if (document.getElementById('tooltip-styles')) return;
+    if (document.getElementById("tooltip-styles")) return;
 
-    const style = document.createElement('style');
-    style.id = 'tooltip-styles';
+    const style = document.createElement("style");
+    style.id = "tooltip-styles";
     style.textContent = `
       .tooltip {
         position: absolute;
@@ -193,21 +193,24 @@ class TooltipSystem {
    */
   setupEventListeners() {
     // Fecha tooltip ao clicar fora
-    document.addEventListener('click', (e) => {
-      if (!e.target.closest('.tooltip') && !e.target.hasAttribute('data-tooltip')) {
+    document.addEventListener("click", (e) => {
+      if (
+        !e.target.closest(".tooltip") &&
+        !e.target.hasAttribute("data-tooltip")
+      ) {
         this.hideTooltip();
       }
     });
 
     // Fecha tooltip ao pressionar ESC
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
         this.hideTooltip();
       }
     });
 
     // Reposiciona tooltip ao redimensionar janela
-    window.addEventListener('resize', () => {
+    window.addEventListener("resize", () => {
       if (this.currentTooltip) {
         this.hideTooltip();
       }
@@ -219,43 +222,43 @@ class TooltipSystem {
    * @param {HTMLElement} element - Elemento que receberá o tooltip
    * @param {Object} config - Configuração do tooltip
    */
-  addTooltip(element, config) {
+  async addTooltip(element, config) {
     const tooltipId = this.generateTooltipId();
-    
+
     const tooltipConfig = {
       id: tooltipId,
-      title: config.title || '',
-      content: config.content || '',
-      tip: config.tip || '',
-      position: config.position || 'top',
-      trigger: config.trigger || 'hover',
+      title: config.title || "",
+      content: config.content || "",
+      tip: config.tip || "",
+      position: config.position || "top",
+      trigger: config.trigger || "hover",
       delay: config.delay || 300,
-      ...config
+      ...config,
     };
 
     this.tooltips.set(element, tooltipConfig);
-    element.setAttribute('data-tooltip-id', tooltipId);
+    element.setAttribute("data-tooltip-id", tooltipId);
 
     // Configura event listeners baseado no trigger
-    if (tooltipConfig.trigger === 'hover') {
-      element.addEventListener('mouseenter', () => this.showTooltip(element));
-      element.addEventListener('mouseleave', () => this.hideTooltip());
-    } else if (tooltipConfig.trigger === 'click') {
-      element.addEventListener('click', (e) => {
+    if (tooltipConfig.trigger === "hover") {
+      element.addEventListener("mouseenter", () => this.showTooltip(element));
+      element.addEventListener("mouseleave", () => this.hideTooltip());
+    } else if (tooltipConfig.trigger === "click") {
+      element.addEventListener("click", (e) => {
         e.preventDefault();
         e.stopPropagation();
         this.toggleTooltip(element);
       });
     }
 
-    tooltipLogger.debug(`Tooltip adicionado ao elemento: ${tooltipId}`);
+    await tooltipLogger.debug(`Tooltip adicionado ao elemento: ${tooltipId}`);
   }
 
   /**
    * Mostra tooltip para um elemento
    * @param {HTMLElement} element - Elemento que possui o tooltip
    */
-  showTooltip(element) {
+  async showTooltip(element) {
     const config = this.tooltips.get(element);
     if (!config) return;
 
@@ -270,11 +273,11 @@ class TooltipSystem {
 
     // Mostra o tooltip com animação
     setTimeout(() => {
-      tooltip.classList.add('show');
+      tooltip.classList.add("show");
     }, 10);
 
     this.currentTooltip = tooltip;
-    tooltipLogger.debug(`Tooltip mostrado: ${config.id}`);
+    await tooltipLogger.debug(`Tooltip mostrado: ${config.id}`);
   }
 
   /**
@@ -282,7 +285,7 @@ class TooltipSystem {
    */
   hideTooltip() {
     if (this.currentTooltip) {
-      this.currentTooltip.classList.remove('show');
+      this.currentTooltip.classList.remove("show");
       setTimeout(() => {
         if (this.currentTooltip && this.currentTooltip.parentNode) {
           this.currentTooltip.parentNode.removeChild(this.currentTooltip);
@@ -310,20 +313,20 @@ class TooltipSystem {
    * @returns {HTMLElement} Elemento do tooltip
    */
   createTooltipElement(config) {
-    const tooltip = document.createElement('div');
-    tooltip.className = 'tooltip';
-    tooltip.setAttribute('data-tooltip-id', config.id);
+    const tooltip = document.createElement("div");
+    tooltip.className = "tooltip";
+    tooltip.setAttribute("data-tooltip-id", config.id);
 
-    let content = '';
-    
+    let content = "";
+
     if (config.title) {
       content += `<div class="tooltip-title">${config.title}</div>`;
     }
-    
+
     if (config.content) {
       content += `<div class="tooltip-content">${config.content}</div>`;
     }
-    
+
     if (config.tip) {
       content += `<div class="tooltip-tip">💡 ${config.tip}</div>`;
     }
@@ -331,7 +334,7 @@ class TooltipSystem {
     tooltip.innerHTML = content;
 
     // Adiciona seta
-    const arrow = document.createElement('div');
+    const arrow = document.createElement("div");
     arrow.className = `tooltip-arrow ${config.position}`;
     tooltip.appendChild(arrow);
 
@@ -347,29 +350,29 @@ class TooltipSystem {
   positionTooltip(tooltip, element, position) {
     const elementRect = element.getBoundingClientRect();
     const tooltipRect = tooltip.getBoundingClientRect();
-    
+
     let top, left;
 
     switch (position) {
-      case 'top':
+      case "top":
         top = elementRect.top - tooltipRect.height - 10;
-        left = elementRect.left + (elementRect.width / 2) - (tooltipRect.width / 2);
+        left = elementRect.left + elementRect.width / 2 - tooltipRect.width / 2;
         break;
-      case 'bottom':
+      case "bottom":
         top = elementRect.bottom + 10;
-        left = elementRect.left + (elementRect.width / 2) - (tooltipRect.width / 2);
+        left = elementRect.left + elementRect.width / 2 - tooltipRect.width / 2;
         break;
-      case 'left':
-        top = elementRect.top + (elementRect.height / 2) - (tooltipRect.height / 2);
+      case "left":
+        top = elementRect.top + elementRect.height / 2 - tooltipRect.height / 2;
         left = elementRect.left - tooltipRect.width - 10;
         break;
-      case 'right':
-        top = elementRect.top + (elementRect.height / 2) - (tooltipRect.height / 2);
+      case "right":
+        top = elementRect.top + elementRect.height / 2 - tooltipRect.height / 2;
         left = elementRect.right + 10;
         break;
       default:
         top = elementRect.top - tooltipRect.height - 10;
-        left = elementRect.left + (elementRect.width / 2) - (tooltipRect.width / 2);
+        left = elementRect.left + elementRect.width / 2 - tooltipRect.width / 2;
     }
 
     // Ajusta para não sair da tela
@@ -401,16 +404,16 @@ class TooltipSystem {
    * @returns {HTMLElement} Elemento do botão
    */
   createHelpButton(config = {}) {
-    const button = document.createElement('button');
-    button.className = `help-button ${config.size === 'large' ? 'large' : ''}`;
-    button.innerHTML = config.icon || '?';
-    button.title = config.title || 'Clique para obter ajuda';
-    button.type = 'button';
+    const button = document.createElement("button");
+    button.className = `help-button ${config.size === "large" ? "large" : ""}`;
+    button.innerHTML = config.icon || "?";
+    button.title = config.title || "Clique para obter ajuda";
+    button.type = "button";
 
     if (config.tooltip) {
       this.addTooltip(button, {
         ...config.tooltip,
-        trigger: 'click'
+        trigger: "click",
       });
     }
 
@@ -423,13 +426,13 @@ class TooltipSystem {
    * @returns {HTMLElement} Elemento do botão
    */
   createSectionHelpButton(config = {}) {
-    const button = document.createElement('button');
-    button.className = 'help-section-button';
-    button.innerHTML = `${config.icon || '❓'} ${config.text || 'Ajuda'}`;
-    button.type = 'button';
+    const button = document.createElement("button");
+    button.className = "help-section-button";
+    button.innerHTML = `${config.icon || "❓"} ${config.text || "Ajuda"}`;
+    button.type = "button";
 
     if (config.onClick) {
-      button.addEventListener('click', config.onClick);
+      button.addEventListener("click", config.onClick);
     }
 
     return button;
@@ -441,17 +444,17 @@ class TooltipSystem {
    * @returns {HTMLElement} Elemento de ajuda
    */
   createContextualHelp(config = {}) {
-    const helpDiv = document.createElement('div');
-    helpDiv.className = 'contextual-help';
+    const helpDiv = document.createElement("div");
+    helpDiv.className = "contextual-help";
 
-    let content = '';
+    let content = "";
     if (config.title) {
       content += `<div class="contextual-help-title">
-        <span class="contextual-help-icon">${config.icon || 'ℹ️'}</span>
+        <span class="contextual-help-icon">${config.icon || "ℹ️"}</span>
         ${config.title}
       </div>`;
     }
-    
+
     if (config.content) {
       content += config.content;
     }
@@ -464,21 +467,21 @@ class TooltipSystem {
    * Remove tooltip de um elemento
    * @param {HTMLElement} element - Elemento que possui o tooltip
    */
-  removeTooltip(element) {
+  async removeTooltip(element) {
     if (this.tooltips.has(element)) {
       this.tooltips.delete(element);
-      element.removeAttribute('data-tooltip-id');
-      tooltipLogger.debug("Tooltip removido do elemento");
+      element.removeAttribute("data-tooltip-id");
+      await tooltipLogger.debug("Tooltip removido do elemento");
     }
   }
 
   /**
    * Limpa todos os tooltips
    */
-  clearAllTooltips() {
+  async clearAllTooltips() {
     this.hideTooltip();
     this.tooltips.clear();
-    tooltipLogger.info("Todos os tooltips foram limpos");
+    await tooltipLogger.info("Todos os tooltips foram limpos");
   }
 }
 

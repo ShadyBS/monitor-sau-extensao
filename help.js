@@ -11,8 +11,8 @@ document.addEventListener("DOMContentLoaded", initializeHelp);
 /**
  * Inicializa o sistema de ajuda
  */
-function initializeHelp() {
-  helpLogger.info("Inicializando sistema de ajuda");
+async function initializeHelp() {
+  await helpLogger.info("Inicializando sistema de ajuda");
   
   // Configura navegação entre seções
   setupNavigation();
@@ -32,7 +32,7 @@ function setupNavigation() {
   const sections = document.querySelectorAll('.help-section');
   
   navButtons.forEach(button => {
-    button.addEventListener('click', () => {
+    button.addEventListener('click', async () => {
       const targetSection = button.dataset.section;
       
       // Remove classe active de todos os botões e seções
@@ -43,7 +43,7 @@ function setupNavigation() {
       button.classList.add('active');
       document.getElementById(targetSection).classList.add('active');
       
-      helpLogger.info(`Navegando para seção: ${targetSection}`);
+      await helpLogger.info(`Navegando para seção: ${targetSection}`);
     });
   });
 }
@@ -77,7 +77,7 @@ async function checkFirstTimeUser() {
       showFirstTimeWelcome();
     }
   } catch (error) {
-    helpLogger.error("Erro ao verificar status de primeiro uso:", error);
+    await helpLogger.error("Erro ao verificar status de primeiro uso:", error);
   }
 }
 
@@ -180,7 +180,7 @@ function createWelcomeModal() {
  * Inicia o tour guiado
  */
 async function startGuidedTour() {
-  helpLogger.info("Iniciando tour guiado");
+  await helpLogger.info("Iniciando tour guiado");
   
   // Marca que o usuário iniciou o tour
   try {
@@ -189,7 +189,7 @@ async function startGuidedTour() {
       firstTimeUser: false 
     });
   } catch (error) {
-    helpLogger.error("Erro ao salvar status do tour:", error);
+    await helpLogger.error("Erro ao salvar status do tour:", error);
   }
   
   // Se estamos na página de ajuda, inicia tour aqui
@@ -262,7 +262,7 @@ function runTour(steps) {
   const overlay = createTourOverlay();
   document.body.appendChild(overlay);
   
-  function showStep(stepIndex) {
+  async function showStep(stepIndex) {
     if (stepIndex >= steps.length) {
       completeTour();
       return;
@@ -272,7 +272,7 @@ function runTour(steps) {
     const element = document.querySelector(step.element);
     
     if (!element) {
-      helpLogger.warn(`Elemento não encontrado para o passo ${stepIndex}: ${step.element}`);
+      await helpLogger.warn(`Elemento não encontrado para o passo ${stepIndex}: ${step.element}`);
       showStep(stepIndex + 1);
       return;
     }
@@ -409,9 +409,9 @@ async function markTourCompleted() {
       helpTourCompleted: true,
       helpTourCompletedAt: new Date().toISOString()
     });
-    helpLogger.info("Tour marcado como completado");
+    await helpLogger.info("Tour marcado como completado");
   } catch (error) {
-    helpLogger.error("Erro ao marcar tour como completado:", error);
+    await helpLogger.error("Erro ao marcar tour como completado:", error);
   }
 }
 
@@ -497,17 +497,17 @@ async function skipTour() {
       helpTourSkipped: true,
       firstTimeUser: false 
     });
-    helpLogger.info("Tour pulado pelo usuário");
+    await helpLogger.info("Tour pulado pelo usuário");
   } catch (error) {
-    helpLogger.error("Erro ao marcar tour como pulado:", error);
+    await helpLogger.error("Erro ao marcar tour como pulado:", error);
   }
 }
 
 /**
  * Fecha a página de ajuda
  */
-function closeHelp() {
-  helpLogger.info("Fechando página de ajuda");
+async function closeHelp() {
+  await helpLogger.info("Fechando página de ajuda");
   
   // Se foi aberta como popup/tab, fecha
   if (window.opener || window.history.length === 1) {

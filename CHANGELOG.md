@@ -7,6 +7,8 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 - **Erro de Registro do Service Worker**: Corrigido erro "Service worker registration failed. Status code: 3" ao simplificar a inicialização da `browserAPI` em `background.js`, removendo uma função que lançava um erro fatal durante a inicialização.
 - **Erro de Script Injetado**: Prevenido um erro de `ReferenceError` no script de login automático ao substituir chamadas ao `backgroundLogger` (que não existe no contexto da página) por `console.log` e `console.error`.
+- **Logger Assíncrono**: Refatorado `logger.js` para inicialização lazy e assíncrona, evitando operações assíncronas no nível superior que violam regras do Service Worker.
+- **Compatibilidade com Service Worker**: Atualizados todos os arquivos para usar `await` com chamadas do logger (`background.js`, `popup.js`, `options.js`, `sanitizer.js`, `tooltip-system.js`, `help.js`).
 
 ### Added
 
