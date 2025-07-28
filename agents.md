@@ -77,6 +77,21 @@ Esta é uma **extensão para navegador** (Chrome e Firefox) com estrutura espec�
 - **Use `sanitizer.js`** para manipulação segura do DOM
 - **Siga Manifest V3** - service workers, não background pages
 
+---
+
+## Permissões Especiais do Agente
+
+> **AUTORIZAÇÃO EXPLÍCITA:**
+>
+> O agente está AUTORIZADO a executar operações no GIT (commit, branch, merge, push, pull, etc.) e a atualizar o arquivo `CHANGELOG.md` sempre que necessário, seguindo as convenções e práticas deste projeto.
+>
+> - Sempre que implementar, corrigir ou documentar algo relevante, atualize o `CHANGELOG.md` conforme as instruções deste guia.
+> - Utilize mensagens de commit seguindo o padrão Conventional Commits.
+> - Realize operações de versionamento, branch e release conforme o fluxo descrito neste documento.
+> - Nunca deixe alterações sem commit final.
+
+---
+
 ## 3. Fluxo de Trabalho de Modificação
 
 ### Passo 1: Entender a Tarefa

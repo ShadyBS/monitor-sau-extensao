@@ -170,10 +170,17 @@ class ReleaseManager {
     console.log(`🏷️  Criando tag v${version}...`);
 
     try {
-      execSync(`git add .`, { stdio: "ignore" });
-      execSync(`git commit -m "chore(release): v${version}"`, {
-        stdio: "ignore",
-      });
+      // Verifica se há mudanças a serem commitadas
+      const status = execSync('git status --porcelain', { encoding: 'utf8' });
+      if (status.trim()) {
+        execSync(`git add .`, { stdio: "ignore" });
+        execSync(`git commit -m "chore(release): v${version}"`, {
+          stdio: "ignore",
+        });
+        console.log("✅ Commit de release criado");
+      } else {
+        console.log("ℹ️  Nenhuma mudança para commit. Apenas criando a tag.");
+      }
       execSync(`git tag -a v${version} -m "Release v${version}"`, {
         stdio: "ignore",
       });
