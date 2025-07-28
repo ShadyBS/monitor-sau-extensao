@@ -11,8 +11,7 @@
     "version:minor": "node scripts/version.js minor",
     "version:major": "node scripts/version.js major",
     "clean": "node scripts/clean.js",
-    "validate": "node scripts/validate.js",
-    "changelog": "node scripts/changelog.js"
+    "validate": "node scripts/validate.js"
   },
   "devDependencies": {
     "archiver": "^6.0.1",

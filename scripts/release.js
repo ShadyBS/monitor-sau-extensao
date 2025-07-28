@@ -80,70 +80,48 @@ class ReleaseManager {
   }
 
   /**
-   * Valida se o CHANGELOG foi atualizado
-   */
-  async validateChangelog() {
-    console.log("🔍 Validando CHANGELOG...");
-
-    try {
-      const changelogContent = await fs.readFile(this.changelogPath, "utf8");
-
-      // Verifica se há seção [Unreleased] com conteúdo
-      const unreleasedMatch = changelogContent.match(
-        /## \[Unreleased\](.*?)(?=## \[|$)/s
-      );
-
-      if (!unreleasedMatch) {
-        throw new ReleaseError(
-          "Seção [Unreleased] não encontrada no CHANGELOG.md",
-          "NO_UNRELEASED_SECTION"
-        );
-      }
-
-      const unreleasedContent = unreleasedMatch[1].trim();
-
-      // Verifica se há conteúdo real além dos cabeçalhos padrão
-      const contentForValidation = unreleasedContent
-        .replace(/### (Added|Changed|Fixed|Removed|Technical Details)/gi, "")
-        .trim();
-
-      if (contentForValidation.length === 0) {
-        throw new ReleaseError(
-          "CHANGELOG.md não foi atualizado com as mudanças desta versão na seção [Unreleased]",
-          "CHANGELOG_NOT_UPDATED"
-        );
-      }
-
-      console.log("✅ CHANGELOG validado");
-      return unreleasedContent;
-    } catch (error) {
-      if (error instanceof ReleaseError) throw error;
-      throw new ReleaseError(
-        `Erro ao validar CHANGELOG: ${error.message}`,
-        "CHANGELOG_READ_ERROR"
-      );
-    }
-  }
-
-  /**
    * Atualiza CHANGELOG movendo [Unreleased] para versão específica
    */
   async updateChangelog(version) {
     console.log("📝 Atualizando CHANGELOG...");
 
     try {
-      const changelogContent = await fs.readFile(this.changelogPath, "utf8");
+      let changelogContent = await fs.readFile(this.changelogPath, "utf8");
       const today = new Date().toISOString().split("T")[0];
 
-      // Substitui [Unreleased] pela versão e data
+      // Regex para encontrar a seção [Unreleased] e seu conteúdo
+      const unreleasedRegex =
+        /^## \[Unreleased\]([\s\S]*?)(?=^## \[\d+\.\d+\.\d+\])/m;
+      const unreleasedMatch = changelogContent.match(unreleasedRegex);
+
+      if (
+        !unreleasedMatch ||
+        !unreleasedMatch[1] ||
+        !unreleasedMatch[1].trim()
+      ) {
+        throw new ReleaseError(
+          "A seção [Unreleased] não foi encontrada ou está vazia no CHANGELOG.md.",
+          "CHANGELOG_NOT_UPDATED"
+        );
+      }
+
+      const unreleasedNotes = unreleasedMatch[1].trim();
+
+      // Prepara a nova entrada de versão
+      const newVersionHeader = `## [${version}] - ${today}`;
+      const newVersionEntry = `${newVersionHeader}\n\n${unreleasedNotes}`;
+
+      // Substitui a seção [Unreleased] antiga pela nova estrutura
+      const cleanUnreleasedSection = "## [Unreleased]";
       const updatedContent = changelogContent.replace(
-        /## \[Unreleased\]/,
-        `## [Unreleased]\n\n## [${version}] - ${today}`
+        unreleasedMatch[0],
+        `${cleanUnreleasedSection}\n\n${newVersionEntry}`
       );
 
       await fs.writeFile(this.changelogPath, updatedContent, "utf8");
-      console.log("✅ CHANGELOG atualizado");
+      console.log("✅ CHANGELOG atualizado para a versão", version);
     } catch (error) {
+      if (error instanceof ReleaseError) throw error;
       throw new ReleaseError(
         `Erro ao atualizar CHANGELOG: ${error.message}`,
         "CHANGELOG_UPDATE_ERROR"
@@ -300,8 +278,8 @@ class ReleaseManager {
 
       console.log(`📦 Versão para release: v${currentVersion}\n`);
 
-      // Valida CHANGELOG
-      await this.validateChangelog();
+      // Atualiza CHANGELOG (a validação está inclusa)
+      await this.updateChangelog(currentVersion);
 
       // Limpa e constrói
       console.log("🧹 Limpando diretório de distribuição...");
@@ -309,9 +287,6 @@ class ReleaseManager {
 
       const builder = new ExtensionBuilder();
       const zipFiles = await builder.build();
-
-      // Atualiza CHANGELOG
-      await this.updateChangelog(currentVersion);
 
       // Extrai notas de release
       const releaseNotes = await this.extractReleaseNotes(currentVersion);

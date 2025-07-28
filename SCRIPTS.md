@@ -60,28 +60,6 @@ node scripts/version.js info
 - ✅ Detecção de versões dessincronizadas
 - ✅ Suporte a prerelease
 
-### Changelog (`scripts/changelog.js`)
-
-Automatiza a atualização do `CHANGELOG.md` para um novo release.
-
-```bash
-# Mover notas "Unreleased" para uma nova versão
-npm run changelog
-```
-
-**Funcionalidades:**
-
-- ✅ Lê a versão atual do `package.json`.
-- ✅ Verifica se a versão já existe no `CHANGELOG.md` para evitar duplicatas.
-- ✅ Move o conteúdo da seção `[Unreleased]` para uma nova seção de versão com a data atual.
-- ✅ Limpa a seção `[Unreleased]` para o próximo ciclo.
-- ✅ Retorna erro se a seção `[Unreleased]` estiver vazia.
-
-**Pré-requisitos:**
-
-- `package.json` com a versão desejada para o release.
-- `CHANGELOG.md` com notas na seção `[Unreleased]`.
-
 ### Release (`scripts/release.js`)
 
 Automatiza todo o processo de release no GitHub.
