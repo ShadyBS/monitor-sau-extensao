@@ -20,6 +20,7 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - **Rate Limiting de Notificações**: Aumentado cooldown de notificações de 5 para 15 segundos para prevenir spam de notificações e melhorar experiência do usuário
 - **Message Passing Security**: Corrigida validação insuficiente de origem em message passing que permitia contorno de verificações de segurança
 - **Timeout de Operações de Rede**: Aumentado timeout de injeção de scripts de 10 para 30 segundos para melhor compatibilidade com conexões lentas e evitar falhas desnecessárias em redes instáveis
+- **SIGSS URL Detection Consistency**: Corrigida inconsistência na detecção de URLs SIGSS substituindo regex genérico `/sigss/i.test(url)` por lista explícita de domínios válidos (`c1863prd.cloudmv.com.br`, `c1863tst1.cloudmv.com.br`) para garantir detecção precisa e evitar falsos positivos. Implementada função `isValidSigssUrl()` consistente em `background.js`, `content-sigss.js` e `sigss-tab-renamer.js` com validação de hostname e pathname
 
 ## [2.1.0] - 2025-07-28
 

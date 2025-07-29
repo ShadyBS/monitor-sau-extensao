@@ -43,6 +43,12 @@
     characterData: true
   };
 
+  // Lista explícita de domínios SIGSS válidos para detecção consistente
+  const VALID_SIGSS_DOMAINS = [
+    'c1863prd.cloudmv.com.br',
+    'c1863tst1.cloudmv.com.br'
+  ];
+
   /**
    * Verifica se a funcionalidade está habilitada nas configurações
    */
@@ -168,12 +174,23 @@
   }
 
   /**
-   * Verifica se a URL atual é uma página do SIGSS
+   * Verifica se a URL atual é uma página do SIGSS válida
+   * Usa validação consistente com lista explícita de domínios
    */
   function isSigssPage() {
     const url = window.location.href;
-    // Verifica se contém 'sigss' na URL (case insensitive)
-    return /sigss/i.test(url);
+    
+    if (!url) return false;
+    
+    try {
+      const urlObj = new URL(url);
+      return VALID_SIGSS_DOMAINS.includes(urlObj.hostname) && 
+             urlObj.pathname.includes('/sigss/');
+    } catch (error) {
+      // URL inválida
+      sigssLogger.warn('URL inválida detectada:', url);
+      return false;
+    }
   }
 
   /**

@@ -14,6 +14,30 @@ const backgroundLogger = logger('[Background]');
 import { migrateToSync } from "./config-manager.js";
 // Importa o validador de storage para verificação de limites
 import { safeStorageSet, validateStorageOperation, getStorageStats } from "./storage-validator.js";
+// Lista explícita de domínios SIGSS válidos para detecção consistente
+const VALID_SIGSS_DOMAINS = [
+  'c1863prd.cloudmv.com.br',
+  'c1863tst1.cloudmv.com.br'
+];
+
+/**
+ * Verifica se uma URL é de uma página SIGSS válida
+ * @param {string} url - URL a ser verificada
+ * @returns {boolean} - True se for uma URL SIGSS válida
+ */
+function isValidSigssUrl(url) {
+  if (!url) return false;
+  
+  try {
+    const urlObj = new URL(url);
+    return VALID_SIGSS_DOMAINS.includes(urlObj.hostname) && 
+           urlObj.pathname.includes('/sigss/');
+  } catch (error) {
+    // URL inválida
+    return false;
+  }
+}
+
 /**
  * Determina qual content script usar baseado na URL da aba
  * @param {number} tabId - ID da aba
@@ -24,8 +48,8 @@ async function getContentScriptForTab(tabId) {
     const tab = await browserAPI.tabs.get(tabId);
     const url = tab.url || '';
     
-    // Verifica se é uma página do SIGSS
-    if (/sigss/i.test(url)) {
+    // Verifica se é uma página do SIGSS usando lista explícita de domínios
+    if (isValidSigssUrl(url)) {
       return 'content-sigss.js';
     }
     
@@ -1164,8 +1188,8 @@ browserAPI.webNavigation.onCompleted.addListener(
       details.url.startsWith(SAU_HOME_URL) ||
       details.url.startsWith(SAU_PREPARAR_PESQUISAR_TAREFA_URL);
 
-    // Verifica se é uma página do SIGSS
-    const isSigssPage = /sigss/i.test(details.url);
+    // Verifica se é uma página do SIGSS usando validação consistente
+    const isSigssPage = isValidSigssUrl(details.url);
 
     if (isSauPage) {
       backgroundLogger.info(
