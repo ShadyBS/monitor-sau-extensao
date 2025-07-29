@@ -8,6 +8,7 @@
  */
 
 import { logger } from "./logger.js";
+import { safeStorageSet, validateStorageOperation } from "./storage-validator.js";
 const configLogger = logger("[ConfigManager]");
 
 // Define o objeto de API do navegador de forma compatível (Chrome ou Firefox)
@@ -113,7 +114,7 @@ function getStorageType(key) {
 }
 
 /**
- * Salva uma configuração usando a estratégia apropriada
+ * Salva uma configuração usando a estratégia apropriada com validação de tamanho
  */
 async function setConfig(key, value) {
   const storageType = getStorageType(key);
@@ -123,17 +124,46 @@ async function setConfig(key, value) {
   
   try {
     if (storageType === 'sync' && syncAvailable) {
-      // Tenta salvar no sync primeiro
-      await browserAPI.storage.sync.set(data);
-      configLogger.debug(`Configuração '${key}' salva no storage.sync`);
+      // Tenta salvar no sync primeiro com validação
+      const syncResult = await safeStorageSet('sync', data);
       
-      // Também salva no local como backup
-      await browserAPI.storage.local.set(data);
-      configLogger.debug(`Configuração '${key}' salva no storage.local como backup`);
+      if (syncResult.success) {
+        configLogger.debug(`Configuração '${key}' salva no storage.sync com validação`);
+        
+        // Também salva no local como backup
+        const localResult = await safeStorageSet('local', data);
+        if (localResult.success) {
+          configLogger.debug(`Configuração '${key}' salva no storage.local como backup`);
+        } else {
+          configLogger.warn(`Backup local falhou para '${key}':`, localResult.error);
+          // Continua mesmo se o backup falhar
+        }
+      } else {
+        configLogger.warn(`Falha ao salvar '${key}' no sync:`, syncResult.error);
+        
+        // Fallback para local storage
+        const localResult = await safeStorageSet('local', data);
+        if (localResult.success) {
+          configLogger.info(`Configuração '${key}' salva no storage.local (fallback após falha sync)`);
+        } else {
+          configLogger.error(`Falha total ao salvar '${key}':`, localResult.error);
+          // Último recurso: salva sem validação
+          await browserAPI.storage.local.set(data);
+          configLogger.warn(`Configuração '${key}' salva sem validação como último recurso`);
+        }
+      }
     } else {
-      // Usa apenas local storage
-      await browserAPI.storage.local.set(data);
-      configLogger.debug(`Configuração '${key}' salva no storage.local`);
+      // Usa apenas local storage com validação
+      const result = await safeStorageSet('local', data);
+      
+      if (result.success) {
+        configLogger.debug(`Configuração '${key}' salva no storage.local com validação`);
+      } else {
+        configLogger.warn(`Falha na validação para '${key}':`, result.error);
+        // Fallback: salva sem validação
+        await browserAPI.storage.local.set(data);
+        configLogger.warn(`Configuração '${key}' salva no storage.local sem validação`);
+      }
     }
   } catch (error) {
     configLogger.error(`Erro ao salvar configuração '${key}':`, error);
@@ -142,7 +172,7 @@ async function setConfig(key, value) {
     if (storageType === 'sync') {
       try {
         await browserAPI.storage.local.set(data);
-        configLogger.info(`Configuração '${key}' salva no storage.local (fallback)`);
+        configLogger.info(`Configuração '${key}' salva no storage.local (fallback de emergência)`);
       } catch (localError) {
         configLogger.error(`Erro no fallback para storage.local:`, localError);
         throw localError;
@@ -154,7 +184,7 @@ async function setConfig(key, value) {
 }
 
 /**
- * Salva múltiplas configurações de uma vez
+ * Salva múltiplas configurações de uma vez com validação de tamanho
  */
 async function setConfigs(configs) {
   const syncConfigs = {};
@@ -172,30 +202,65 @@ async function setConfigs(configs) {
   const syncAvailable = await isSyncAvailable();
   
   try {
-    // Salva configurações sync
+    // Salva configurações sync com validação
     if (Object.keys(syncConfigs).length > 0) {
       if (syncAvailable) {
-        await browserAPI.storage.sync.set(syncConfigs);
-        configLogger.debug(`Configurações salvas no storage.sync:`, Object.keys(syncConfigs));
+        const syncResult = await safeStorageSet('sync', syncConfigs);
         
-        // Backup no local
-        await browserAPI.storage.local.set(syncConfigs);
-        configLogger.debug(`Configurações salvas no storage.local como backup:`, Object.keys(syncConfigs));
+        if (syncResult.success) {
+          configLogger.debug(`Configurações salvas no storage.sync com validação:`, Object.keys(syncConfigs));
+          
+          // Backup no local
+          const localBackupResult = await safeStorageSet('local', syncConfigs);
+          if (localBackupResult.success) {
+            configLogger.debug(`Configurações salvas no storage.local como backup:`, Object.keys(syncConfigs));
+          } else {
+            configLogger.warn(`Backup local falhou:`, localBackupResult.error);
+            // Tenta backup sem validação
+            await browserAPI.storage.local.set(syncConfigs);
+            configLogger.debug(`Backup local salvo sem validação:`, Object.keys(syncConfigs));
+          }
+        } else {
+          configLogger.warn(`Falha ao salvar no sync:`, syncResult.error);
+          
+          // Fallback para local
+          const localResult = await safeStorageSet('local', syncConfigs);
+          if (localResult.success) {
+            configLogger.info(`Configurações salvas no storage.local (fallback):`, Object.keys(syncConfigs));
+          } else {
+            configLogger.error(`Falha total:`, localResult.error);
+            // Último recurso: salva sem validação
+            await browserAPI.storage.local.set(syncConfigs);
+            configLogger.warn(`Configurações salvas no storage.local sem validação:`, Object.keys(syncConfigs));
+          }
+        }
       } else {
-        await browserAPI.storage.local.set(syncConfigs);
-        configLogger.debug(`Configurações salvas no storage.local:`, Object.keys(syncConfigs));
+        const result = await safeStorageSet('local', syncConfigs);
+        if (result.success) {
+          configLogger.debug(`Configurações salvas no storage.local com validação:`, Object.keys(syncConfigs));
+        } else {
+          configLogger.warn(`Falha na validação:`, result.error);
+          await browserAPI.storage.local.set(syncConfigs);
+          configLogger.debug(`Configurações salvas no storage.local sem validação:`, Object.keys(syncConfigs));
+        }
       }
     }
     
-    // Salva configurações locais
+    // Salva configurações locais com validação
     if (Object.keys(localConfigs).length > 0) {
-      await browserAPI.storage.local.set(localConfigs);
-      configLogger.debug(`Configurações locais salvas:`, Object.keys(localConfigs));
+      const result = await safeStorageSet('local', localConfigs);
+      if (result.success) {
+        configLogger.debug(`Configurações locais salvas com validação:`, Object.keys(localConfigs));
+      } else {
+        configLogger.warn(`Falha na validação de configurações locais:`, result.error);
+        await browserAPI.storage.local.set(localConfigs);
+        configLogger.debug(`Configurações locais salvas sem validação:`, Object.keys(localConfigs));
+      }
     }
   } catch (error) {
     configLogger.error("Erro ao salvar configurações:", error);
     
-    // Fallback: salva tudo no local
+    // Fallback: salva tudo no local sem validação
     try {
       await browserAPI.storage.local.set(configs);
       configLogger.info("Configurações salvas no storage.local (fallback completo)");

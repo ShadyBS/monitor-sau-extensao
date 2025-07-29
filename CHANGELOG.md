@@ -228,4 +228,4 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - Criado sistema de definições de ajuda em options.js com explicações detalhadas
 - Implementados estilos responsivos para botões de ajuda em options.css
 - Integrado sistema de tooltips existente para fornecer ajuda contextual
-- Expandida documentação sobre funcionalidade SIGSS no help.html
+- Expandida documentação sobre funcionalidade SIGSS no help.html- **Storage Size Validation**: Implementado sistema robusto de validação de tamanho de storage para evitar exceder limites do Chrome (sync: 100KB, local: 5MB) com limpeza automática de dados antigos e fallbacks seguros

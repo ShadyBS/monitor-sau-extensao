@@ -12,6 +12,8 @@ const backgroundLogger = logger('[Background]');
 
 // Importa o config manager para sincronização de configurações
 import { migrateToSync } from "./config-manager.js";
+// Importa o validador de storage para verificação de limites
+import { safeStorageSet, validateStorageOperation, getStorageStats } from "./storage-validator.js";
 /**
  * Determina qual content script usar baseado na URL da aba
  * @param {number} tabId - ID da aba
@@ -118,20 +120,116 @@ function updateBadge() {
 
 /**
  * Salva o estado atual das variáveis globais no armazenamento local do Chrome.
+ * Agora com validação de tamanho para evitar exceder limites de storage.
  */
 async function savePersistentData() {
   try {
-    await browserAPI.storage.local.set({
+    const dataToSave = {
       lastKnownTasks: lastKnownTasks,
       ignoredTasks: ignoredTasks,
       snoozedTasks: snoozedTasks,
-      openedTasks: openedTasks, // Salva o novo estado
+      openedTasks: openedTasks,
       lastCheckTimestamp: lastCheckTimestamp,
-      taskNotificationTimestamps: taskNotificationTimestamps, // Salva timestamps de notificação
-    });
-    backgroundLogger.info("Dados persistentes salvos.");
+      taskNotificationTimestamps: taskNotificationTimestamps,
+    };
+
+    // Usa o storage validator para verificar limites antes de salvar
+    const result = await safeStorageSet('local', dataToSave);
+    
+    if (result.success) {
+      backgroundLogger.info("Dados persistentes salvos com validação de tamanho.");
+      
+      // Log estatísticas de uso se em modo debug
+      if (result.validation) {
+        const { newDataSize, estimatedNewSize, limits } = result.validation;
+        const usagePercent = ((estimatedNewSize / limits.totalBytes) * 100).toFixed(1);
+        backgroundLogger.debug(`Storage usage: ${usagePercent}% (${Math.round(estimatedNewSize / 1024)}KB / ${Math.round(limits.totalBytes / 1024)}KB)`);
+      }
+    } else {
+      backgroundLogger.error("Falha na validação de storage:", result.error);
+      
+      // Tenta limpeza automática se o problema for de tamanho
+      if (result.error.includes('Tamanho total excederia limite')) {
+        backgroundLogger.warn("Tentando limpeza automática de dados antigos...");
+        
+        // Remove tarefas muito antigas (mais de 30 dias)
+        const thirtyDaysAgo = Date.now() - (30 * 24 * 60 * 60 * 1000);
+        const originalTaskCount = lastKnownTasks.length;
+        
+        lastKnownTasks = lastKnownTasks.filter(task => {
+          const taskTimestamp = task.lastNotifiedTimestamp || 0;
+          return taskTimestamp > thirtyDaysAgo;
+        });
+        
+        // Remove entradas antigas de timestamps de notificação
+        const validTaskIds = new Set(lastKnownTasks.map(task => task.id));
+        for (const taskId in taskNotificationTimestamps) {
+          if (!validTaskIds.has(taskId)) {
+            delete taskNotificationTimestamps[taskId];
+          }
+        }
+        
+        // Remove entradas antigas de tarefas ignoradas/snoozed/abertas
+        for (const taskId in ignoredTasks) {
+          if (!validTaskIds.has(taskId)) {
+            delete ignoredTasks[taskId];
+          }
+        }
+        for (const taskId in snoozedTasks) {
+          if (!validTaskIds.has(taskId)) {
+            delete snoozedTasks[taskId];
+          }
+        }
+        for (const taskId in openedTasks) {
+          if (!validTaskIds.has(taskId)) {
+            delete openedTasks[taskId];
+          }
+        }
+        
+        const cleanedTaskCount = lastKnownTasks.length;
+        backgroundLogger.info(`Limpeza automática concluída: ${originalTaskCount - cleanedTaskCount} tarefas antigas removidas`);
+        
+        // Tenta salvar novamente após limpeza
+        const cleanedData = {
+          lastKnownTasks: lastKnownTasks,
+          ignoredTasks: ignoredTasks,
+          snoozedTasks: snoozedTasks,
+          openedTasks: openedTasks,
+          lastCheckTimestamp: lastCheckTimestamp,
+          taskNotificationTimestamps: taskNotificationTimestamps,
+        };
+        
+        const retryResult = await safeStorageSet('local', cleanedData);
+        if (retryResult.success) {
+          backgroundLogger.info("Dados persistentes salvos após limpeza automática.");
+        } else {
+          // Fallback: salva sem validação como último recurso
+          backgroundLogger.error("Falha mesmo após limpeza. Salvando sem validação:", retryResult.error);
+          await browserAPI.storage.local.set(cleanedData);
+        }
+      } else {
+        // Para outros tipos de erro, tenta salvar sem validação
+        backgroundLogger.warn("Salvando dados sem validação devido a erro não relacionado a tamanho");
+        await browserAPI.storage.local.set(dataToSave);
+      }
+    }
   } catch (error) {
     backgroundLogger.error("Erro ao salvar dados persistentes:", error);
+    
+    // Fallback final: tenta salvar diretamente
+    try {
+      await browserAPI.storage.local.set({
+        lastKnownTasks: lastKnownTasks,
+        ignoredTasks: ignoredTasks,
+        snoozedTasks: snoozedTasks,
+        openedTasks: openedTasks,
+        lastCheckTimestamp: lastCheckTimestamp,
+        taskNotificationTimestamps: taskNotificationTimestamps,
+      });
+      backgroundLogger.warn("Dados salvos usando fallback direto");
+    } catch (fallbackError) {
+      backgroundLogger.error("Falha crítica ao salvar dados:", fallbackError);
+    }
   }
 }
 
@@ -379,6 +477,15 @@ browserAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
       // Força uma nova verificação para repopular a lista se a página estiver aberta
       checkAndNotifyNewTasks();
       return true; // Indica que a resposta será enviada de forma síncrona
+    case "getStorageStats": // NOVO CASE PARA OBTER ESTATÍSTICAS DE STORAGE
+      backgroundLogger.info("Solicitação de estatísticas de storage recebida.");
+      getStorageStats().then((stats) => {
+        sendResponse({ stats });
+      }).catch((error) => {
+        backgroundLogger.error("Erro ao obter estatísticas de storage:", error);
+        sendResponse({ error: error.message });
+      });
+      return true; // Indica que a resposta será enviada de forma assíncrona
   }
 });
 
