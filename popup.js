@@ -22,7 +22,7 @@ document.addEventListener("DOMContentLoaded", initializePopup);
  */
 async function getDisplaySettings() {
   try {
-    await popupLogger.info(
+    popupLogger.info(
       "getDisplaySettings: Iniciando carregamento de configurações de exibição"
     );
 
@@ -30,18 +30,18 @@ async function getDisplaySettings() {
     let taskDisplaySettings;
     try {
       taskDisplaySettings = await getConfig("taskDisplaySettings");
-      await popupLogger.info(
+      popupLogger.info(
         "getDisplaySettings: Configurações carregadas via config-manager:",
         taskDisplaySettings
       );
     } catch (configError) {
-      await popupLogger.warn(
+      popupLogger.warn(
         "getDisplaySettings: Erro no config-manager, usando storage direto:",
         configError
       );
       const data = await browserAPI.storage.local.get(["taskDisplaySettings"]);
       taskDisplaySettings = data.taskDisplaySettings;
-      await popupLogger.info(
+      popupLogger.info(
         "getDisplaySettings: Configurações carregadas via storage direto:",
         taskDisplaySettings
       );
@@ -59,18 +59,18 @@ async function getDisplaySettings() {
         solicitante: false,
         unidade: false,
       };
-      await popupLogger.info(
+      popupLogger.info(
         "getDisplaySettings: Usando configurações padrão:",
         defaultSettings
       );
       return defaultSettings;
     }
   } catch (error) {
-    await popupLogger.error(
+    popupLogger.error(
       "getDisplaySettings: Erro ao carregar configurações:",
       error
     );
-    await popupLogger.error(
+    popupLogger.error(
       "Erro ao carregar configurações de exibição:",
       error
     );
@@ -108,7 +108,7 @@ async function getSnoozeSettings() {
       };
     }
   } catch (error) {
-    await popupLogger.error("Erro ao carregar configurações de snooze:", error);
+    popupLogger.error("Erro ao carregar configurações de snooze:", error);
     // Retorna configurações padrão em caso de erro
     return {
       options: [
@@ -124,7 +124,7 @@ async function getSnoozeSettings() {
 }
 
 async function loadPopupData() {
-  await popupLogger.info("Carregando dados iniciais do popup...");
+  popupLogger.info("Carregando dados iniciais do popup...");
   try {
     // Solicita ao background script as últimas tarefas e o status usando Promise com timeout
     const response = await Promise.race([
@@ -146,7 +146,7 @@ async function loadPopupData() {
     ]);
 
     if (response) {
-      await popupLogger.debug(
+      popupLogger.debug(
         "Dados de tarefas recebidos do background:",
         response
       );
@@ -157,7 +157,7 @@ async function loadPopupData() {
         "Última verificação: " +
           new Date(response.lastCheck).toLocaleTimeString();
     } else {
-      await popupLogger.warn(
+      popupLogger.warn(
         "Nenhuma resposta de tarefas recebida do background."
       );
       document.getElementById("status-message").textContent =
@@ -168,15 +168,19 @@ async function loadPopupData() {
     const errorMessage = error instanceof Error ? error.message : String(error);
     const errorDetails = error instanceof Error ? error.stack : error;
     
-    await popupLogger.error("Erro ao carregar dados do popup:", {
+    popupLogger.error("Erro ao carregar dados do popup:", {
       message: errorMessage,
       details: errorDetails,
       type: typeof error,
       error: error
     });
     
-    document.getElementById("status-message").textContent =
-      "Erro ao carregar dados. Tente atualizar.";
+    let userErrorMsg = "Erro ao carregar dados. Tente atualizar.";
+    // Se o erro veio do background e tem message, exibe para o usuário
+    if (error && typeof error === 'object' && error.message) {
+      userErrorMsg += `\n${error.message}`;
+    }
+    document.getElementById("status-message").textContent = userErrorMsg;
   }
 }
 
@@ -201,7 +205,7 @@ async function displayTasks(tasks, displaySettings = null) {
       }
     );
     tasksList.appendChild(noTasksP);
-    await popupLogger.info("Nenhuma tarefa para exibir no popup.");
+    popupLogger.info("Nenhuma tarefa para exibir no popup.");
     return;
   }
 

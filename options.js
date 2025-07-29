@@ -687,7 +687,7 @@ function addSnoozeOption() {
     <label>horas</label>
     <input type="number" class="minutes-input" min="0" max="59" value="15" placeholder="15">
     <label>minutos</label>
-    <button type="button" class="remove-btn" onclick="removeSnoozeOption(this)">Remover</button>
+    <button type="button" class="remove-btn" onclick="removeSnoozeOption(this)" title="Remover opção">🗑️</button>
   `;
 
   container.appendChild(optionDiv);
@@ -723,7 +723,7 @@ function loadSnoozeOptions(snoozeSettings) {
       <label>horas</label>
       <input type="number" class="minutes-input" min="0" max="59" value="${option.minutes}" placeholder="15">
       <label>minutos</label>
-      <button type="button" class="remove-btn" onclick="removeSnoozeOption(this)">Remover</button>
+      <button type="button" class="remove-btn" onclick="removeSnoozeOption(this)" title="Remover opção">🗑️</button>
     `;
 
     container.appendChild(optionDiv);

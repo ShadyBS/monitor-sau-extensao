@@ -450,47 +450,38 @@ browserAPI.runtime.onMessage.addListener(async (request, sender, sendResponse) =
       backgroundLogger.info("Verificação manual solicitada.");
       checkAndNotifyNewTasks();
       break;
-    case "getLatestTasks":
-      // Garante que os dados persistentes estejam carregados antes de responder
-      loadPersistentData().then(() => {
-        try {
-          const currentPendingTasks = lastKnownTasks.filter(
-            (task) =>
-              !ignoredTasks[task.id] &&
-              !openedTasks[task.id] && // Filtra tarefas abertas
-              (!snoozedTasks[task.id] || snoozedTasks[task.id] <= Date.now())
-          );
-          backgroundLogger.debug(
-            "Retornando últimas tarefas para popup:",
-            currentPendingTasks.length,
-            currentPendingTasks
-          );
-          sendResponse({
-            newTasks: currentPendingTasks || [],
-            message: `Última verificação: ${new Date(
-              lastCheckTimestamp
-            ).toLocaleTimeString()}`,
-            lastCheck: lastCheckTimestamp,
-          });
-        } catch (error) {
-          backgroundLogger.error("Erro ao processar getLatestTasks:", error);
-          sendResponse({
-            newTasks: [],
-            message: "Erro ao carregar tarefas",
-            lastCheck: lastCheckTimestamp,
-            error: error.message
-          });
-        }
-      }).catch((loadError) => {
-        backgroundLogger.error("Erro ao carregar dados persistentes para getLatestTasks:", loadError);
+    case "getLatestTasks": {
+      // Responde imediatamente com os dados em memória para evitar fechamento do port
+      try {
+        const currentPendingTasks = lastKnownTasks.filter(
+          (task) =>
+            !ignoredTasks[task.id] &&
+            !openedTasks[task.id] &&
+            (!snoozedTasks[task.id] || snoozedTasks[task.id] <= Date.now())
+        );
+        backgroundLogger.debug(
+          "Retornando últimas tarefas para popup:",
+          currentPendingTasks.length,
+          currentPendingTasks
+        );
+        sendResponse({
+          newTasks: currentPendingTasks || [],
+          message: `Última verificação: ${new Date(
+            lastCheckTimestamp
+          ).toLocaleTimeString()}`,
+          lastCheck: lastCheckTimestamp,
+        });
+      } catch (error) {
+        backgroundLogger.error("Erro ao processar getLatestTasks:", error);
         sendResponse({
           newTasks: [],
-          message: "Erro ao carregar dados",
-          lastCheck: 0,
-          error: loadError.message
+          message: "Erro ao carregar tarefas",
+          lastCheck: lastCheckTimestamp,
+          error: error.message
         });
-      });
-      return true; // Indica que a resposta será enviada de forma assíncrona
+      }
+      return false; // Resposta síncrona, não precisa manter o port aberto
+    }
     case "ignoreTask":
       // Marca uma tarefa como ignorada e salva o estado
       ignoredTasks[request.taskId] = true;

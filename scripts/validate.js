@@ -55,6 +55,7 @@ class ProjectValidator {
       'config-manager.js',
       'storage-validator.js',
       'data-compressor.js',
+      'default-config.js',
       'popup.html',
       'popup.js',
       'popup.css',

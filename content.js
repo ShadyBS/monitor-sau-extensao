@@ -850,14 +850,9 @@
         return;
       }
 
-      // 2. Validação de fonte mais flexível (permite MAIN world e ISOLATED world)
-      if (event.source !== window && event.source !== window.parent && event.source !== window.top) {
-        contentLogger.debug("Mensagem de fonte externa ignorada", {
-          source: event.source,
-          expected: window,
-          origin: event.origin,
-          type: event.data?.type
-        });
+      // 2. Validação de fonte - deve ser a própria janela (interceptor roda no mesmo contexto)
+      if (event.source !== window) {
+        contentLogger.warn("Mensagem de fonte não autorizada rejeitada");
         return;
       }
 

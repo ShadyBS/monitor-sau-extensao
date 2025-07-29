@@ -3,6 +3,10 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 ## [Unreleased]
 
+### Changed
+
+- **Interface de Configurações de Snooze**: Substituído texto "Remover" por ícone de lixeira (🗑️) nos botões de remoção das opções pré-configuradas de "Lembrar Mais Tarde" para uma interface mais visual e intuitiva
+
 ### Added
 
 - **Verificação Inicial Automática**: Implementada verificação imediata de tarefas na inicialização da extensão. Agora o monitoramento inicia automaticamente após instalação, reinício do navegador ou recarregamento da extensão, sem necessidade de interação manual
