@@ -9,6 +9,9 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - **Sanitização de Dados**: Implementado sistema robusto de sanitização de dados de tarefas com validação de tipos, limitação de tamanho e validação de URLs
 - **Prevenção de Injeção**: Adicionadas funções `sanitizeTaskData()`, `createSafeElement()` e `createSafeTaskItem()` para construção segura de elementos DOM
 
+### Fixed
+- **Rate Limiting de Notificações**: Aumentado cooldown de notificações de 5 para 15 segundos para prevenir spam de notificações e melhorar experiência do usuário
+
 ## [2.1.0] - 2025-07-28
 
 ### Changed

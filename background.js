@@ -57,7 +57,7 @@ let loginTabId = null; // ID da aba de login atualmente aberta (se houver)
 
 // Rate limiting para notificações
 let lastNotificationTime = 0;
-const NOTIFICATION_COOLDOWN = 5000; // 5 segundos entre notificações
+const NOTIFICATION_COOLDOWN = 15000; // 15 segundos entre notificações
 
 /**
  * Carrega os dados persistentes do armazenamento local do Chrome.
