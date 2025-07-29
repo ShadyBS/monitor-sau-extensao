@@ -8,9 +8,11 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - **DOM Manipulation Segura**: Substituído uso inseguro de `innerHTML` por manipulação DOM segura usando `textContent`, `createElement` e `appendChild`
 - **Sanitização de Dados**: Implementado sistema robusto de sanitização de dados de tarefas com validação de tipos, limitação de tamanho e validação de URLs
 - **Prevenção de Injeção**: Adicionadas funções `sanitizeTaskData()`, `createSafeElement()` e `createSafeTaskItem()` para construção segura de elementos DOM
+- **Validação de Mensagens Cross-Frame**: Implementada validação robusta contra injeção de dados maliciosos via mensagens cross-frame com 10 camadas de segurança incluindo validação de timestamp, padrões suspeitos e prevenção de replay attacks
 
 ### Fixed
 - **Rate Limiting de Notificações**: Aumentado cooldown de notificações de 5 para 15 segundos para prevenir spam de notificações e melhorar experiência do usuário
+- **Message Passing Security**: Corrigida validação insuficiente de origem em message passing que permitia contorno de verificações de segurança
 
 ## [2.1.0] - 2025-07-28
 

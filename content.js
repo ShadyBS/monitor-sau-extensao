@@ -688,44 +688,93 @@
     // Adiciona um listener para receber mensagens do script interceptor (que roda no world: MAIN).
     // Esta é a ponte de comunicação para obter os dados do AJAX.
     window.addEventListener("message", (event) => {
-      // Validação de segurança aprimorada
+      // Validação de segurança robusta contra injeção de dados maliciosos
+      
+      // 1. Validação básica de fonte
       if (event.source !== window) {
         contentLogger.warn("Mensagem de fonte não confiável rejeitada");
         return;
       }
 
+      // 2. Validação rigorosa de origem
       if (event.origin !== window.location.origin) {
         contentLogger.warn("Mensagem de origem incorreta rejeitada:", event.origin);
         return;
       }
 
+      // 3. Validação de estrutura de dados
       if (!event.data || typeof event.data !== "object") {
         contentLogger.warn("Dados de mensagem inválidos rejeitados");
         return;
       }
 
-      if (event.data.type === "SAU_TASKS_RESPONSE") {
-        // Validação adicional do conteúdo
-        if (typeof event.data.htmlContent !== "string") {
-          contentLogger.warn("Conteúdo HTML inválido rejeitado");
-          return;
-        }
-
-        // Validação de tamanho (limite de 5MB para prevenir ataques de DoS)
-        if (event.data.htmlContent.length > 5 * 1024 * 1024) {
-          contentLogger.warn("Conteúdo HTML muito grande rejeitado");
-          return;
-        }
-
-        // Validação de timestamp (mensagens não podem ser muito antigas - 30 segundos)
-        if (event.data.timestamp && Date.now() - event.data.timestamp > 30000) {
-          contentLogger.warn("Mensagem muito antiga rejeitada");
-          return;
-        }
-
-        contentLogger.info("Resposta AJAX de tarefas recebida do interceptor.");
-        processTasksHtml(event.data.htmlContent);
+      // 4. Validação de tipo de mensagem específico
+      if (event.data.type !== "SAU_TASKS_RESPONSE") {
+        contentLogger.debug("Tipo de mensagem não reconhecido ignorado:", event.data.type);
+        return;
       }
+
+      // 5. Validação de timestamp obrigatório (previne replay attacks)
+      if (!event.data.timestamp || typeof event.data.timestamp !== "number") {
+        contentLogger.warn("Mensagem sem timestamp válido rejeitada");
+        return;
+      }
+
+      // 6. Validação de janela temporal (mensagens não podem ser muito antigas - 30 segundos)
+      const messageAge = Date.now() - event.data.timestamp;
+      if (messageAge > 30000 || messageAge < 0) {
+        contentLogger.warn(`Mensagem fora da janela temporal rejeitada (idade: ${messageAge}ms)`);
+        return;
+      }
+
+      // 7. Validação de conteúdo HTML
+      if (typeof event.data.htmlContent !== "string") {
+        contentLogger.warn("Conteúdo HTML inválido rejeitado");
+        return;
+      }
+
+      // 8. Validação de tamanho (limite de 5MB para prevenir ataques de DoS)
+      if (event.data.htmlContent.length > 5 * 1024 * 1024) {
+        contentLogger.warn("Conteúdo HTML muito grande rejeitado");
+        return;
+      }
+
+      // 9. Validação de padrões suspeitos no HTML
+      const suspiciousPatterns = [
+        /<script[^>]*>/i,
+        /javascript:/i,
+        /on\w+\s*=/i,
+        /<iframe[^>]*>/i,
+        /<object[^>]*>/i,
+        /<embed[^>]*>/i
+      ];
+      
+      for (const pattern of suspiciousPatterns) {
+        if (pattern.test(event.data.htmlContent)) {
+          contentLogger.warn("Conteúdo HTML com padrões suspeitos rejeitado");
+          return;
+        }
+      }
+
+      // 10. Validação de identificador único da mensagem (previne processamento duplicado)
+      if (event.data.messageId) {
+        const messageId = String(event.data.messageId);
+        const storageKey = `processed_message_${messageId}`;
+        
+        // Verifica se a mensagem já foi processada
+        if (window.sessionStorage && window.sessionStorage.getItem(storageKey)) {
+          contentLogger.warn("Mensagem duplicada rejeitada:", messageId);
+          return;
+        }
+        
+        // Marca a mensagem como processada
+        if (window.sessionStorage) {
+          window.sessionStorage.setItem(storageKey, Date.now().toString());
+        }
+      }
+
+      contentLogger.info("Resposta AJAX de tarefas validada e aceita do interceptor.");
+      processTasksHtml(event.data.htmlContent);
     });
 
     // Configura o MutationObserver como um complemento/fallback para detectar mudanças no DOM
