@@ -736,3 +736,7 @@ function validateTaskData(task) {
 ---
 
 **Última atualização:** 2025-01-23 - Revisada estrutura completa do projeto, atualizados scripts de build/release e adicionadas especificações da arquitetura Monitor SAU.
+
+---
+
+## 🚨 **LIÇÕES CRÍTICAS APRENDIDAS - EDIÇÃO DE CHANGELOG**

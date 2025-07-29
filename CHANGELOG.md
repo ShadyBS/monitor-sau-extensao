@@ -17,6 +17,8 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 ### Fixed
 
+- **Erro Crítico currentSessionTasks.some**: Corrigido erro fatal `Uncaught TypeError: currentSessionTasks.some is not a function` no content.js linha 263 que impedia o funcionamento da extensão no Edge. Implementada validação robusta para garantir que `currentSessionTasks` seja sempre um array válido, incluindo tratamento de dados comprimidos, validação de tipos e fallbacks seguros para dados corrompidos ou em formato inesperado
+
 - **Message Validation - Cross-World Communication**: Corrigido problema onde validação de segurança muito restritiva estava rejeitando mensagens legítimas entre interceptor.js (MAIN world) e content.js (ISOLATED world). Alterada validação de `event.source` para ser mais flexível, permitindo comunicação entre diferentes contextos de execução enquanto mantém segurança através de validação de origem
 - **Console Warnings Reduction**: Reduzidas mensagens de aviso "Mensagem de fonte não confiável rejeitada" no console, alterando nível de log de `warn` para `debug` para mensagens de fontes externas não relacionadas à extensão
 - **Scripts de Build - Arquivos Essenciais**: Corrigido problema crítico onde arquivos essenciais estavam sendo deixados de fora dos ZIPs de distribuição. Adicionados ao script de build:

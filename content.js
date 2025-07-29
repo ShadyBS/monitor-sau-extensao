@@ -704,7 +704,40 @@
     // Carrega as últimas tarefas conhecidas do storage local para a sessão atual do content script.
     // Isso é importante para que o content script não notifique sobre tarefas já vistas na mesma sessão.
     const data = await browserAPI.storage.local.get("lastKnownTasks");
-    currentSessionTasks = data.lastKnownTasks || [];
+    
+    // Validação robusta para garantir que currentSessionTasks seja sempre um array
+    let rawTasks = data.lastKnownTasks;
+    
+    // Se os dados estão em formato comprimido, tenta descomprimir
+    if (rawTasks && typeof rawTasks === 'object' && rawTasks.__compressed) {
+      try {
+        // Simula descompressão básica - em produção seria importado do data-compressor.js
+        rawTasks = JSON.parse(rawTasks.data);
+        contentLogger.debug("Dados de tarefas descomprimidos no content script");
+      } catch (error) {
+        contentLogger.warn("Erro ao descomprimir dados de tarefas:", error);
+        rawTasks = [];
+      }
+    }
+    
+    // Garante que currentSessionTasks seja sempre um array válido
+    if (Array.isArray(rawTasks)) {
+      currentSessionTasks = rawTasks;
+    } else if (rawTasks && typeof rawTasks === 'object') {
+      // Se for um objeto, tenta extrair array de uma propriedade conhecida
+      currentSessionTasks = rawTasks.tasks || rawTasks.data || [];
+      contentLogger.warn("Dados de tarefas em formato inesperado, tentando extrair array");
+    } else {
+      currentSessionTasks = [];
+      contentLogger.warn("Dados de tarefas inválidos, inicializando array vazio");
+    }
+    
+    // Validação final para garantir que é um array
+    if (!Array.isArray(currentSessionTasks)) {
+      contentLogger.error("Falha na validação final: currentSessionTasks não é um array, forçando array vazio");
+      currentSessionTasks = [];
+    }
+    
     contentLogger.info("Tarefas conhecidas na sessão:", currentSessionTasks.length);
 
     // Lida com a tentativa de login automático se a página atual for a de login
