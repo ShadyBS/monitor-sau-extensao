@@ -25,6 +25,7 @@ const CONFIG = {
     'config-manager.js',
     'sigss-tab-renamer.js',
     'storage-validator.js',
+    'data-compressor.js',
     'popup.html',
     'popup.js',
     'popup.css',

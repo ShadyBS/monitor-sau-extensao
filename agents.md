@@ -46,10 +46,13 @@ Esta é uma **extensão para navegador** (Chrome e Firefox) com estrutura espec�
 ├── background.js              # Service Worker principal (Manifest V3)
 ├── content.js                 # Script injetado nas páginas do SAU
 ├── content-sigss.js           # Script injetado nas páginas do SIGSS
+├── content-backup.js          # Script de backup do content script
 ├── interceptor.js             # Interceptador de requisições
 ├── sanitizer.js               # Utilitários de segurança e sanitização
 ├── logger.js                  # Sistema de logging centralizado
 ├── config-manager.js          # Gerenciamento de configurações
+├── storage-validator.js       # Validação de limites de storage
+├── data-compressor.js         # Sistema de compressão de dados
 ├── tooltip-system.js          # Sistema de tooltips
 ├── sigss-tab-renamer.js       # Renomeação de abas SIGSS
 ├── popup.html/js/css          # Interface do popup

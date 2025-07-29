@@ -281,3 +281,14 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - Implementados estilos responsivos para botões de ajuda em options.css
 - Integrado sistema de tooltips existente para fornecer ajuda contextual
 - Expandida documentação sobre funcionalidade SIGSS no help.html
+
+### Added
+
+- **Script de Verificação de Integridade**: Novo script \
+pm run integrity\ que verifica se todos os arquivos necessários estão incluídos no build, valida imports, sincronização de manifests e scripts do package.json. Garante que o projeto esteja íntegro antes de builds e releases
+
+### Changed
+
+- **Scripts de Build - Arquivo data-compressor.js**: Adicionado \data-compressor.js\ à lista de arquivos do build.js que estava faltando, garantindo que o sistema de compressão seja incluído nos ZIPs de distribuição
+- **Scripts de Validação - Arquivos Novos**: Atualizados scripts de validação para incluir verificação de todos os novos arquivos críticos: \content-sigss.js\, \storage-validator.js\, \data-compressor.js\, \help.html/js/css\ e outros módulos essenciais
+- **Documentação agents.md - Estrutura Atualizada**: Atualizada estrutura do projeto no \gents.md\ para refletir todos os novos arquivos incluindo \data-compressor.js\, \storage-validator.js\, \content-backup.js\ e outros módulos implementados recentemente
