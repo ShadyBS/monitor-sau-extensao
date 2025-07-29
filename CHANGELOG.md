@@ -11,6 +11,7 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - **Validação de Mensagens Cross-Frame**: Implementada validação robusta contra injeção de dados maliciosos via mensagens cross-frame com 10 camadas de segurança incluindo validação de timestamp, padrões suspeitos e prevenção de replay attacks
 
 ### Fixed
+- **Performance - Processamento de Tarefas**: Otimizado processamento de tarefas em `handleNewTasks()` para evitar bloqueio do Service Worker através de processamento em lotes paralelos e yield control
 - **Rate Limiting de Notificações**: Aumentado cooldown de notificações de 5 para 15 segundos para prevenir spam de notificações e melhorar experiência do usuário
 - **Message Passing Security**: Corrigida validação insuficiente de origem em message passing que permitia contorno de verificações de segurança
 

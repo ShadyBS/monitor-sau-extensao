@@ -747,6 +747,7 @@ function performantDeepCopy(obj) {
 /**
  * Lida com as novas tarefas recebidas do content script.
  * Filtra, notifica o usuário e atualiza o estado persistente da extensão.
+ * Otimizado para processamento paralelo para evitar bloqueio do Service Worker.
  * @param {Array<Object>} newTasks - Um array de objetos de tarefa recém-encontradas.
  */
 async function handleNewTasks(newTasks) {
@@ -792,61 +793,75 @@ async function handleNewTasks(newTasks) {
     })
   );
 
-  // Processa resultados das verificações
-  for (const check of renotificationChecks) {
-    const {
-      newTask,
-      taskId,
-      isAlreadyKnown,
-      isAlreadyKnownIndex,
-      isIgnored,
-      isSnoozed,
-      isOpened,
-      shouldRenotify,
-    } = check;
+  // Processa resultados das verificações de forma otimizada
+  // Usa processamento em lotes para evitar bloqueio do Service Worker
+  const BATCH_SIZE = 10; // Processa até 10 tarefas por vez
+  for (let i = 0; i < renotificationChecks.length; i += BATCH_SIZE) {
+    const batch = renotificationChecks.slice(i, i + BATCH_SIZE);
+    
+    // Processa lote atual em paralelo
+    await Promise.all(
+      batch.map(async (check) => {
+        const {
+          newTask,
+          taskId,
+          isAlreadyKnown,
+          isAlreadyKnownIndex,
+          isIgnored,
+          isSnoozed,
+          isOpened,
+          shouldRenotify,
+        } = check;
 
-    backgroundLogger.debug(
-      `Processando tarefa ${taskId}: isAlreadyKnown=${isAlreadyKnown}, isIgnored=${isIgnored}, isSnoozed=${isSnoozed}, isOpened=${isOpened}`
+        backgroundLogger.debug(
+          `Processando tarefa ${taskId}: isAlreadyKnown=${isAlreadyKnown}, isIgnored=${isIgnored}, isSnoozed=${isSnoozed}, isOpened=${isOpened}`
+        );
+
+        if (!isAlreadyKnown) {
+          // Se a tarefa não é conhecida, adiciona-a à lista de tarefas a serem notificadas
+          // e também à lista de tarefas conhecidas.
+          tasksToNotify.push(newTask);
+          const now = Date.now();
+          updatedLastKnownTasks.push({
+            ...newTask,
+            lastNotifiedTimestamp: now,
+          }); // Adiciona timestamp
+          taskNotificationTimestamps[taskId] = now; // Registra timestamp de notificação
+          backgroundLogger.debug(`Tarefa ${taskId} é nova e será notificada.`);
+        } else {
+          // Se a tarefa já é conhecida, atualiza seus detalhes se for necessário (ex: posição, descrição)
+          // E verifica se deve ser re-notificada
+          const existingTask = updatedLastKnownTasks[isAlreadyKnownIndex];
+          // Atualiza os detalhes da tarefa existente com os novos dados, exceto o ID e o timestamp
+          Object.assign(existingTask, {
+            ...newTask,
+            id: existingTask.id,
+            lastNotifiedTimestamp: existingTask.lastNotifiedTimestamp,
+          });
+
+          // Lógica para re-notificar tarefas pendentes
+          if (!isIgnored && !isSnoozed && !isOpened) {
+            if (shouldRenotify) {
+              tasksToNotify.push(newTask);
+              taskNotificationTimestamps[taskId] = Date.now(); // Atualiza timestamp da renotificação
+              backgroundLogger.debug(`Tarefa ${taskId} será renotificada.`);
+            } else {
+              backgroundLogger.debug(
+                `Tarefa ${taskId} já conhecida, não ignorada, não snoozed e não aberta. Será considerada para o badge.`
+              );
+            }
+          } else {
+            backgroundLogger.debug(
+              `Tarefa ${taskId} já conhecida e está ignorada, snoozed ou aberta.`
+            );
+          }
+        }
+      })
     );
 
-    if (!isAlreadyKnown) {
-      // Se a tarefa não é conhecida, adiciona-a à lista de tarefas a serem notificadas
-      // e também à lista de tarefas conhecidas.
-      tasksToNotify.push(newTask);
-      const now = Date.now();
-      updatedLastKnownTasks.push({
-        ...newTask,
-        lastNotifiedTimestamp: now,
-      }); // Adiciona timestamp
-      taskNotificationTimestamps[taskId] = now; // Registra timestamp de notificação
-      backgroundLogger.debug(`Tarefa ${taskId} é nova e será notificada.`);
-    } else {
-      // Se a tarefa já é conhecida, atualiza seus detalhes se for necessário (ex: posição, descrição)
-      // E verifica se deve ser re-notificada
-      const existingTask = updatedLastKnownTasks[isAlreadyKnownIndex];
-      // Atualiza os detalhes da tarefa existente com os novos dados, exceto o ID e o timestamp
-      Object.assign(existingTask, {
-        ...newTask,
-        id: existingTask.id,
-        lastNotifiedTimestamp: existingTask.lastNotifiedTimestamp,
-      });
-
-      // Lógica para re-notificar tarefas pendentes
-      if (!isIgnored && !isSnoozed && !isOpened) {
-        if (shouldRenotify) {
-          tasksToNotify.push(newTask);
-          taskNotificationTimestamps[taskId] = Date.now(); // Atualiza timestamp da renotificação
-          backgroundLogger.debug(`Tarefa ${taskId} será renotificada.`);
-        } else {
-          backgroundLogger.debug(
-            `Tarefa ${taskId} já conhecida, não ignorada, não snoozed e não aberta. Será considerada para o badge.`
-          );
-        }
-      } else {
-        backgroundLogger.debug(
-          `Tarefa ${taskId} já conhecida e está ignorada, snoozed ou aberta.`
-        );
-      }
+    // Yield control para evitar bloqueio do Service Worker em lotes grandes
+    if (i + BATCH_SIZE < renotificationChecks.length) {
+      await new Promise(resolve => setTimeout(resolve, 0));
     }
   }
 
@@ -896,48 +911,54 @@ async function handleNewTasks(newTasks) {
       );
     }
 
-    // Envia uma mensagem para o popup (se aberto) para que ele possa atualizar sua lista de tarefas
-    try {
+    // Processa notificações de forma assíncrona e paralela
+    const notificationPromises = [
+      // Envia uma mensagem para o popup (se aberto) para que ele possa atualizar sua lista de tarefas
       browserAPI.runtime.sendMessage({
         action: "updatePopup",
         newTasks: tasksToNotify,
         message: `Novas tarefas encontradas: ${tasksToNotify.length}`,
-      });
-    } catch (error) {
-      // Popup pode não estar aberto, isso é normal
-      backgroundLogger.debug(
-        "Popup não está aberto para receber atualização:",
-        error.message
-      );
-    }
-
-    // Tenta enviar uma mensagem para a aba ativa do SAU para exibir a UI de notificação visual
-    const [activeSauTab] = await browserAPI.tabs.query({
-      active: true,
-      currentWindow: true,
-      url: "https://egov.santos.sp.gov.br/sau/*",
-    });
-    if (activeSauTab) {
-      try {
-        await browserAPI.tabs.sendMessage(activeSauTab.id, {
-          action: "showNotificationUI",
-          tasks: tasksToNotify,
-        });
-        backgroundLogger.info(
-          "Comando para injetar UI de notificação enviado para content script."
-        );
-      } catch (error) {
-        backgroundLogger.error(
-          "Erro ao injetar UI de notificação visual:",
+      }).catch(error => {
+        // Popup pode não estar aberto, isso é normal
+        backgroundLogger.debug(
+          "Popup não está aberto para receber atualização:",
           error.message
         );
-      }
-    }
+      }),
+
+      // Tenta enviar uma mensagem para a aba ativa do SAU para exibir a UI de notificação visual
+      (async () => {
+        try {
+          const [activeSauTab] = await browserAPI.tabs.query({
+            active: true,
+            currentWindow: true,
+            url: "https://egov.santos.sp.gov.br/sau/*",
+          });
+          if (activeSauTab) {
+            await browserAPI.tabs.sendMessage(activeSauTab.id, {
+              action: "showNotificationUI",
+              tasks: tasksToNotify,
+            });
+            backgroundLogger.info(
+              "Comando para injetar UI de notificação enviado para content script."
+            );
+          }
+        } catch (error) {
+          backgroundLogger.error(
+            "Erro ao injetar UI de notificação visual:",
+            error.message
+          );
+        }
+      })()
+    ];
+
+    // Executa todas as notificações em paralelo sem bloquear
+    await Promise.allSettled(notificationPromises);
   } else {
     backgroundLogger.info("Nenhuma tarefa nova para notificar.");
     // Se não houver tarefas novas, ainda assim atualiza o popup para indicar que a verificação ocorreu
     try {
-      browserAPI.runtime.sendMessage({
+      await browserAPI.runtime.sendMessage({
         action: "updatePopup",
         newTasks: [], // Nenhuma tarefa nova
         message: `Nenhuma tarefa nova. Última verificação: ${new Date(
