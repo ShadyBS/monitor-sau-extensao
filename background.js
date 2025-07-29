@@ -453,23 +453,41 @@ browserAPI.runtime.onMessage.addListener(async (request, sender, sendResponse) =
     case "getLatestTasks":
       // Garante que os dados persistentes estejam carregados antes de responder
       loadPersistentData().then(() => {
-        const currentPendingTasks = lastKnownTasks.filter(
-          (task) =>
-            !ignoredTasks[task.id] &&
-            !openedTasks[task.id] && // Filtra tarefas abertas
-            (!snoozedTasks[task.id] || snoozedTasks[task.id] <= Date.now())
-        );
-        backgroundLogger.debug(
-          "Retornando últimas tarefas para popup:",
-          currentPendingTasks.length,
-          currentPendingTasks
-        );
+        try {
+          const currentPendingTasks = lastKnownTasks.filter(
+            (task) =>
+              !ignoredTasks[task.id] &&
+              !openedTasks[task.id] && // Filtra tarefas abertas
+              (!snoozedTasks[task.id] || snoozedTasks[task.id] <= Date.now())
+          );
+          backgroundLogger.debug(
+            "Retornando últimas tarefas para popup:",
+            currentPendingTasks.length,
+            currentPendingTasks
+          );
+          sendResponse({
+            newTasks: currentPendingTasks || [],
+            message: `Última verificação: ${new Date(
+              lastCheckTimestamp
+            ).toLocaleTimeString()}`,
+            lastCheck: lastCheckTimestamp,
+          });
+        } catch (error) {
+          backgroundLogger.error("Erro ao processar getLatestTasks:", error);
+          sendResponse({
+            newTasks: [],
+            message: "Erro ao carregar tarefas",
+            lastCheck: lastCheckTimestamp,
+            error: error.message
+          });
+        }
+      }).catch((loadError) => {
+        backgroundLogger.error("Erro ao carregar dados persistentes para getLatestTasks:", loadError);
         sendResponse({
-          newTasks: currentPendingTasks,
-          message: `Última verificação: ${new Date(
-            lastCheckTimestamp
-          ).toLocaleTimeString()}`,
-          lastCheck: lastCheckTimestamp,
+          newTasks: [],
+          message: "Erro ao carregar dados",
+          lastCheck: 0,
+          error: loadError.message
         });
       });
       return true; // Indica que a resposta será enviada de forma assíncrona

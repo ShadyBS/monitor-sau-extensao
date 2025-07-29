@@ -288,3 +288,6 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - Implementados estilos responsivos para botões de ajuda em options.css
 - Integrado sistema de tooltips existente para fornecer ajuda contextual
 - Expandida documentação sobre funcionalidade SIGSS no help.html
+- **Erro de Logging no Popup**: Corrigido erro crítico onde objetos de erro eram logados como \[object Object]\ no popup.js linha 162, dificultando diagnóstico de problemas. Implementado sistema robusto de logging de erros que extrai mensagem, stack trace e detalhes do erro de forma legível. Adicionado timeout de 10 segundos para comunicação com background script para evitar travamentos indefinidos
+- **Tratamento de Erros no Background**: Melhorado tratamento de erros no caso \getLatestTasks\ do background script com try-catch robusto e respostas estruturadas que incluem informações de erro detalhadas para facilitar debugging
+- **Comunicação Popup-Background**: Implementado sistema de timeout e retry para comunicação entre popup e background script, prevenindo travamentos quando service worker está ocupado ou não responsivo

@@ -70,9 +70,18 @@ function log(levelName, levelValue, prefix, ...args) {
     level: levelName,
     prefix: prefix,
     message: args
-      .map((arg) =>
-        typeof arg === "object" ? JSON.stringify(arg) : String(arg)
-      )
+      .map((arg) => {
+        if (arg instanceof Error) {
+          return JSON.stringify({
+            message: arg.message,
+            stack: arg.stack,
+          });
+        }
+        if (typeof arg === "object" && arg !== null) {
+          return JSON.stringify(arg);
+        }
+        return String(arg);
+      })
       .join(" "),
   };
   logBuffer.push(logEntry);

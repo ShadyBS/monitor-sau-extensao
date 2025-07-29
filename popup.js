@@ -22,20 +22,31 @@ document.addEventListener("DOMContentLoaded", initializePopup);
  */
 async function getDisplaySettings() {
   try {
-    await popupLogger.info("getDisplaySettings: Iniciando carregamento de configurações de exibição");
-    
+    await popupLogger.info(
+      "getDisplaySettings: Iniciando carregamento de configurações de exibição"
+    );
+
     // Fallback temporário: usa storage direto se config-manager falhar
     let taskDisplaySettings;
     try {
       taskDisplaySettings = await getConfig("taskDisplaySettings");
-      await popupLogger.info("getDisplaySettings: Configurações carregadas via config-manager:", taskDisplaySettings);
+      await popupLogger.info(
+        "getDisplaySettings: Configurações carregadas via config-manager:",
+        taskDisplaySettings
+      );
     } catch (configError) {
-      await popupLogger.warn("getDisplaySettings: Erro no config-manager, usando storage direto:", configError);
+      await popupLogger.warn(
+        "getDisplaySettings: Erro no config-manager, usando storage direto:",
+        configError
+      );
       const data = await browserAPI.storage.local.get(["taskDisplaySettings"]);
       taskDisplaySettings = data.taskDisplaySettings;
-      await popupLogger.info("getDisplaySettings: Configurações carregadas via storage direto:", taskDisplaySettings);
+      await popupLogger.info(
+        "getDisplaySettings: Configurações carregadas via storage direto:",
+        taskDisplaySettings
+      );
     }
-    
+
     if (taskDisplaySettings && taskDisplaySettings.headerFields) {
       return taskDisplaySettings.headerFields;
     } else {
@@ -48,11 +59,17 @@ async function getDisplaySettings() {
         solicitante: false,
         unidade: false,
       };
-      await popupLogger.info("getDisplaySettings: Usando configurações padrão:", defaultSettings);
+      await popupLogger.info(
+        "getDisplaySettings: Usando configurações padrão:",
+        defaultSettings
+      );
       return defaultSettings;
     }
   } catch (error) {
-    await popupLogger.error("getDisplaySettings: Erro ao carregar configurações:", error);
+    await popupLogger.error(
+      "getDisplaySettings: Erro ao carregar configurações:",
+      error
+    );
     await popupLogger.error(
       "Erro ao carregar configurações de exibição:",
       error
@@ -109,19 +126,24 @@ async function getSnoozeSettings() {
 async function loadPopupData() {
   await popupLogger.info("Carregando dados iniciais do popup...");
   try {
-    // Solicita ao background script as últimas tarefas e o status usando Promise
-    const response = await new Promise((resolve, reject) => {
-      browserAPI.runtime.sendMessage(
-        { action: "getLatestTasks" },
-        (response) => {
-          if (browserAPI.runtime.lastError) {
-            reject(browserAPI.runtime.lastError);
-          } else {
-            resolve(response);
+    // Solicita ao background script as últimas tarefas e o status usando Promise com timeout
+    const response = await Promise.race([
+      new Promise((resolve, reject) => {
+        browserAPI.runtime.sendMessage(
+          { action: "getLatestTasks" },
+          (response) => {
+            if (browserAPI.runtime.lastError) {
+              reject(browserAPI.runtime.lastError);
+            } else {
+              resolve(response);
+            }
           }
-        }
-      );
-    });
+        );
+      }),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Timeout ao comunicar com background script")), 10000)
+      )
+    ]);
 
     if (response) {
       await popupLogger.debug(
@@ -142,7 +164,17 @@ async function loadPopupData() {
         "Nenhuma tarefa nova.";
     }
   } catch (error) {
-    await popupLogger.error("Erro ao carregar dados do popup:", error);
+    // Melhora o logging do erro para evitar [object Object]
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorDetails = error instanceof Error ? error.stack : error;
+    
+    await popupLogger.error("Erro ao carregar dados do popup:", {
+      message: errorMessage,
+      details: errorDetails,
+      type: typeof error,
+      error: error
+    });
+    
     document.getElementById("status-message").textContent =
       "Erro ao carregar dados. Tente atualizar.";
   }
@@ -161,9 +193,13 @@ async function displayTasks(tasks, displaySettings = null) {
 
   // Se não houver tarefas, exibe uma mensagem
   if (tasks.length === 0) {
-    const noTasksP = await createSafeElement("p", "Nenhuma tarefa nova encontrada.", {
-      class: "no-tasks",
-    });
+    const noTasksP = await createSafeElement(
+      "p",
+      "Nenhuma tarefa nova encontrada.",
+      {
+        class: "no-tasks",
+      }
+    );
     tasksList.appendChild(noTasksP);
     await popupLogger.info("Nenhuma tarefa para exibir no popup.");
     return;
@@ -193,7 +229,10 @@ async function displayTasks(tasks, displaySettings = null) {
     }
 
     // Cria o elemento da tarefa de forma segura
-    const taskElement = await createSafeTaskElement(sanitizedTask, displaySettings);
+    const taskElement = await createSafeTaskElement(
+      sanitizedTask,
+      displaySettings
+    );
     tasksList.appendChild(taskElement);
 
     // Adiciona event listeners para os botões de ação de cada tarefa
@@ -434,9 +473,13 @@ async function applySnooze(taskId, minutes) {
   // Se não houver mais tarefas, exibe a mensagem de "nenhuma tarefa"
   const tasksList = document.getElementById("tasks-list");
   if (tasksList.children.length === 0) {
-    const noTasksP = await createSafeElement("p", "Nenhuma tarefa nova encontrada.", {
-      class: "no-tasks",
-    });
+    const noTasksP = await createSafeElement(
+      "p",
+      "Nenhuma tarefa nova encontrada.",
+      {
+        class: "no-tasks",
+      }
+    );
     tasksList.appendChild(noTasksP);
     await popupLogger.info("Todas as tarefas removidas do popup após snoozar.");
   }
@@ -493,9 +536,9 @@ async function initializePopup() {
   } catch (error) {
     await popupLogger.error("Erro crítico na inicialização do popup:", error);
     await popupLogger.error("Erro crítico na inicialização do popup:", error);
-    
+
     // Fallback: mostra mensagem de erro para o usuário
-    document.getElementById("status-message").textContent = 
+    document.getElementById("status-message").textContent =
       "Erro ao inicializar popup. Verifique o log para detalhes.";
   }
 }
@@ -629,12 +672,15 @@ async function checkFirstTimeUser() {
         "sauUsername", // Verifica se já configurou credenciais
       ]);
     } catch (configError) {
-      await popupLogger.warn("checkFirstTimeUser: Erro no config-manager, usando storage direto:", configError);
+      await popupLogger.warn(
+        "checkFirstTimeUser: Erro no config-manager, usando storage direto:",
+        configError
+      );
       data = await browserAPI.storage.local.get([
         "helpTourCompleted",
-        "firstTimeUser", 
+        "firstTimeUser",
         "helpDismissed",
-        "sauUsername"
+        "sauUsername",
       ]);
     }
 
