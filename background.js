@@ -432,7 +432,7 @@ browserAPI.alarms.onAlarm.addListener(async (alarm) => {
  * Gerencia ações como atualizar o alarme, iniciar verificação manual,
  * obter últimas tarefas, ignorar/snooze tarefas, lidar com novas tarefas encontradas e obter logs.
  */
-browserAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
+browserAPI.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
   backgroundLogger.debug("Mensagem recebida no background:", request);
 
   switch (request.action) {
