@@ -11,6 +11,11 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - **Validação de Mensagens Cross-Frame**: Implementada validação robusta contra injeção de dados maliciosos via mensagens cross-frame com 10 camadas de segurança incluindo validação de timestamp, padrões suspeitos e prevenção de replay attacks
 
 ### Fixed
+- **Memory Leak - MutationObserver**: Corrigido vazamento de memória crítico onde MutationObserver não era desconectado quando página era fechada, causando acúmulo de recursos em sessões longas
+- **Cleanup Automático**: Implementado sistema automático de limpeza de recursos com listeners para `beforeunload` e `visibilitychange` para garantir desconexão adequada do MutationObserver
+- **Gestão de Recursos**: Adicionada variável global `globalMutationObserver` para rastreamento e cleanup adequado da instância do observer
+- **Prevenção de Vazamentos**: Implementada função `cleanupMutationObserver()` que desconecta observer e limpa timeouts pendentes
+- **Reconfiguração Inteligente**: Sistema agora reconfigura automaticamente o MutationObserver quando página volta a ficar visível após estar oculta
 - **Performance - Processamento de Tarefas**: Otimizado processamento de tarefas em `handleNewTasks()` para evitar bloqueio do Service Worker através de processamento em lotes paralelos e yield control
 - **Rate Limiting de Notificações**: Aumentado cooldown de notificações de 5 para 15 segundos para prevenir spam de notificações e melhorar experiência do usuário
 - **Message Passing Security**: Corrigida validação insuficiente de origem em message passing que permitia contorno de verificações de segurança
@@ -23,9 +28,19 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - **Botões de Ajuda**: Consolidado os botões de ajuda na página de opções, substituindo múltiplos botões por um único botão por seção para uma interface mais limpa.
 
 ### Fixed
+- **Memory Leak - MutationObserver**: Corrigido vazamento de memória crítico onde MutationObserver não era desconectado quando página era fechada, causando acúmulo de recursos em sessões longas
+- **Cleanup Automático**: Implementado sistema automático de limpeza de recursos com listeners para `beforeunload` e `visibilitychange` para garantir desconexão adequada do MutationObserver
+- **Gestão de Recursos**: Adicionada variável global `globalMutationObserver` para rastreamento e cleanup adequado da instância do observer
+- **Prevenção de Vazamentos**: Implementada função `cleanupMutationObserver()` que desconecta observer e limpa timeouts pendentes
+- **Reconfiguração Inteligente**: Sistema agora reconfigura automaticamente o MutationObserver quando página volta a ficar visível após estar oculta
 - **Alinhamento de Checkbox**: Corrigido o problema de quebra de linha entre o checkbox e o texto na opção "Permitir tempo personalizado".## [2.0.0] - 2025-07-28
 
 ### Fixed
+- **Memory Leak - MutationObserver**: Corrigido vazamento de memória crítico onde MutationObserver não era desconectado quando página era fechada, causando acúmulo de recursos em sessões longas
+- **Cleanup Automático**: Implementado sistema automático de limpeza de recursos com listeners para `beforeunload` e `visibilitychange` para garantir desconexão adequada do MutationObserver
+- **Gestão de Recursos**: Adicionada variável global `globalMutationObserver` para rastreamento e cleanup adequado da instância do observer
+- **Prevenção de Vazamentos**: Implementada função `cleanupMutationObserver()` que desconecta observer e limpa timeouts pendentes
+- **Reconfiguração Inteligente**: Sistema agora reconfigura automaticamente o MutationObserver quando página volta a ficar visível após estar oculta
 - **Background Script Error**: Corrigido erro crítico `ReferenceError: tabId is not defined` na linha 1043 do background.js que impedia a injeção correta de content scripts
 - **SIGSS Tab Renaming**: Corrigido problema onde títulos das abas do SIGSS não estavam sendo renomeados devido a falta de injeção do content script apropriado
 - **WebNavigation Listener**: Adicionado suporte para páginas do SIGSS no listener de navegação, permitindo injeção automática do content-sigss.js
@@ -54,6 +69,11 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - **Manutenibilidade**: Cada funcionalidade agora tem seu próprio arquivo, facilitando manutenção e testes
 
 ### Fixed
+- **Memory Leak - MutationObserver**: Corrigido vazamento de memória crítico onde MutationObserver não era desconectado quando página era fechada, causando acúmulo de recursos em sessões longas
+- **Cleanup Automático**: Implementado sistema automático de limpeza de recursos com listeners para `beforeunload` e `visibilitychange` para garantir desconexão adequada do MutationObserver
+- **Gestão de Recursos**: Adicionada variável global `globalMutationObserver` para rastreamento e cleanup adequado da instância do observer
+- **Prevenção de Vazamentos**: Implementada função `cleanupMutationObserver()` que desconecta observer e limpa timeouts pendentes
+- **Reconfiguração Inteligente**: Sistema agora reconfigura automaticamente o MutationObserver quando página volta a ficar visível após estar oculta
 - **Sincronização de Versões**: Corrigida discrepância entre versões do package.json e manifests para release v1.1.5## [1.1.5] - 2025-01-28
 
 ### Changed
@@ -62,6 +82,11 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - **Manutenibilidade**: Cada funcionalidade agora tem seu próprio arquivo, facilitando manutenção e testes
 
 ### Fixed
+- **Memory Leak - MutationObserver**: Corrigido vazamento de memória crítico onde MutationObserver não era desconectado quando página era fechada, causando acúmulo de recursos em sessões longas
+- **Cleanup Automático**: Implementado sistema automático de limpeza de recursos com listeners para `beforeunload` e `visibilitychange` para garantir desconexão adequada do MutationObserver
+- **Gestão de Recursos**: Adicionada variável global `globalMutationObserver` para rastreamento e cleanup adequado da instância do observer
+- **Prevenção de Vazamentos**: Implementada função `cleanupMutationObserver()` que desconecta observer e limpa timeouts pendentes
+- **Reconfiguração Inteligente**: Sistema agora reconfigura automaticamente o MutationObserver quando página volta a ficar visível após estar oculta
 - **Build Script Missing File**: Corrigido problema crítico onde popup funcionava no modo desenvolvimento mas falhava no ZIP empacotado devido ao arquivo config-manager.js não estar incluído na lista sourceFiles do script de build
 - **Syntax Error (Popup)**: Corrigido erro de sintaxe "Unexpected token ')'" no popup.js linha 251, causado por parêntese extra no final da função displayTasks
 - **Comunicação Popup-Background**: Corrigido erro "Could not establish connection. Receiving end does not exist" adicionando return true nos message listeners que usam sendResponse
@@ -95,6 +120,11 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - **Manutenibilidade**: Cada funcionalidade agora tem seu próprio arquivo, facilitando manutenção e testes
 
 ### Fixed
+- **Memory Leak - MutationObserver**: Corrigido vazamento de memória crítico onde MutationObserver não era desconectado quando página era fechada, causando acúmulo de recursos em sessões longas
+- **Cleanup Automático**: Implementado sistema automático de limpeza de recursos com listeners para `beforeunload` e `visibilitychange` para garantir desconexão adequada do MutationObserver
+- **Gestão de Recursos**: Adicionada variável global `globalMutationObserver` para rastreamento e cleanup adequado da instância do observer
+- **Prevenção de Vazamentos**: Implementada função `cleanupMutationObserver()` que desconecta observer e limpa timeouts pendentes
+- **Reconfiguração Inteligente**: Sistema agora reconfigura automaticamente o MutationObserver quando página volta a ficar visível após estar oculta
 - **Config Manager**: Adicionada configuração `enableSigssTabRename` ao DEFAULT_CONFIG para garantir valor padrão correto
 - **Manifest Permissions**: Adicionadas permissões para URLs do SIGSS (c1863prd.cloudmv.com.br e c1863tst1.cloudmv.com.br) nos manifests Chrome e Firefox
 
@@ -118,6 +148,11 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - **Manutenibilidade**: Cada funcionalidade agora tem seu próprio arquivo, facilitando manutenção e testes
 
 ### Fixed
+- **Memory Leak - MutationObserver**: Corrigido vazamento de memória crítico onde MutationObserver não era desconectado quando página era fechada, causando acúmulo de recursos em sessões longas
+- **Cleanup Automático**: Implementado sistema automático de limpeza de recursos com listeners para `beforeunload` e `visibilitychange` para garantir desconexão adequada do MutationObserver
+- **Gestão de Recursos**: Adicionada variável global `globalMutationObserver` para rastreamento e cleanup adequado da instância do observer
+- **Prevenção de Vazamentos**: Implementada função `cleanupMutationObserver()` que desconecta observer e limpa timeouts pendentes
+- **Reconfiguração Inteligente**: Sistema agora reconfigura automaticamente o MutationObserver quando página volta a ficar visível após estar oculta
 
 - **Timeout para Abas Travadas**: Implementado sistema de timeout para detectar e lidar com abas do SAU que ficam não responsivas
 - **Verificação de Responsividade**: Adicionada verificação de ping para detectar se abas estão travadas antes de tentar operações
@@ -139,6 +174,11 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - **Manutenibilidade**: Cada funcionalidade agora tem seu próprio arquivo, facilitando manutenção e testes
 
 ### Fixed
+- **Memory Leak - MutationObserver**: Corrigido vazamento de memória crítico onde MutationObserver não era desconectado quando página era fechada, causando acúmulo de recursos em sessões longas
+- **Cleanup Automático**: Implementado sistema automático de limpeza de recursos com listeners para `beforeunload` e `visibilitychange` para garantir desconexão adequada do MutationObserver
+- **Gestão de Recursos**: Adicionada variável global `globalMutationObserver` para rastreamento e cleanup adequado da instância do observer
+- **Prevenção de Vazamentos**: Implementada função `cleanupMutationObserver()` que desconecta observer e limpa timeouts pendentes
+- **Reconfiguração Inteligente**: Sistema agora reconfigura automaticamente o MutationObserver quando página volta a ficar visível após estar oculta
 - **Config Manager**: Adicionada configuração `enableSigssTabRename` ao DEFAULT_CONFIG para garantir valor padrão correto
 - **Manifest Permissions**: Adicionadas permissões para URLs do SIGSS (c1863prd.cloudmv.com.br e c1863tst1.cloudmv.com.br) nos manifests Chrome e Firefox
 
@@ -157,6 +197,11 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - **Manutenibilidade**: Cada funcionalidade agora tem seu próprio arquivo, facilitando manutenção e testes
 
 ### Fixed
+- **Memory Leak - MutationObserver**: Corrigido vazamento de memória crítico onde MutationObserver não era desconectado quando página era fechada, causando acúmulo de recursos em sessões longas
+- **Cleanup Automático**: Implementado sistema automático de limpeza de recursos com listeners para `beforeunload` e `visibilitychange` para garantir desconexão adequada do MutationObserver
+- **Gestão de Recursos**: Adicionada variável global `globalMutationObserver` para rastreamento e cleanup adequado da instância do observer
+- **Prevenção de Vazamentos**: Implementada função `cleanupMutationObserver()` que desconecta observer e limpa timeouts pendentes
+- **Reconfiguração Inteligente**: Sistema agora reconfigura automaticamente o MutationObserver quando página volta a ficar visível após estar oculta
 
 - **Erro de Módulo em Content Script**: Corrigido o erro `Uncaught SyntaxError: Cannot use import statement outside a module` em `content.js`. A tentativa de usar `import` para o logger foi revertida devido a limitações na injeção de scripts como módulos. O `content.js` voltará a usar `console.*` para logs, com uma nota técnica explicando a limitação.
 
@@ -168,6 +213,11 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - **Manutenibilidade**: Cada funcionalidade agora tem seu próprio arquivo, facilitando manutenção e testes
 
 ### Fixed
+- **Memory Leak - MutationObserver**: Corrigido vazamento de memória crítico onde MutationObserver não era desconectado quando página era fechada, causando acúmulo de recursos em sessões longas
+- **Cleanup Automático**: Implementado sistema automático de limpeza de recursos com listeners para `beforeunload` e `visibilitychange` para garantir desconexão adequada do MutationObserver
+- **Gestão de Recursos**: Adicionada variável global `globalMutationObserver` para rastreamento e cleanup adequado da instância do observer
+- **Prevenção de Vazamentos**: Implementada função `cleanupMutationObserver()` que desconecta observer e limpa timeouts pendentes
+- **Reconfiguração Inteligente**: Sistema agora reconfigura automaticamente o MutationObserver quando página volta a ficar visível após estar oculta
 
 - **Padronização de Logs**: Refatorados `background.js` e `content.js` para usar o sistema de logging centralizado (`logger.js`) em vez de `console.log`, `console.warn` e `console.error`, alinhando com as boas práticas do projeto.
 - **Múltiplas Abas de Login**: Corrigido problema crítico onde extensão abria nova aba do SAU a cada verificação quando usuário não tinha credenciais salvas
@@ -187,6 +237,11 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - **Manutenibilidade**: Cada funcionalidade agora tem seu próprio arquivo, facilitando manutenção e testes
 
 ### Fixed
+- **Memory Leak - MutationObserver**: Corrigido vazamento de memória crítico onde MutationObserver não era desconectado quando página era fechada, causando acúmulo de recursos em sessões longas
+- **Cleanup Automático**: Implementado sistema automático de limpeza de recursos com listeners para `beforeunload` e `visibilitychange` para garantir desconexão adequada do MutationObserver
+- **Gestão de Recursos**: Adicionada variável global `globalMutationObserver` para rastreamento e cleanup adequado da instância do observer
+- **Prevenção de Vazamentos**: Implementada função `cleanupMutationObserver()` que desconecta observer e limpa timeouts pendentes
+- **Reconfiguração Inteligente**: Sistema agora reconfigura automaticamente o MutationObserver quando página volta a ficar visível após estar oculta
 - **Config Manager**: Adicionada configuração `enableSigssTabRename` ao DEFAULT_CONFIG para garantir valor padrão correto
 - **Manifest Permissions**: Adicionadas permissões para URLs do SIGSS (c1863prd.cloudmv.com.br e c1863tst1.cloudmv.com.br) nos manifests Chrome e Firefox
 
@@ -206,6 +261,11 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - **Manutenibilidade**: Cada funcionalidade agora tem seu próprio arquivo, facilitando manutenção e testes
 
 ### Fixed
+- **Memory Leak - MutationObserver**: Corrigido vazamento de memória crítico onde MutationObserver não era desconectado quando página era fechada, causando acúmulo de recursos em sessões longas
+- **Cleanup Automático**: Implementado sistema automático de limpeza de recursos com listeners para `beforeunload` e `visibilitychange` para garantir desconexão adequada do MutationObserver
+- **Gestão de Recursos**: Adicionada variável global `globalMutationObserver` para rastreamento e cleanup adequado da instância do observer
+- **Prevenção de Vazamentos**: Implementada função `cleanupMutationObserver()` que desconecta observer e limpa timeouts pendentes
+- **Reconfiguração Inteligente**: Sistema agora reconfigura automaticamente o MutationObserver quando página volta a ficar visível após estar oculta
 
 - Release v1.1.1 com correções críticas de popup e build da extensão
 
@@ -217,6 +277,11 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - **Manutenibilidade**: Cada funcionalidade agora tem seu próprio arquivo, facilitando manutenção e testes
 
 ### Fixed
+- **Memory Leak - MutationObserver**: Corrigido vazamento de memória crítico onde MutationObserver não era desconectado quando página era fechada, causando acúmulo de recursos em sessões longas
+- **Cleanup Automático**: Implementado sistema automático de limpeza de recursos com listeners para `beforeunload` e `visibilitychange` para garantir desconexão adequada do MutationObserver
+- **Gestão de Recursos**: Adicionada variável global `globalMutationObserver` para rastreamento e cleanup adequado da instância do observer
+- **Prevenção de Vazamentos**: Implementada função `cleanupMutationObserver()` que desconecta observer e limpa timeouts pendentes
+- **Reconfiguração Inteligente**: Sistema agora reconfigura automaticamente o MutationObserver quando página volta a ficar visível após estar oculta
 
 - **Correção Crítica do Popup**: Botão de configurações não funcionava devido a erro de conexão
 - **Comunicação Robusta**: Implementado tratamento de erro robusto para comunicação entre popup e background script
@@ -236,6 +301,11 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - **Manutenibilidade**: Cada funcionalidade agora tem seu próprio arquivo, facilitando manutenção e testes
 
 ### Fixed
+- **Memory Leak - MutationObserver**: Corrigido vazamento de memória crítico onde MutationObserver não era desconectado quando página era fechada, causando acúmulo de recursos em sessões longas
+- **Cleanup Automático**: Implementado sistema automático de limpeza de recursos com listeners para `beforeunload` e `visibilitychange` para garantir desconexão adequada do MutationObserver
+- **Gestão de Recursos**: Adicionada variável global `globalMutationObserver` para rastreamento e cleanup adequado da instância do observer
+- **Prevenção de Vazamentos**: Implementada função `cleanupMutationObserver()` que desconecta observer e limpa timeouts pendentes
+- **Reconfiguração Inteligente**: Sistema agora reconfigura automaticamente o MutationObserver quando página volta a ficar visível após estar oculta
 - **Config Manager**: Adicionada configuração `enableSigssTabRename` ao DEFAULT_CONFIG para garantir valor padrão correto
 - **Manifest Permissions**: Adicionadas permissões para URLs do SIGSS (c1863prd.cloudmv.com.br e c1863tst1.cloudmv.com.br) nos manifests Chrome e Firefox
 
@@ -268,6 +338,11 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - **Manutenibilidade**: Cada funcionalidade agora tem seu próprio arquivo, facilitando manutenção e testes
 
 ### Fixed
+- **Memory Leak - MutationObserver**: Corrigido vazamento de memória crítico onde MutationObserver não era desconectado quando página era fechada, causando acúmulo de recursos em sessões longas
+- **Cleanup Automático**: Implementado sistema automático de limpeza de recursos com listeners para `beforeunload` e `visibilitychange` para garantir desconexão adequada do MutationObserver
+- **Gestão de Recursos**: Adicionada variável global `globalMutationObserver` para rastreamento e cleanup adequado da instância do observer
+- **Prevenção de Vazamentos**: Implementada função `cleanupMutationObserver()` que desconecta observer e limpa timeouts pendentes
+- **Reconfiguração Inteligente**: Sistema agora reconfigura automaticamente o MutationObserver quando página volta a ficar visível após estar oculta
 
 - **Otimização de Performance**: Implementadas correções críticas para melhorar responsividade e experiência do usuário
 - **Bloqueio da UI Principal**: Corrigido processamento síncrono de tarefas que causava travamentos temporários
@@ -300,8 +375,3 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - Implementados estilos responsivos para botões de ajuda em options.css
 - Integrado sistema de tooltips existente para fornecer ajuda contextual
 - Expandida documentação sobre funcionalidade SIGSS no help.html
-- **Memory Leak - MutationObserver**: Corrigido vazamento de memória crítico onde MutationObserver não era desconectado quando página era fechada, causando acúmulo de recursos em sessões longas
-- **Cleanup Automático**: Implementado sistema automático de limpeza de recursos com listeners para beforeunload e visibilitychange para garantir desconexão adequada do MutationObserver
-- **Gestão de Recursos**: Adicionada variável global globalMutationObserver para rastreamento e cleanup adequado da instância do observer
-- **Prevenção de Vazamentos**: Implementada função cleanupMutationObserver() que desconecta observer e limpa timeouts pendentes
-- **Reconfiguração Inteligente**: Sistema agora reconfigura automaticamente o MutationObserver quando página volta a ficar visível após estar oculta
