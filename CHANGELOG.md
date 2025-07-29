@@ -3,9 +3,7 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 ## [Unreleased]
 
-### Changed
-
-- **Interface de Configurações de Snooze**: Substituído texto "Remover" por ícone de lixeira (🗑️) nos botões de remoção das opções pré-configuradas de "Lembrar Mais Tarde" para uma interface mais visual e intuitiva
+## [2.1.1] - 2025-01-29
 
 ### Added
 
@@ -15,6 +13,7 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 ### Changed
 
+- **Interface de Configurações de Snooze**: Substituído texto "Remover" por ícone de lixeira (🗑️) nos botões de remoção das opções pré-configuradas de "Lembrar Mais Tarde" para uma interface mais visual e intuitiva
 - **Scripts de Build - Arquivo data-compressor.js**: Adicionado `data-compressor.js` à lista de arquivos do build.js que estava faltando, garantindo que o sistema de compressão seja incluído nos ZIPs de distribuição
 - **Scripts de Validação - Arquivos Novos**: Atualizados scripts de validação para incluir verificação de todos os novos arquivos críticos: `content-sigss.js`, `storage-validator.js`, `data-compressor.js`, `help.html/js/css` e outros módulos essenciais
 - **Documentação agents.md - Estrutura Atualizada**: Atualizada estrutura do projeto no `agents.md` para refletir todos os novos arquivos incluindo `data-compressor.js`, `storage-validator.js`, `content-backup.js` e outros módulos implementados recentemente
