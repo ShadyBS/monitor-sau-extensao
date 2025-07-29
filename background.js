@@ -1385,10 +1385,19 @@ loadPersistentData()
           backgroundLogger.warn("Erro na migração para sync:", error);
         }
 
-        browserAPI.storage.local.get("checkInterval").then((data) => {
+        browserAPI.storage.local.get("checkInterval").then(async (data) => {
           const interval = data.checkInterval || 30; // Padrão: 30 segundos
           scheduleNextCheck(interval);
           updateBadge(); // Atualiza o badge na inicialização
+          
+          // ✅ NOVA FUNCIONALIDADE: Verificação inicial imediata
+          backgroundLogger.info("Executando verificação inicial de tarefas...");
+          try {
+            await checkAndNotifyNewTasks();
+            backgroundLogger.info("Verificação inicial concluída com sucesso");
+          } catch (error) {
+            backgroundLogger.error("Erro na verificação inicial:", error);
+          }
         });
       })
       .catch((error) => {

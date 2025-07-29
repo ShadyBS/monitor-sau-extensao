@@ -3,6 +3,11 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 ## [Unreleased]
 
+### Added
+
+- **Verificação Inicial Automática**: Implementada verificação imediata de tarefas na inicialização da extensão. Agora o monitoramento inicia automaticamente após instalação, reinício do navegador ou recarregamento da extensão, sem necessidade de interação manual
+- **Feedback Instantâneo**: Badge e notificações aparecem imediatamente se houver tarefas pendentes, melhorando significativamente a experiência do usuário
+
 ### Fixed
 
 - **Scripts de Build - Arquivos Essenciais**: Corrigido problema crítico onde arquivos essenciais estavam sendo deixados de fora dos ZIPs de distribuição. Adicionados ao script de build:
