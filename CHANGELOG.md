@@ -17,6 +17,7 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 ### Fixed
 
+- **Erro de Sintaxe no Popup**: Corrigido erro crítico de sintaxe JavaScript no popup.js linha 171 onde objeto passado para `popupLogger.error()` estava malformado com vírgulas ausentes entre propriedades, causando erro "[object Object]" nos logs e impedindo diagnóstico adequado de problemas. Corrigida estrutura do objeto de logging para incluir vírgulas necessárias entre `message`, `details`, `type` e `error`
 - **Erro Crítico currentSessionTasks.some**: Corrigido erro fatal `Uncaught TypeError: currentSessionTasks.some is not a function` no content.js linha 263 que impedia o funcionamento da extensão no Edge. Implementada validação robusta para garantir que `currentSessionTasks` seja sempre um array válido, incluindo tratamento de dados comprimidos, validação de tipos e fallbacks seguros para dados corrompidos ou em formato inesperado
 - **Dados de Tarefas em Formato Inesperado**: Corrigido warning "Dados de tarefas em formato inesperado, tentando extrair array" na linha 729 do content.js. Implementado sistema robusto de descompressão e extração de dados que suporta múltiplos formatos (dados comprimidos do data-compressor.js, objetos aninhados, arrays diretos) com funções auxiliares `decompressTaskData()` e `extractTasksArray()` para garantir compatibilidade total com diferentes versões de dados armazenados
 
