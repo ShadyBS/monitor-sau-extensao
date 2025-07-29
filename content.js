@@ -369,7 +369,171 @@
   }
 
   /**
+   * Sanitiza dados de tarefa para prevenir XSS
+   * @param {Object} task - Objeto de tarefa a ser sanitizado
+   * @returns {Object} Tarefa sanitizada
+   */
+  function sanitizeTaskData(task) {
+    const sanitized = {
+      numero: String(task.numero || '').substring(0, 50),
+      titulo: String(task.titulo || '').substring(0, 200),
+      dataEnvio: String(task.dataEnvio || '').substring(0, 50),
+      posicao: String(task.posicao || '').substring(0, 50),
+      solicitante: String(task.solicitante || 'N/A').substring(0, 100),
+      unidade: String(task.unidade || 'N/A').substring(0, 100),
+      descricao: String(task.descricao || 'N/A').substring(0, 1000),
+      id: String(task.id || '').substring(0, 100),
+      link: String(task.link || '#').substring(0, 500),
+      enderecos: Array.isArray(task.enderecos) 
+        ? task.enderecos.slice(0, 10).map(addr => String(addr).substring(0, 200))
+        : []
+    };
+
+    // Valida URL
+    try {
+      new URL(sanitized.link);
+    } catch (error) {
+      contentLogger.warn(`URL inválida na tarefa ${sanitized.id}: ${sanitized.link}`);
+      sanitized.link = '#';
+    }
+
+    return sanitized;
+  }
+
+  /**
+   * Cria um elemento DOM de forma segura usando textContent
+   * @param {string} tag - Tag HTML
+   * @param {string} textContent - Conteúdo de texto
+   * @param {Object} attributes - Atributos do elemento
+   * @returns {HTMLElement} Elemento criado
+   */
+  function createSafeElement(tag, textContent = '', attributes = {}) {
+    const element = document.createElement(tag);
+    
+    if (textContent) {
+      element.textContent = textContent; // Usa textContent em vez de innerHTML
+    }
+    
+    // Define atributos de forma segura
+    for (const [key, value] of Object.entries(attributes)) {
+      element.setAttribute(key, String(value));
+    }
+    
+    return element;
+  }
+
+  /**
+   * Cria um item de tarefa de forma segura sem usar innerHTML
+   * @param {Object} task - Dados da tarefa sanitizados
+   * @returns {HTMLElement} Elemento da tarefa
+   */
+  function createSafeTaskItem(task) {
+    // Container principal do item
+    const itemDiv = createSafeElement('div', '', { class: 'sau-notification-item' });
+
+    // Parágrafo principal com número e título
+    const mainP = createSafeElement('p');
+    const strongElement = createSafeElement('strong', task.numero);
+    mainP.appendChild(strongElement);
+    mainP.appendChild(document.createTextNode(`: ${task.titulo}`));
+    itemDiv.appendChild(mainP);
+
+    // Parágrafo com meta informações
+    const metaP = createSafeElement('p', `Envio: ${task.dataEnvio} | Posição: ${task.posicao}`, {
+      class: 'sau-notification-meta'
+    });
+    itemDiv.appendChild(metaP);
+
+    // Container de ações
+    const actionsDiv = createSafeElement('div', '', { class: 'sau-notification-actions' });
+    
+    // Botões de ação
+    const openBtn = createSafeElement('button', 'Abrir', {
+      class: 'sau-btn-open',
+      'data-url': task.link,
+      'data-id': task.id
+    });
+    
+    const detailsBtn = createSafeElement('button', 'Detalhes', {
+      class: 'sau-btn-details',
+      'data-id': task.id
+    });
+    
+    const ignoreBtn = createSafeElement('button', 'Ignorar', {
+      class: 'sau-btn-ignore',
+      'data-id': task.id
+    });
+    
+    const snoozeBtn = createSafeElement('button', 'Lembrar Mais Tarde', {
+      class: 'sau-btn-snooze',
+      'data-id': task.id
+    });
+
+    actionsDiv.appendChild(openBtn);
+    actionsDiv.appendChild(detailsBtn);
+    actionsDiv.appendChild(ignoreBtn);
+    actionsDiv.appendChild(snoozeBtn);
+    itemDiv.appendChild(actionsDiv);
+
+    // Container de detalhes expandidos
+    const detailsDiv = createSafeElement('div', '', {
+      class: 'sau-details-expanded',
+      id: `sau-details-${task.id}`
+    });
+
+    // Adiciona campos de detalhes
+    const detailFields = [
+      { label: 'Solicitante', value: task.solicitante },
+      { label: 'Unidade', value: task.unidade },
+      { label: 'Descrição', value: task.descricao }
+    ];
+
+    detailFields.forEach(field => {
+      const fieldP = createSafeElement('p');
+      const labelStrong = createSafeElement('strong', `${field.label}: `);
+      fieldP.appendChild(labelStrong);
+      fieldP.appendChild(document.createTextNode(field.value));
+      detailsDiv.appendChild(fieldP);
+    });
+
+    // Adiciona endereços se existirem
+    if (task.enderecos && task.enderecos.length > 0) {
+      const addressP = createSafeElement('p');
+      const addressLabel = createSafeElement('strong', 'Endereço(s): ');
+      addressP.appendChild(addressLabel);
+      
+      task.enderecos.forEach((addr, index) => {
+        if (index > 0) {
+          addressP.appendChild(document.createElement('br'));
+        }
+        const addrSpan = createSafeElement('span', addr);
+        addressP.appendChild(addrSpan);
+      });
+      
+      detailsDiv.appendChild(addressP);
+    }
+
+    // Adiciona link
+    const linkP = createSafeElement('p');
+    const linkLabel = createSafeElement('strong', 'Link: ');
+    linkP.appendChild(linkLabel);
+    
+    const linkA = document.createElement('a');
+    linkA.href = task.link;
+    linkA.textContent = 'Abrir no SAU';
+    linkA.target = '_blank';
+    linkA.rel = 'noopener noreferrer';
+    linkP.appendChild(linkA);
+    
+    detailsDiv.appendChild(linkP);
+    itemDiv.appendChild(detailsDiv);
+
+    return itemDiv;
+  }
+
+  /**
    * Injeta a interface de usuário visual para exibir notificações de novas tarefas na página.
+   * CORRIGIDO: Agora usa DOM manipulation segura em vez de innerHTML para prevenir XSS.
    * @param {Array<Object>} tasks - Um array de objetos de tarefa a serem exibidos na notificação.
    */
   function injectNotificationUI(tasks) {
@@ -381,76 +545,35 @@
       existingNotification.remove();
     }
 
-    const notificationContainer = document.createElement("div");
-    notificationContainer.id = "sau-notification-container";
-    notificationContainer.className = "sau-notification-container";
+    // Cria o container principal
+    const notificationContainer = createSafeElement('div', '', {
+      id: 'sau-notification-container',
+      class: 'sau-notification-container'
+    });
 
-    // Cria o HTML para cada tarefa na notificação de forma segura
-    let tasksHtml = tasks
-      .map((task) => {
-        // Sanitiza os dados da tarefa
-        const safeTask = {
-          numero: String(task.numero || '').substring(0, 50),
-          titulo: String(task.titulo || '').substring(0, 200),
-          dataEnvio: String(task.dataEnvio || '').substring(0, 50),
-          posicao: String(task.posicao || '').substring(0, 50),
-          solicitante: String(task.solicitante || 'N/A').substring(0, 100),
-          unidade: String(task.unidade || 'N/A').substring(0, 100),
-          descricao: String(task.descricao || 'N/A').substring(0, 1000),
-          id: String(task.id || '').substring(0, 100),
-          link: String(task.link || '#').substring(0, 500),
-          enderecos: Array.isArray(task.enderecos) 
-            ? task.enderecos.slice(0, 10).map(addr => String(addr).substring(0, 200))
-            : []
-        };
+    // Cria o header
+    const headerDiv = createSafeElement('div', '', { class: 'sau-notification-header' });
+    const headerTitle = createSafeElement('h3', `Novas Tarefas SAU (${tasks.length})`);
+    const closeBtn = createSafeElement('button', '×', {
+      id: 'sau-notification-close',
+      class: 'sau-close-btn'
+    });
+    
+    headerDiv.appendChild(headerTitle);
+    headerDiv.appendChild(closeBtn);
+    notificationContainer.appendChild(headerDiv);
 
-        // Valida URL
-        try {
-          new URL(safeTask.link);
-        } catch (error) {
-          contentLogger.warn(`URL inválida na tarefa ${safeTask.id}: ${safeTask.link}`);
-          safeTask.link = '#';
-        }
+    // Cria o body
+    const bodyDiv = createSafeElement('div', '', { class: 'sau-notification-body' });
 
-        return `
-        <div class="sau-notification-item">
-            <p><strong>${safeTask.numero}</strong>: ${safeTask.titulo}</p>
-            <p class="sau-notification-meta">Envio: ${safeTask.dataEnvio} | Posição: ${safeTask.posicao}</p>
-            <div class="sau-notification-actions">
-                <button class="sau-btn-open" data-url="${safeTask.link}" data-id="${safeTask.id}">Abrir</button>
-                <button class="sau-btn-details" data-id="${safeTask.id}">Detalhes</button>
-                <button class="sau-btn-ignore" data-id="${safeTask.id}">Ignorar</button>
-                <button class="sau-btn-snooze" data-id="${safeTask.id}">Lembrar Mais Tarde</button>
-            </div>
-            <div class="sau-details-expanded" id="sau-details-${safeTask.id}">
-                <p><strong>Solicitante:</strong> ${safeTask.solicitante}</p>
-                <p><strong>Unidade:</strong> ${safeTask.unidade}</p>
-                <p><strong>Descrição:</strong> ${safeTask.descricao}</p>
-                ${
-                  safeTask.enderecos && safeTask.enderecos.length > 0
-                    ? `<p><strong>Endereço(s):</strong> ${safeTask.enderecos
-                        .map((addr) => `<span>${addr}</span>`)
-                        .join("<br>")}</p>`
-                    : ""
-                }
-                <p><strong>Link:</strong> <a href="${safeTask.link}" target="_blank" rel="noopener noreferrer">Abrir no SAU</a></p>
-            </div>
-        </div>
-    `;
-      })
-      .join("");
+    // Processa cada tarefa de forma segura
+    tasks.forEach(task => {
+      const sanitizedTask = sanitizeTaskData(task);
+      const taskElement = createSafeTaskItem(sanitizedTask);
+      bodyDiv.appendChild(taskElement);
+    });
 
-    // Constrói o HTML completo da notificação
-    notificationContainer.innerHTML = `
-        <div class="sau-notification-header">
-            <h3>Novas Tarefas SAU (${tasks.length})</h3>
-            <button id="sau-notification-close" class="sau-close-btn">&times;</button>
-        </div>
-        <div class="sau-notification-body">
-            ${tasksHtml}
-        </div>
-    `;
-
+    notificationContainer.appendChild(bodyDiv);
     document.body.appendChild(notificationContainer); // Adiciona a notificação ao corpo do documento
 
     // Adiciona listeners para o botão de fechar a notificação

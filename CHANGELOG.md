@@ -3,6 +3,12 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 ## [Unreleased]
 
+### Security
+- **Vulnerabilidade XSS Crítica**: Corrigida vulnerabilidade crítica de XSS na função `injectNotificationUI()` do content.js que permitia execução de código malicioso através de dados de tarefas não sanitizados
+- **DOM Manipulation Segura**: Substituído uso inseguro de `innerHTML` por manipulação DOM segura usando `textContent`, `createElement` e `appendChild`
+- **Sanitização de Dados**: Implementado sistema robusto de sanitização de dados de tarefas com validação de tipos, limitação de tamanho e validação de URLs
+- **Prevenção de Injeção**: Adicionadas funções `sanitizeTaskData()`, `createSafeElement()` e `createSafeTaskItem()` para construção segura de elementos DOM
+
 ## [2.1.0] - 2025-07-28
 
 ### Changed

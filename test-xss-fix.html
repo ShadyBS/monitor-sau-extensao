@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Correção XSS - Monitor SAU</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-result {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .warning {
+            background-color: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #test-output {
+            border: 1px solid #ddd;
+            padding: 10px;
+            background-color: #f8f9fa;
+            min-height: 100px;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔒 Teste de Correção XSS - Monitor SAU</h1>
+    
+    <div class="test-container">
+        <h2>📋 Teste da TASK-C-001: Vulnerabilidade de XSS em Notificação Visual</h2>
+        <p><strong>Objetivo:</strong> Verificar se a função <code>injectNotificationUI()</code> está protegida contra ataques XSS.</p>
+        
+        <div class="test-result warning">
+            <strong>⚠️ Aviso:</strong> Este teste simula dados maliciosos para verificar a segurança. 
+            Se você ver alertas ou comportamentos estranhos, significa que a correção falhou.
+        </div>
+        
+        <button onclick="testNormalData()">✅ Teste com Dados Normais</button>
+        <button onclick="testMaliciousData()">🚨 Teste com Dados Maliciosos</button>
+        <button onclick="clearOutput()">🧹 Limpar Saída</button>
+        
+        <div id="test-output"></div>
+    </div>
+
+    <div class="test-container">
+        <h2>📊 Resultados dos Testes</h2>
+        <div id="test-results"></div>
+    </div>
+
+    <script>
+        // Simula as funções do content script para teste
+        function sanitizeTaskData(task) {
+            const sanitized = {
+                numero: String(task.numero || '').substring(0, 50),
+                titulo: String(task.titulo || '').substring(0, 200),
+                dataEnvio: String(task.dataEnvio || '').substring(0, 50),
+                posicao: String(task.posicao || '').substring(0, 50),
+                solicitante: String(task.solicitante || 'N/A').substring(0, 100),
+                unidade: String(task.unidade || 'N/A').substring(0, 100),
+                descricao: String(task.descricao || 'N/A').substring(0, 1000),
+                id: String(task.id || '').substring(0, 100),
+                link: String(task.link || '#').substring(0, 500),
+                enderecos: Array.isArray(task.enderecos) 
+                    ? task.enderecos.slice(0, 10).map(addr => String(addr).substring(0, 200))
+                    : []
+            };
+
+            // Valida URL
+            try {
+                new URL(sanitized.link);
+            } catch (error) {
+                console.warn(`URL inválida na tarefa ${sanitized.id}: ${sanitized.link}`);
+                sanitized.link = '#';
+            }
+
+            return sanitized;
+        }
+
+        function createSafeElement(tag, textContent = '', attributes = {}) {
+            const element = document.createElement(tag);
+            
+            if (textContent) {
+                element.textContent = textContent; // Usa textContent em vez de innerHTML
+            }
+            
+            // Define atributos de forma segura
+            for (const [key, value] of Object.entries(attributes)) {
+                element.setAttribute(key, String(value));
+            }
+            
+            return element;
+        }
+
+        function createSafeTaskItem(task) {
+            // Container principal do item
+            const itemDiv = createSafeElement('div', '', { class: 'sau-notification-item' });
+
+            // Parágrafo principal com número e título
+            const mainP = createSafeElement('p');
+            const strongElement = createSafeElement('strong', task.numero);
+            mainP.appendChild(strongElement);
+            mainP.appendChild(document.createTextNode(`: ${task.titulo}`));
+            itemDiv.appendChild(mainP);
+
+            // Parágrafo com meta informações
+            const metaP = createSafeElement('p', `Envio: ${task.dataEnvio} | Posição: ${task.posicao}`, {
+                class: 'sau-notification-meta'
+            });
+            itemDiv.appendChild(metaP);
+
+            return itemDiv;
+        }
+
+        // Dados de teste normais
+        const normalTask = {
+            id: 'TEST-001',
+            numero: '12345',
+            titulo: 'Tarefa de Teste Normal',
+            dataEnvio: '2025-01-29',
+            posicao: '1',
+            solicitante: 'João Silva',
+            unidade: 'Unidade de Teste',
+            descricao: 'Esta é uma descrição normal de tarefa',
+            link: 'https://example.com/tarefa/12345',
+            enderecos: ['Rua Teste, 123', 'Bairro Teste']
+        };
+
+        // Dados maliciosos para teste XSS
+        const maliciousTask = {
+            id: 'MALICIOUS-001',
+            numero: '<script>alert("XSS no número!")</script>',
+            titulo: '<img src="x" onerror="alert(\'XSS no título!\')">Título Malicioso',
+            dataEnvio: '<script>alert("XSS na data!")</script>',
+            posicao: '<svg onload="alert(\'XSS na posição!\')">',
+            solicitante: 'javascript:alert("XSS no solicitante!")',
+            unidade: '<iframe src="javascript:alert(\'XSS na unidade!\')"></iframe>',
+            descricao: '<script>document.body.innerHTML="HACKED!"</script>Descrição maliciosa',
+            link: 'javascript:alert("XSS no link!")',
+            enderecos: [
+                '<script>alert("XSS no endereço!")</script>',
+                '<img src="x" onerror="alert(\'XSS no endereço 2!\')">'
+            ]
+        };
+
+        function testNormalData() {
+            const output = document.getElementById('test-output');
+            const results = document.getElementById('test-results');
+            
+            try {
+                // Testa sanitização
+                const sanitized = sanitizeTaskData(normalTask);
+                
+                // Cria elemento seguro
+                const taskElement = createSafeTaskItem(sanitized);
+                
+                // Limpa e adiciona ao output
+                output.innerHTML = '';
+                output.appendChild(taskElement);
+                
+                // Adiciona resultado
+                const resultDiv = document.createElement('div');
+                resultDiv.className = 'test-result success';
+                resultDiv.innerHTML = '<strong>✅ SUCESSO:</strong> Dados normais processados corretamente sem problemas de segurança.';
+                results.appendChild(resultDiv);
+                
+                console.log('Teste com dados normais: PASSOU');
+                
+            } catch (error) {
+                const resultDiv = document.createElement('div');
+                resultDiv.className = 'test-result error';
+                resultDiv.innerHTML = `<strong>❌ ERRO:</strong> Falha ao processar dados normais: ${error.message}`;
+                results.appendChild(resultDiv);
+                
+                console.error('Teste com dados normais: FALHOU', error);
+            }
+        }
+
+        function testMaliciousData() {
+            const output = document.getElementById('test-output');
+            const results = document.getElementById('test-results');
+            
+            try {
+                // Testa sanitização com dados maliciosos
+                const sanitized = sanitizeTaskData(maliciousTask);
+                
+                // Verifica se scripts foram removidos/neutralizados
+                const hasScript = JSON.stringify(sanitized).includes('<script>');
+                const hasOnError = JSON.stringify(sanitized).includes('onerror');
+                const hasJavascript = JSON.stringify(sanitized).includes('javascript:');
+                
+                if (hasScript || hasOnError || hasJavascript) {
+                    throw new Error('Dados maliciosos não foram completamente sanitizados');
+                }
+                
+                // Cria elemento seguro
+                const taskElement = createSafeTaskItem(sanitized);
+                
+                // Limpa e adiciona ao output
+                output.innerHTML = '';
+                output.appendChild(taskElement);
+                
+                // Adiciona resultado
+                const resultDiv = document.createElement('div');
+                resultDiv.className = 'test-result success';
+                resultDiv.innerHTML = '<strong>✅ SUCESSO:</strong> Dados maliciosos foram sanitizados corretamente. Nenhum script foi executado.';
+                results.appendChild(resultDiv);
+                
+                console.log('Teste com dados maliciosos: PASSOU');
+                console.log('Dados sanitizados:', sanitized);
+                
+            } catch (error) {
+                const resultDiv = document.createElement('div');
+                resultDiv.className = 'test-result error';
+                resultDiv.innerHTML = `<strong>❌ ERRO:</strong> Falha na sanitização: ${error.message}`;
+                results.appendChild(resultDiv);
+                
+                console.error('Teste com dados maliciosos: FALHOU', error);
+            }
+        }
+
+        function clearOutput() {
+            document.getElementById('test-output').innerHTML = '';
+            document.getElementById('test-results').innerHTML = '';
+        }
+
+        // Executa teste automático ao carregar
+        window.addEventListener('load', function() {
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'test-result success';
+            resultDiv.innerHTML = '<strong>🚀 SISTEMA CARREGADO:</strong> Página de teste carregada com sucesso. Pronto para executar testes.';
+            document.getElementById('test-results').appendChild(resultDiv);
+        });
+    </script>
+</body>
+</html>
