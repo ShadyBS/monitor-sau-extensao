@@ -722,122 +722,194 @@ async function checkForExistingLoginTab() {
 }
 
 /**
+ * Configurações para retry logic
+ */
+const RETRY_CONFIG = {
+  maxRetries: 3,
+  baseDelay: 1000, // 1 segundo
+  maxDelay: 10000, // 10 segundos
+  backoffMultiplier: 2
+};
+
+/**
+ * Implementa retry com backoff exponencial
+ * @param {Function} operation - Função assíncrona a ser executada
+ * @param {Object} config - Configurações de retry
+ * @param {string} operationName - Nome da operação para logs
+ * @returns {Promise} - Resultado da operação ou erro final
+ */
+async function retryWithBackoff(operation, config = RETRY_CONFIG, operationName = 'operação') {
+  let lastError;
+  
+  for (let attempt = 1; attempt <= config.maxRetries; attempt++) {
+    try {
+      backgroundLogger.debug(`Tentativa ${attempt}/${config.maxRetries} para ${operationName}`);
+      const result = await operation();
+      
+      if (attempt > 1) {
+        backgroundLogger.info(`${operationName} bem-sucedida na tentativa ${attempt}`);
+      }
+      
+      return result;
+    } catch (error) {
+      lastError = error;
+      backgroundLogger.warn(`Tentativa ${attempt}/${config.maxRetries} falhou para ${operationName}:`, error.message);
+      
+      // Se não é a última tentativa, aguarda antes de tentar novamente
+      if (attempt < config.maxRetries) {
+        const delay = Math.min(
+          config.baseDelay * Math.pow(config.backoffMultiplier, attempt - 1),
+          config.maxDelay
+        );
+        
+        backgroundLogger.debug(`Aguardando ${delay}ms antes da próxima tentativa`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+  
+  // Se chegou aqui, todas as tentativas falharam
+  backgroundLogger.error(`Todas as ${config.maxRetries} tentativas falharam para ${operationName}:`, lastError);
+  throw lastError;
+}
+
+/**
  * Tenta realizar o login automático no SAU usando as credenciais salvas.
  * Abre uma nova aba para a página de login e injeta um script para preencher e submeter o formulário.
+ * Agora com retry logic para operações críticas.
  */
 async function performAutomaticLogin() {
-  const data = await browserAPI.storage.local.get([
-    "sauUsername",
-    "sauPassword",
-  ]);
-  const username = data.sauUsername;
-  const password = data.sauPassword;
-
-  // Se as credenciais não estiverem salvas, verifica se deve abrir uma nova aba
-  if (!username || !password) {
-    backgroundLogger.warn(
-      "Credenciais de login não encontradas. Login automático não será realizado."
+  try {
+    // Operação crítica 1: Obter credenciais com retry
+    const data = await retryWithBackoff(
+      () => browserAPI.storage.local.get(["sauUsername", "sauPassword"]),
+      RETRY_CONFIG,
+      'obtenção de credenciais'
     );
+    
+    const username = data.sauUsername;
+    const password = data.sauPassword;
 
-    const now = Date.now();
-    const timeSinceLastLoginTab = now - lastLoginTabOpenedTimestamp;
-    const LOGIN_TAB_COOLDOWN = 5 * 60 * 1000; // 5 minutos em millisegundos
-
-    // Verifica se já existe uma aba de login aberta
-    const hasExistingLoginTab = await checkForExistingLoginTab();
-
-    // Só abre uma nova aba se:
-    // 1. Não há aba de login existente E
-    // 2. Passou tempo suficiente desde a última aba aberta (cooldown)
-    if (!hasExistingLoginTab && timeSinceLastLoginTab > LOGIN_TAB_COOLDOWN) {
-      backgroundLogger.info(
-        "Abrindo nova aba de login para configuração manual de credenciais"
+    // Se as credenciais não estiverem salvas, verifica se deve abrir uma nova aba
+    if (!username || !password) {
+      backgroundLogger.warn(
+        "Credenciais de login não encontradas. Login automático não será realizado."
       );
 
-      // Cria notificação apenas na primeira vez ou após o cooldown
-      browserAPI.notifications.create({
-        type: "basic",
-        iconUrl: "icons/icon48.png",
-        title: "Monitor SAU: Login Necessário",
-        message:
-          "Credenciais não configuradas. Por favor, acesse as opções da extensão para configurar o login automático.",
-      });
+      const now = Date.now();
+      const timeSinceLastLoginTab = now - lastLoginTabOpenedTimestamp;
+      const LOGIN_TAB_COOLDOWN = 5 * 60 * 1000; // 5 minutos em millisegundos
 
-      // Abre a página de login para que o usuário possa fazer o login manualmente
-      const loginTab = await browserAPI.tabs.create({
-        url: SAU_LOGIN_URL,
-        active: false, // Abre em segundo plano para não interromper o usuário
-      });
+      // Verifica se já existe uma aba de login aberta
+      const hasExistingLoginTab = await checkForExistingLoginTab();
 
-      // Atualiza o timestamp e ID da última aba de login aberta
-      lastLoginTabOpenedTimestamp = now;
-      loginTabId = loginTab.id;
+      // Só abre uma nova aba se:
+      // 1. Não há aba de login existente E
+      // 2. Passou tempo suficiente desde a última aba aberta (cooldown)
+      if (!hasExistingLoginTab && timeSinceLastLoginTab > LOGIN_TAB_COOLDOWN) {
+        backgroundLogger.info(
+          "Abrindo nova aba de login para configuração manual de credenciais"
+        );
 
-      backgroundLogger.info(
-        `Nova aba de login criada: ${loginTab.id} (em segundo plano)`
-      );
-    } else if (hasExistingLoginTab) {
-      backgroundLogger.debug("Aba de login já existe, não abrindo nova aba");
-    } else {
-      backgroundLogger.debug(
-        `Cooldown ativo: ${Math.round(
-          (LOGIN_TAB_COOLDOWN - timeSinceLastLoginTab) / 1000
-        )}s restantes`
-      );
+        // Operação crítica 2: Criar notificação com retry
+        await retryWithBackoff(
+          () => browserAPI.notifications.create({
+            type: "basic",
+            iconUrl: "icons/icon48.png",
+            title: "Monitor SAU: Login Necessário",
+            message:
+              "Credenciais não configuradas. Por favor, acesse as opções da extensão para configurar o login automático.",
+          }),
+          RETRY_CONFIG,
+          'criação de notificação'
+        );
+
+        // Operação crítica 3: Criar aba de login com retry
+        const loginTab = await retryWithBackoff(
+          () => browserAPI.tabs.create({
+            url: SAU_LOGIN_URL,
+            active: false, // Abre em segundo plano para não interromper o usuário
+          }),
+          RETRY_CONFIG,
+          'criação de aba de login'
+        );
+
+        // Atualiza o timestamp e ID da última aba de login aberta
+        lastLoginTabOpenedTimestamp = now;
+        loginTabId = loginTab.id;
+
+        backgroundLogger.info(
+          `Nova aba de login criada: ${loginTab.id} (em segundo plano)`
+        );
+      } else if (hasExistingLoginTab) {
+        backgroundLogger.debug("Aba de login já existe, não abrindo nova aba");
+      } else {
+        backgroundLogger.debug(
+          `Cooldown ativo: ${Math.round(
+            (LOGIN_TAB_COOLDOWN - timeSinceLastLoginTab) / 1000
+          )}s restantes`
+        );
+      }
+
+      return;
     }
 
-    return;
-  }
+    // Operação crítica 4: Criar aba de login automático com retry
+    const loginTab = await retryWithBackoff(
+      () => browserAPI.tabs.create({
+        url: SAU_LOGIN_URL,
+        active: false, // PRINCIPAL MUDANÇA: Abre em segundo plano
+      }),
+      RETRY_CONFIG,
+      'criação de aba para login automático'
+    );
+    
+    backgroundLogger.info(
+      `Tentando login automático na aba ${loginTab.id} (em segundo plano).`
+    );
 
-  // Abre uma nova aba para a página de login e a torna NÃO ativa
-  const loginTab = await browserAPI.tabs.create({
-    url: SAU_LOGIN_URL,
-    active: false, // PRINCIPAL MUDANÇA: Abre em segundo plano
-  });
-  backgroundLogger.info(
-    `Tentando login automático na aba ${loginTab.id} (em segundo plano).`
-  );
+    // Adiciona um listener para quando a página de login estiver completamente carregada
+    // Este listener será removido assim que o script for injetado para evitar múltiplas injeções.
+    browserAPI.tabs.onUpdated.addListener(function listener(tabId, changeInfo) {
+      if (tabId === loginTab.id && changeInfo.status === "complete") {
+        // Remove o listener para evitar que ele seja disparado novamente
+        browserAPI.tabs.onUpdated.removeListener(listener);
 
-  // Adiciona um listener para quando a página de login estiver completamente carregada
-  // Este listener será removido assim que o script for injetado para evitar múltiplas injeções.
-  browserAPI.tabs.onUpdated.addListener(function listener(tabId, changeInfo) {
-    if (tabId === loginTab.id && changeInfo.status === "complete") {
-      // Remove o listener para evitar que ele seja disparado novamente
-      browserAPI.tabs.onUpdated.removeListener(listener);
-
-      // Injeta um script na página para preencher e submeter o formulário de login
-      // Usamos world: 'MAIN' para que o script possa acessar e manipular o DOM do formulário diretamente.
-      browserAPI.scripting
-        .executeScript({
-          target: { tabId: loginTab.id },
-          function: (user, pass) => {
-            const loginForm = document.getElementById("loginForm");
-            if (loginForm) {
-              const usernameInput = document.getElementById("usuario");
-              const passwordInput = document.getElementById("senha");
-              if (usernameInput && passwordInput) {
-                usernameInput.value = user;
-                passwordInput.value = pass;
-                loginForm.submit();
-                // Logs no console da página (não do Service Worker)
-                // Usamos console.info aqui porque é no contexto da página e não no do Service Worker
-                console.info(
-                  "Content Script (Login): Credenciais preenchidas e formulário submetido."
-                );
+        // Operação crítica 5: Injetar script de login com retry
+        retryWithBackoff(
+          () => browserAPI.scripting.executeScript({
+            target: { tabId: loginTab.id },
+            function: (user, pass) => {
+              const loginForm = document.getElementById("loginForm");
+              if (loginForm) {
+                const usernameInput = document.getElementById("usuario");
+                const passwordInput = document.getElementById("senha");
+                if (usernameInput && passwordInput) {
+                  usernameInput.value = user;
+                  passwordInput.value = pass;
+                  loginForm.submit();
+                  // Logs no console da página (não do Service Worker)
+                  // Usamos console.info aqui porque é no contexto da página e não no do Service Worker
+                  console.info(
+                    "Content Script (Login): Credenciais preenchidas e formulário submetido."
+                  );
+                } else {
+                  console.error(
+                    "Content Script (Login): Campos de login (IDs: usuario, senha) não encontrados na página do SAU."
+                  );
+                }
               } else {
                 console.error(
-                  "Content Script (Login): Campos de login (IDs: usuario, senha) não encontrados na página do SAU."
+                  'Content Script (Login): Formulário de login (id="loginForm") não encontrado na página do SAU.'
                 );
               }
-            } else {
-              console.error(
-                'Content Script (Login): Formulário de login (id="loginForm") não encontrado na página do SAU.'
-              );
-            }
-          },
-          args: [username, password], // Passa as credenciais como argumentos para a função injetada
-          world: "MAIN",
-        })
+            },
+            args: [username, password], // Passa as credenciais como argumentos para a função injetada
+            world: "MAIN",
+          }),
+          RETRY_CONFIG,
+          'injeção de script de login'
+        )
         .then(() => {
           backgroundLogger.info(
             `Script de preenchimento de login injetado na aba ${loginTab.id}.`
@@ -846,20 +918,45 @@ async function performAutomaticLogin() {
         })
         .catch((error) => {
           backgroundLogger.error(
-            `Erro ao injetar script de login na aba ${loginTab.id}:`,
+            `Erro ao injetar script de login na aba ${loginTab.id} após ${RETRY_CONFIG.maxRetries} tentativas:`,
             error
           );
-          browserAPI.notifications.create({
-            type: "basic",
-            iconUrl: "icons/icon48.png",
-            title: "Monitor SAU: Erro no Login Automático",
-            message:
-              "Não foi possível preencher o formulário de login em segundo plano. Por favor, tente fazer o login manualmente.",
+          
+          // Operação crítica 6: Notificação de erro com retry (fallback)
+          retryWithBackoff(
+            () => browserAPI.notifications.create({
+              type: "basic",
+              iconUrl: "icons/icon48.png",
+              title: "Monitor SAU: Erro no Login Automático",
+              message:
+                "Não foi possível preencher o formulário de login em segundo plano após múltiplas tentativas. Por favor, tente fazer o login manualmente.",
+            }),
+            { ...RETRY_CONFIG, maxRetries: 2 }, // Menos tentativas para notificação de erro
+            'notificação de erro de login'
+          ).catch((notificationError) => {
+            backgroundLogger.error("Falha crítica: não foi possível criar notificação de erro:", notificationError);
           });
+          
           // Se o login falhar em segundo plano, a aba permanecerá em segundo plano.
         });
+      }
+    });
+    
+  } catch (error) {
+    backgroundLogger.error("Falha crítica no login automático:", error);
+    
+    // Tenta criar notificação de falha crítica como último recurso
+    try {
+      await browserAPI.notifications.create({
+        type: "basic",
+        iconUrl: "icons/icon48.png",
+        title: "Monitor SAU: Falha Crítica",
+        message: "Erro crítico no sistema de login automático. Verifique as configurações da extensão.",
+      });
+    } catch (notificationError) {
+      backgroundLogger.error("Não foi possível criar notificação de falha crítica:", notificationError);
     }
-  });
+  }
 }
 
 /**
