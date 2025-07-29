@@ -14,6 +14,8 @@ const backgroundLogger = logger('[Background]');
 import { migrateToSync } from "./config-manager.js";
 // Importa o validador de storage para verificação de limites
 import { safeStorageSet, validateStorageOperation, getStorageStats } from "./storage-validator.js";
+// Importa o sistema de compressão de dados
+import { compressData, decompressData, migrateExistingData, isCompressedFormat, getCompressionStats } from "./data-compressor.js";
 // Lista explícita de domínios SIGSS válidos para detecção consistente
 const VALID_SIGSS_DOMAINS = [
   'c1863prd.cloudmv.com.br',
@@ -88,6 +90,7 @@ const NOTIFICATION_COOLDOWN = 15000; // 15 segundos entre notificações
 /**
  * Carrega os dados persistentes do armazenamento local do Chrome.
  * Isso garante que o estado da extensão seja mantido entre as sessões do navegador.
+ * Agora com suporte a descompressão de dados para otimização de storage.
  */
 async function loadPersistentData() {
   try {
@@ -95,26 +98,68 @@ async function loadPersistentData() {
       "lastKnownTasks",
       "ignoredTasks",
       "snoozedTasks",
-      "openedTasks", // Carrega o novo estado
+      "openedTasks",
       "lastCheckTimestamp",
-      "taskNotificationTimestamps", // Carrega timestamps de notificação
+      "taskNotificationTimestamps",
     ]);
-    lastKnownTasks = data.lastKnownTasks || [];
-    ignoredTasks = data.ignoredTasks || {};
-    snoozedTasks = data.snoozedTasks || {};
-    openedTasks = data.openedTasks || {}; // Inicializa o novo estado
+
+    // Descomprime dados se necessário
+    const decompressedLastKnownTasks = isCompressedFormat(data.lastKnownTasks) 
+      ? decompressData(data.lastKnownTasks) 
+      : data.lastKnownTasks || [];
+    
+    const decompressedIgnoredTasks = isCompressedFormat(data.ignoredTasks)
+      ? decompressData(data.ignoredTasks)
+      : data.ignoredTasks || {};
+    
+    const decompressedSnoozedTasks = isCompressedFormat(data.snoozedTasks)
+      ? decompressData(data.snoozedTasks)
+      : data.snoozedTasks || {};
+    
+    const decompressedOpenedTasks = isCompressedFormat(data.openedTasks)
+      ? decompressData(data.openedTasks)
+      : data.openedTasks || {};
+    
+    const decompressedTaskNotificationTimestamps = isCompressedFormat(data.taskNotificationTimestamps)
+      ? decompressData(data.taskNotificationTimestamps)
+      : data.taskNotificationTimestamps || {};
+
+    // Atribui dados descomprimidos às variáveis globais
+    lastKnownTasks = decompressedLastKnownTasks;
+    ignoredTasks = decompressedIgnoredTasks;
+    snoozedTasks = decompressedSnoozedTasks;
+    openedTasks = decompressedOpenedTasks;
     lastCheckTimestamp = data.lastCheckTimestamp || 0;
-    taskNotificationTimestamps = data.taskNotificationTimestamps || {}; // Inicializa timestamps
+    taskNotificationTimestamps = decompressedTaskNotificationTimestamps;
+
+    // Log estatísticas de compressão se dados estavam comprimidos
+    let compressionStats = {};
+    if (isCompressedFormat(data.lastKnownTasks)) {
+      compressionStats.lastKnownTasks = getCompressionStats(data.lastKnownTasks);
+    }
+    if (isCompressedFormat(data.ignoredTasks)) {
+      compressionStats.ignoredTasks = getCompressionStats(data.ignoredTasks);
+    }
+
     backgroundLogger.info("Dados persistentes carregados:", {
-      lastKnownTasks: lastKnownTasks.length, // Log apenas o tamanho para evitar logs muito grandes
+      lastKnownTasks: lastKnownTasks.length,
       ignoredTasks: Object.keys(ignoredTasks).length,
       snoozedTasks: Object.keys(snoozedTasks).length,
-      openedTasks: Object.keys(openedTasks).length, // Log o tamanho do novo estado
-      taskNotificationTimestamps: Object.keys(taskNotificationTimestamps)
-        .length,
+      openedTasks: Object.keys(openedTasks).length,
+      taskNotificationTimestamps: Object.keys(taskNotificationTimestamps).length,
       lastCheckTimestamp,
+      compressionUsed: Object.keys(compressionStats).length > 0,
+      compressionStats: Object.keys(compressionStats).length > 0 ? compressionStats : undefined
     });
-    backgroundLogger.debug("Conteúdo de lastKnownTasks:", lastKnownTasks); // Log o conteúdo completo para depuração
+
+    backgroundLogger.debug("Conteúdo de lastKnownTasks:", lastKnownTasks);
+
+    // Migra dados existentes para formato comprimido se necessário
+    if (!isCompressedFormat(data.lastKnownTasks) && lastKnownTasks.length > 0) {
+      backgroundLogger.info("Detectados dados não comprimidos. Iniciando migração...");
+      await savePersistentData(); // Isso salvará os dados no formato comprimido
+    }
+
   } catch (error) {
     backgroundLogger.error("Erro ao carregar dados persistentes:", error);
   }
@@ -144,24 +189,52 @@ function updateBadge() {
 
 /**
  * Salva o estado atual das variáveis globais no armazenamento local do Chrome.
- * Agora com validação de tamanho para evitar exceder limites de storage.
+ * Agora com compressão de dados e validação de tamanho para otimizar uso de storage.
  */
 async function savePersistentData() {
   try {
+    // Comprime dados grandes antes de salvar
+    const compressedLastKnownTasks = compressData(lastKnownTasks);
+    const compressedIgnoredTasks = compressData(ignoredTasks);
+    const compressedSnoozedTasks = compressData(snoozedTasks);
+    const compressedOpenedTasks = compressData(openedTasks);
+    const compressedTaskNotificationTimestamps = compressData(taskNotificationTimestamps);
+
     const dataToSave = {
-      lastKnownTasks: lastKnownTasks,
-      ignoredTasks: ignoredTasks,
-      snoozedTasks: snoozedTasks,
-      openedTasks: openedTasks,
-      lastCheckTimestamp: lastCheckTimestamp,
-      taskNotificationTimestamps: taskNotificationTimestamps,
+      lastKnownTasks: compressedLastKnownTasks,
+      ignoredTasks: compressedIgnoredTasks,
+      snoozedTasks: compressedSnoozedTasks,
+      openedTasks: compressedOpenedTasks,
+      lastCheckTimestamp: lastCheckTimestamp, // Não comprime timestamps simples
+      taskNotificationTimestamps: compressedTaskNotificationTimestamps,
     };
+
+    // Log estatísticas de compressão
+    const compressionStats = {
+      lastKnownTasks: getCompressionStats(compressedLastKnownTasks),
+      ignoredTasks: getCompressionStats(compressedIgnoredTasks),
+      snoozedTasks: getCompressionStats(compressedSnoozedTasks),
+      openedTasks: getCompressionStats(compressedOpenedTasks),
+      taskNotificationTimestamps: getCompressionStats(compressedTaskNotificationTimestamps)
+    };
+
+    const totalOriginalSize = Object.values(compressionStats).reduce((sum, stat) => sum + stat.originalSize, 0);
+    const totalCompressedSize = Object.values(compressionStats).reduce((sum, stat) => sum + stat.compressedSize, 0);
+    const overallCompressionRatio = totalOriginalSize > 0 ? totalOriginalSize / totalCompressedSize : 1;
+
+    backgroundLogger.debug("Estatísticas de compressão:", {
+      totalOriginalSize: `${Math.round(totalOriginalSize / 1024)}KB`,
+      totalCompressedSize: `${Math.round(totalCompressedSize / 1024)}KB`,
+      overallCompressionRatio: overallCompressionRatio.toFixed(2),
+      spaceSaved: `${Math.round((totalOriginalSize - totalCompressedSize) / 1024)}KB`,
+      compressionUsed: Object.values(compressionStats).some(stat => stat.compressed)
+    });
 
     // Usa o storage validator para verificar limites antes de salvar
     const result = await safeStorageSet('local', dataToSave);
     
     if (result.success) {
-      backgroundLogger.info("Dados persistentes salvos com validação de tamanho.");
+      backgroundLogger.info("Dados persistentes salvos com compressão e validação de tamanho.");
       
       // Log estatísticas de uso se em modo debug
       if (result.validation) {
@@ -213,8 +286,36 @@ async function savePersistentData() {
         const cleanedTaskCount = lastKnownTasks.length;
         backgroundLogger.info(`Limpeza automática concluída: ${originalTaskCount - cleanedTaskCount} tarefas antigas removidas`);
         
-        // Tenta salvar novamente após limpeza
-        const cleanedData = {
+        // Tenta salvar novamente após limpeza com compressão
+        const cleanedCompressedData = {
+          lastKnownTasks: compressData(lastKnownTasks),
+          ignoredTasks: compressData(ignoredTasks),
+          snoozedTasks: compressData(snoozedTasks),
+          openedTasks: compressData(openedTasks),
+          lastCheckTimestamp: lastCheckTimestamp,
+          taskNotificationTimestamps: compressData(taskNotificationTimestamps),
+        };
+        
+        const retryResult = await safeStorageSet('local', cleanedCompressedData);
+        if (retryResult.success) {
+          backgroundLogger.info("Dados persistentes salvos após limpeza automática com compressão.");
+        } else {
+          // Fallback: salva dados limpos sem compressão como último recurso
+          backgroundLogger.error("Falha mesmo após limpeza. Salvando dados limpos sem compressão:", retryResult.error);
+          const fallbackData = {
+            lastKnownTasks: lastKnownTasks,
+            ignoredTasks: ignoredTasks,
+            snoozedTasks: snoozedTasks,
+            openedTasks: openedTasks,
+            lastCheckTimestamp: lastCheckTimestamp,
+            taskNotificationTimestamps: taskNotificationTimestamps,
+          };
+          await browserAPI.storage.local.set(fallbackData);
+        }
+      } else {
+        // Para outros tipos de erro, tenta salvar sem compressão
+        backgroundLogger.warn("Salvando dados sem compressão devido a erro não relacionado a tamanho");
+        const fallbackData = {
           lastKnownTasks: lastKnownTasks,
           ignoredTasks: ignoredTasks,
           snoozedTasks: snoozedTasks,
@@ -222,25 +323,13 @@ async function savePersistentData() {
           lastCheckTimestamp: lastCheckTimestamp,
           taskNotificationTimestamps: taskNotificationTimestamps,
         };
-        
-        const retryResult = await safeStorageSet('local', cleanedData);
-        if (retryResult.success) {
-          backgroundLogger.info("Dados persistentes salvos após limpeza automática.");
-        } else {
-          // Fallback: salva sem validação como último recurso
-          backgroundLogger.error("Falha mesmo após limpeza. Salvando sem validação:", retryResult.error);
-          await browserAPI.storage.local.set(cleanedData);
-        }
-      } else {
-        // Para outros tipos de erro, tenta salvar sem validação
-        backgroundLogger.warn("Salvando dados sem validação devido a erro não relacionado a tamanho");
-        await browserAPI.storage.local.set(dataToSave);
+        await browserAPI.storage.local.set(fallbackData);
       }
     }
   } catch (error) {
     backgroundLogger.error("Erro ao salvar dados persistentes:", error);
     
-    // Fallback final: tenta salvar diretamente
+    // Fallback final: tenta salvar diretamente sem compressão
     try {
       await browserAPI.storage.local.set({
         lastKnownTasks: lastKnownTasks,
@@ -250,7 +339,7 @@ async function savePersistentData() {
         lastCheckTimestamp: lastCheckTimestamp,
         taskNotificationTimestamps: taskNotificationTimestamps,
       });
-      backgroundLogger.warn("Dados salvos usando fallback direto");
+      backgroundLogger.warn("Dados salvos usando fallback direto sem compressão");
     } catch (fallbackError) {
       backgroundLogger.error("Falha crítica ao salvar dados:", fallbackError);
     }
@@ -509,6 +598,45 @@ browserAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
         backgroundLogger.error("Erro ao obter estatísticas de storage:", error);
         sendResponse({ error: error.message });
       });
+      return true; // Indica que a resposta será enviada de forma assíncrona
+    case "getCompressionStats": // NOVO CASE PARA OBTER ESTATÍSTICAS DE COMPRESSÃO
+      backgroundLogger.info("Solicitação de estatísticas de compressão recebida.");
+      try {
+        // Obtém dados atuais do storage para calcular estatísticas
+        const data = await browserAPI.storage.local.get([
+          "lastKnownTasks",
+          "ignoredTasks", 
+          "snoozedTasks",
+          "openedTasks",
+          "taskNotificationTimestamps"
+        ]);
+        
+        const compressionStats = {
+          lastKnownTasks: isCompressedFormat(data.lastKnownTasks) ? getCompressionStats(data.lastKnownTasks) : { compressed: false },
+          ignoredTasks: isCompressedFormat(data.ignoredTasks) ? getCompressionStats(data.ignoredTasks) : { compressed: false },
+          snoozedTasks: isCompressedFormat(data.snoozedTasks) ? getCompressionStats(data.snoozedTasks) : { compressed: false },
+          openedTasks: isCompressedFormat(data.openedTasks) ? getCompressionStats(data.openedTasks) : { compressed: false },
+          taskNotificationTimestamps: isCompressedFormat(data.taskNotificationTimestamps) ? getCompressionStats(data.taskNotificationTimestamps) : { compressed: false }
+        };
+        
+        const totalOriginalSize = Object.values(compressionStats).reduce((sum, stat) => sum + (stat.originalSize || 0), 0);
+        const totalCompressedSize = Object.values(compressionStats).reduce((sum, stat) => sum + (stat.compressedSize || 0), 0);
+        const overallCompressionRatio = totalOriginalSize > 0 ? totalOriginalSize / totalCompressedSize : 1;
+        
+        sendResponse({
+          compressionStats,
+          summary: {
+            totalOriginalSize,
+            totalCompressedSize,
+            overallCompressionRatio,
+            spaceSaved: totalOriginalSize - totalCompressedSize,
+            compressionEnabled: Object.values(compressionStats).some(stat => stat.compressed)
+          }
+        });
+      } catch (error) {
+        backgroundLogger.error("Erro ao obter estatísticas de compressão:", error);
+        sendResponse({ error: error.message });
+      }
       return true; // Indica que a resposta será enviada de forma assíncrona
   }
 });
