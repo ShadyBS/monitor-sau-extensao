@@ -8,8 +8,259 @@ import {
   migrateToSync,
 } from "./config-manager.js";
 import { tooltipSystem } from "./tooltip-system.js";
+import { sanitizeHTML } from "./sanitizer.js";
 
 const optionsLogger = logger("[Options]");
+
+// Validation constants and rules
+const VALIDATION_RULES = {
+  username: {
+    minLength: 3,
+    maxLength: 50,
+    pattern: /^[a-zA-Z0-9._-]+$/,
+    required: true,
+    errorMessage: "Usuário deve ter entre 3-50 caracteres e conter apenas letras, números, pontos, hífens e underscores."
+  },
+  password: {
+    minLength: 4,
+    maxLength: 100,
+    required: true,
+    errorMessage: "Senha deve ter entre 4-100 caracteres."
+  },
+  checkInterval: {
+    min: 10,
+    max: 3600, // 1 hour max
+    required: true,
+    errorMessage: "Intervalo de verificação deve estar entre 10 e 3600 segundos."
+  },
+  renotificationInterval: {
+    min: 1,
+    max: 1440, // 24 hours max
+    required: false,
+    errorMessage: "Intervalo de renotificação deve estar entre 1 e 1440 minutos."
+  },
+  snoozeHours: {
+    min: 0,
+    max: 23,
+    required: false,
+    errorMessage: "Horas devem estar entre 0 e 23."
+  },
+  snoozeMinutes: {
+    min: 0,
+    max: 59,
+    required: false,
+    errorMessage: "Minutos devem estar entre 0 e 59."
+  }
+};
+
+/**
+ * Validates a string input according to specified rules
+ * @param {string} value - The value to validate
+ * @param {Object} rules - Validation rules
+ * @returns {Object} Validation result with isValid and errorMessage
+ */
+function validateStringInput(value, rules) {
+  // Sanitize input first
+  const sanitizedValue = typeof value === 'string' ? value.trim() : '';
+  
+  // Check if required
+  if (rules.required && (!sanitizedValue || sanitizedValue.length === 0)) {
+    return {
+      isValid: false,
+      errorMessage: "Este campo é obrigatório.",
+      sanitizedValue: sanitizedValue
+    };
+  }
+  
+  // If not required and empty, it's valid
+  if (!rules.required && sanitizedValue.length === 0) {
+    return {
+      isValid: true,
+      sanitizedValue: sanitizedValue
+    };
+  }
+  
+  // Check length constraints
+  if (rules.minLength && sanitizedValue.length < rules.minLength) {
+    return {
+      isValid: false,
+      errorMessage: `Deve ter pelo menos ${rules.minLength} caracteres.`,
+      sanitizedValue: sanitizedValue
+    };
+  }
+  
+  if (rules.maxLength && sanitizedValue.length > rules.maxLength) {
+    return {
+      isValid: false,
+      errorMessage: `Deve ter no máximo ${rules.maxLength} caracteres.`,
+      sanitizedValue: sanitizedValue
+    };
+  }
+  
+  // Check pattern if specified
+  if (rules.pattern && !rules.pattern.test(sanitizedValue)) {
+    return {
+      isValid: false,
+      errorMessage: rules.errorMessage || "Formato inválido.",
+      sanitizedValue: sanitizedValue
+    };
+  }
+  
+  return {
+    isValid: true,
+    sanitizedValue: sanitizedValue
+  };
+}
+
+/**
+ * Validates a numeric input according to specified rules
+ * @param {string|number} value - The value to validate
+ * @param {Object} rules - Validation rules
+ * @returns {Object} Validation result with isValid, errorMessage, and parsedValue
+ */
+function validateNumericInput(value, rules) {
+  // Convert to string and sanitize
+  const stringValue = String(value || '').trim();
+  
+  // Check if required
+  if (rules.required && stringValue === '') {
+    return {
+      isValid: false,
+      errorMessage: "Este campo é obrigatório.",
+      parsedValue: null
+    };
+  }
+  
+  // If not required and empty, return default or null
+  if (!rules.required && stringValue === '') {
+    return {
+      isValid: true,
+      parsedValue: rules.defaultValue || null
+    };
+  }
+  
+  // Parse the number
+  const parsedValue = parseInt(stringValue, 10);
+  
+  // Check if it's a valid number
+  if (isNaN(parsedValue)) {
+    return {
+      isValid: false,
+      errorMessage: "Deve ser um número válido.",
+      parsedValue: null
+    };
+  }
+  
+  // Check range constraints
+  if (rules.min !== undefined && parsedValue < rules.min) {
+    return {
+      isValid: false,
+      errorMessage: `Deve ser pelo menos ${rules.min}.`,
+      parsedValue: parsedValue
+    };
+  }
+  
+  if (rules.max !== undefined && parsedValue > rules.max) {
+    return {
+      isValid: false,
+      errorMessage: `Deve ser no máximo ${rules.max}.`,
+      parsedValue: parsedValue
+    };
+  }
+  
+  return {
+    isValid: true,
+    parsedValue: parsedValue
+  };
+}
+
+/**
+ * Validates snooze option inputs (hours and minutes combination)
+ * @param {number} hours - Hours value
+ * @param {number} minutes - Minutes value
+ * @returns {Object} Validation result
+ */
+function validateSnoozeOption(hours, minutes) {
+  const hoursValidation = validateNumericInput(hours, VALIDATION_RULES.snoozeHours);
+  const minutesValidation = validateNumericInput(minutes, VALIDATION_RULES.snoozeMinutes);
+  
+  if (!hoursValidation.isValid) {
+    return {
+      isValid: false,
+      errorMessage: `Horas: ${hoursValidation.errorMessage}`
+    };
+  }
+  
+  if (!minutesValidation.isValid) {
+    return {
+      isValid: false,
+      errorMessage: `Minutos: ${minutesValidation.errorMessage}`
+    };
+  }
+  
+  const totalMinutes = (hoursValidation.parsedValue || 0) * 60 + (minutesValidation.parsedValue || 0);
+  
+  // Check if at least one value is greater than 0
+  if (totalMinutes === 0) {
+    return {
+      isValid: false,
+      errorMessage: "Pelo menos horas ou minutos deve ser maior que 0."
+    };
+  }
+  
+  // Check maximum total time (24 hours)
+  if (totalMinutes > 1440) {
+    return {
+      isValid: false,
+      errorMessage: "Tempo total não pode exceder 24 horas."
+    };
+  }
+  
+  return {
+    isValid: true,
+    hours: hoursValidation.parsedValue || 0,
+    minutes: minutesValidation.parsedValue || 0,
+    totalMinutes: totalMinutes
+  };
+}
+
+/**
+ * Shows validation error with enhanced styling and logging
+ * @param {string} elementId - Status element ID
+ * @param {string} message - Error message
+ * @param {boolean} isError - Whether it's an error or success
+ */
+async function showValidationStatus(elementId, message, isError = false) {
+  const element = document.getElementById(elementId);
+  if (!element) {
+    await optionsLogger.warn(`Status element not found: ${elementId}`);
+    return;
+  }
+  
+  // Sanitize the message before displaying
+  const sanitizedMessage = await sanitizeHTML(message);
+  element.textContent = sanitizedMessage;
+  element.style.color = isError ? "#d32f2f" : "#2e7d32";
+  element.style.fontWeight = "bold";
+  element.style.padding = "8px";
+  element.style.borderRadius = "4px";
+  element.style.backgroundColor = isError ? "#ffebee" : "#e8f5e9";
+  element.style.border = isError ? "1px solid #ffcdd2" : "1px solid #c8e6c9";
+  
+  // Log the validation result
+  if (isError) {
+    await optionsLogger.warn(`Validation error in ${elementId}: ${message}`);
+  } else {
+    await optionsLogger.info(`Validation success in ${elementId}: ${message}`);
+  }
+  
+  setTimeout(() => {
+    element.textContent = "";
+    element.style.backgroundColor = "";
+    element.style.border = "";
+    element.style.padding = "";
+  }, 5000);
+}
 
 // Define o objeto de API do navegador de forma compatível (Chrome ou Firefox)
 const browserAPI = globalThis.browser || globalThis.chrome;
@@ -232,79 +483,92 @@ function showStatus(elementId, message, isError = false) {
 }
 
 async function saveLogin() {
-  const username = document.getElementById("username").value;
-  const password = document.getElementById("password").value;
+  const usernameInput = document.getElementById("username").value;
+  const passwordInput = document.getElementById("password").value;
 
-  if (!username || !password) {
-    showStatus("loginStatus", "Usuário e senha são obrigatórios.", true);
+  // Validate username
+  const usernameValidation = validateStringInput(usernameInput, VALIDATION_RULES.username);
+  if (!usernameValidation.isValid) {
+    await showValidationStatus("loginStatus", usernameValidation.errorMessage, true);
+    return;
+  }
+
+  // Validate password
+  const passwordValidation = validateStringInput(passwordInput, VALIDATION_RULES.password);
+  if (!passwordValidation.isValid) {
+    await showValidationStatus("loginStatus", passwordValidation.errorMessage, true);
     return;
   }
 
   try {
     await setConfigs({
-      sauUsername: username,
-      sauPassword: password,
+      sauUsername: usernameValidation.sanitizedValue,
+      sauPassword: passwordValidation.sanitizedValue,
     });
-    showStatus("loginStatus", "Credenciais salvas com sucesso!");
-    await optionsLogger.info("Credenciais de login salvas com sincronização.");
+    await showValidationStatus("loginStatus", "Credenciais salvas com sucesso!");
+    await optionsLogger.info("Credenciais de login salvas com sincronização.", {
+      username: usernameValidation.sanitizedValue.substring(0, 3) + "***", // Log partial username for security
+      passwordLength: passwordValidation.sanitizedValue.length
+    });
   } catch (error) {
     await optionsLogger.error("Erro ao salvar credenciais:", error);
-    showStatus("loginStatus", "Erro ao salvar credenciais.", true);
+    await showValidationStatus("loginStatus", "Erro ao salvar credenciais.", true);
   }
 }
 
 async function saveSettings() {
-  const checkInterval = parseInt(
-    document.getElementById("checkInterval").value,
-    10
-  );
-  const enableRenotification = document.getElementById(
-    "enableRenotification"
-  ).checked;
-  const renotificationInterval = parseInt(
-    document.getElementById("renotificationInterval").value,
-    10
-  );
-  const enableSigssTabRename = document.getElementById(
-    "enableSigssTabRename"
-  ).checked;
+  const checkIntervalInput = document.getElementById("checkInterval").value;
+  const enableRenotification = document.getElementById("enableRenotification").checked;
+  const renotificationIntervalInput = document.getElementById("renotificationInterval").value;
+  const enableSigssTabRename = document.getElementById("enableSigssTabRename").checked;
 
-  if (isNaN(checkInterval) || checkInterval < 10) {
-    showStatus(
-      "settingsStatus",
-      "Intervalo de verificação inválido (mínimo 10 segundos).",
-      true
-    );
+  // Validate check interval
+  const checkIntervalValidation = validateNumericInput(checkIntervalInput, VALIDATION_RULES.checkInterval);
+  if (!checkIntervalValidation.isValid) {
+    await showValidationStatus("settingsStatus", checkIntervalValidation.errorMessage, true);
     return;
   }
 
-  if (
-    enableRenotification &&
-    (isNaN(renotificationInterval) || renotificationInterval < 1)
-  ) {
-    showStatus(
-      "settingsStatus",
-      "Intervalo de renotificação inválido (mínimo 1 minuto).",
-      true
-    );
-    return;
+  // Validate renotification interval only if renotification is enabled
+  let renotificationIntervalValue = null;
+  if (enableRenotification) {
+    const renotificationValidation = validateNumericInput(renotificationIntervalInput, {
+      ...VALIDATION_RULES.renotificationInterval,
+      required: true // Make it required when renotification is enabled
+    });
+    if (!renotificationValidation.isValid) {
+      await showValidationStatus("settingsStatus", `Renotificação: ${renotificationValidation.errorMessage}`, true);
+      return;
+    }
+    renotificationIntervalValue = renotificationValidation.parsedValue;
+  } else {
+    // If renotification is disabled, still validate the input but don't require it
+    const renotificationValidation = validateNumericInput(renotificationIntervalInput, VALIDATION_RULES.renotificationInterval);
+    if (renotificationIntervalInput.trim() !== '' && !renotificationValidation.isValid) {
+      await showValidationStatus("settingsStatus", `Renotificação: ${renotificationValidation.errorMessage}`, true);
+      return;
+    }
+    renotificationIntervalValue = renotificationValidation.parsedValue || 30; // Default value
   }
 
   try {
     await setConfigs({
-      checkInterval: checkInterval,
+      checkInterval: checkIntervalValidation.parsedValue,
       enableRenotification: enableRenotification,
-      renotificationInterval: renotificationInterval,
+      renotificationInterval: renotificationIntervalValue,
       enableSigssTabRename: enableSigssTabRename,
     });
-    showStatus("settingsStatus", "Configurações salvas com sucesso!");
-    await optionsLogger.info(
-      "Configurações de notificação salvas com sincronização. Enviando mensagem para atualizar alarme."
-    );
+    await showValidationStatus("settingsStatus", "Configurações salvas com sucesso!");
+    await optionsLogger.info("Configurações de notificação salvas com sincronização.", {
+      checkInterval: checkIntervalValidation.parsedValue,
+      enableRenotification: enableRenotification,
+      renotificationInterval: renotificationIntervalValue,
+      enableSigssTabRename: enableSigssTabRename
+    });
     browserAPI.runtime.sendMessage({ action: "updateAlarm" });
   } catch (error) {
     await optionsLogger.error("Erro ao salvar configurações:", error);
-    showStatus("settingsStatus", "Erro ao salvar configurações.", true);
+    await showValidationStatus("settingsStatus", "Erro ao salvar configurações.", true);
   }
 }
 
@@ -348,45 +612,67 @@ async function saveSnoozeSettings() {
   try {
     const snoozeOptions = [];
     const optionItems = document.querySelectorAll(".snooze-option-item");
+    const validationErrors = [];
 
-    optionItems.forEach((item) => {
-      const hours = parseInt(item.querySelector(".hours-input").value) || 0;
-      const minutes = parseInt(item.querySelector(".minutes-input").value) || 0;
+    // Validate each snooze option
+    optionItems.forEach((item, index) => {
+      const hoursInput = item.querySelector(".hours-input").value;
+      const minutesInput = item.querySelector(".minutes-input").value;
 
-      if (hours > 0 || minutes > 0) {
+      // Validate the snooze option
+      const validation = validateSnoozeOption(hoursInput, minutesInput);
+      
+      if (!validation.isValid) {
+        validationErrors.push(`Opção ${index + 1}: ${validation.errorMessage}`);
+      } else {
         snoozeOptions.push({
-          hours: hours,
-          minutes: minutes,
-          totalMinutes: hours * 60 + minutes,
+          hours: validation.hours,
+          minutes: validation.minutes,
+          totalMinutes: validation.totalMinutes,
         });
       }
     });
 
-    const allowCustomSnooze =
-      document.getElementById("allowCustomSnooze").checked;
+    // Check if there are validation errors
+    if (validationErrors.length > 0) {
+      await showValidationStatus("snoozeSettingsStatus", validationErrors.join("; "), true);
+      return;
+    }
+
+    // Check if at least one option is provided
+    if (snoozeOptions.length === 0) {
+      await showValidationStatus("snoozeSettingsStatus", "Pelo menos uma opção de snooze deve ser configurada.", true);
+      return;
+    }
+
+    // Check for duplicate options
+    const duplicates = snoozeOptions.filter((option, index, arr) => 
+      arr.findIndex(other => other.totalMinutes === option.totalMinutes) !== index
+    );
+    
+    if (duplicates.length > 0) {
+      await showValidationStatus("snoozeSettingsStatus", "Opções duplicadas detectadas. Cada opção deve ter um tempo único.", true);
+      return;
+    }
+
+    const allowCustomSnooze = document.getElementById("allowCustomSnooze").checked;
 
     const snoozeSettings = {
-      options: snoozeOptions,
+      options: snoozeOptions.sort((a, b) => a.totalMinutes - b.totalMinutes), // Sort by total minutes
       allowCustom: allowCustomSnooze,
     };
 
     await setConfig("snoozeSettings", snoozeSettings);
 
-    showStatus(
-      "snoozeSettingsStatus",
-      "Configurações de 'Lembrar Mais Tarde' salvas com sucesso!"
-    );
-    await optionsLogger.info(
-      "Configurações de snooze salvas com sincronização:",
-      snoozeSettings
-    );
+    await showValidationStatus("snoozeSettingsStatus", "Configurações de 'Lembrar Mais Tarde' salvas com sucesso!");
+    await optionsLogger.info("Configurações de snooze salvas com sincronização:", {
+      optionsCount: snoozeOptions.length,
+      allowCustom: allowCustomSnooze,
+      options: snoozeOptions.map(opt => `${opt.hours}h${opt.minutes}m`)
+    });
   } catch (error) {
     await optionsLogger.error("Erro ao salvar configurações de snooze:", error);
-    showStatus(
-      "snoozeSettingsStatus",
-      "Erro ao salvar configurações de snooze.",
-      true
-    );
+    await showValidationStatus("snoozeSettingsStatus", "Erro ao salvar configurações de snooze.", true);
   }
 }
 
