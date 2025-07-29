@@ -55,6 +55,9 @@
   // Throttling para MutationObserver
   let mutationTimeout = null;
   const MUTATION_THROTTLE_DELAY = 500; // 500ms
+  
+  // Variável global para armazenar a instância do MutationObserver para cleanup
+  let globalMutationObserver = null;
 
   /**
    * Lida com o login automático se a página atual for a página de login do SAU.
@@ -334,6 +337,12 @@
    * caso as tarefas sejam injetadas diretamente no DOM sem uma requisição XHR óbvia.
    */
   function setupMutationObserver() {
+    // Desconecta observer anterior se existir (previne vazamentos de memória)
+    if (globalMutationObserver) {
+      globalMutationObserver.disconnect();
+      contentLogger.debug("MutationObserver anterior desconectado.");
+    }
+
     // Tenta encontrar o elemento que contém a lista de tarefas, ou monitora o body como fallback
     const targetNode = document.getElementById("divLista") || document.body;
     if (!targetNode) {
@@ -363,9 +372,28 @@
       }, MUTATION_THROTTLE_DELAY);
     };
 
-    const observer = new MutationObserver(callback);
-    observer.observe(targetNode, config); // Inicia a observação
+    globalMutationObserver = new MutationObserver(callback);
+    globalMutationObserver.observe(targetNode, config); // Inicia a observação
     contentLogger.info("MutationObserver configurado para divLista com throttling.");
+  }
+
+  /**
+   * Limpa recursos do MutationObserver para prevenir vazamentos de memória.
+   * Deve ser chamado quando a página é descarregada ou o script é finalizado.
+   */
+  function cleanupMutationObserver() {
+    if (globalMutationObserver) {
+      globalMutationObserver.disconnect();
+      globalMutationObserver = null;
+      contentLogger.info("MutationObserver desconectado e limpo com sucesso.");
+    }
+    
+    // Limpa timeout pendente se existir
+    if (mutationTimeout) {
+      clearTimeout(mutationTimeout);
+      mutationTimeout = null;
+      contentLogger.debug("Timeout do MutationObserver limpo.");
+    }
   }
 
   /**
@@ -779,6 +807,24 @@
 
     // Configura o MutationObserver como um complemento/fallback para detectar mudanças no DOM
     setupMutationObserver();
+
+    // Adiciona listeners para cleanup quando a página é descarregada (previne vazamentos de memória)
+    window.addEventListener('beforeunload', () => {
+      contentLogger.info("Página sendo descarregada. Executando cleanup do MutationObserver...");
+      cleanupMutationObserver();
+    });
+
+    // Adiciona listener para visibilitychange como backup para cleanup
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') {
+        contentLogger.debug("Página ficou oculta. Executando cleanup preventivo...");
+        cleanupMutationObserver();
+      } else if (document.visibilityState === 'visible') {
+        // Reconfigura o observer quando a página volta a ficar visível
+        contentLogger.debug("Página ficou visível. Reconfigurando MutationObserver...");
+        setupMutationObserver();
+      }
+    });
 
     // Adiciona um listener para mensagens enviadas do background script para este content script.
     // Isso é usado para injetar a UI de notificação visual e responder a pings de responsividade.

@@ -300,3 +300,8 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - Implementados estilos responsivos para botões de ajuda em options.css
 - Integrado sistema de tooltips existente para fornecer ajuda contextual
 - Expandida documentação sobre funcionalidade SIGSS no help.html
+- **Memory Leak - MutationObserver**: Corrigido vazamento de memória crítico onde MutationObserver não era desconectado quando página era fechada, causando acúmulo de recursos em sessões longas
+- **Cleanup Automático**: Implementado sistema automático de limpeza de recursos com listeners para beforeunload e visibilitychange para garantir desconexão adequada do MutationObserver
+- **Gestão de Recursos**: Adicionada variável global globalMutationObserver para rastreamento e cleanup adequado da instância do observer
+- **Prevenção de Vazamentos**: Implementada função cleanupMutationObserver() que desconecta observer e limpa timeouts pendentes
+- **Reconfiguração Inteligente**: Sistema agora reconfigura automaticamente o MutationObserver quando página volta a ficar visível após estar oculta
