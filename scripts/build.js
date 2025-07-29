@@ -17,11 +17,14 @@ const CONFIG = {
     'background.js',
     'content.js',
     'content-sigss.js',
+    'content-backup.js',
     'interceptor.js',
     'logger.js',
     'sanitizer.js',
     'tooltip-system.js',
     'config-manager.js',
+    'sigss-tab-renamer.js',
+    'storage-validator.js',
     'popup.html',
     'popup.js',
     'popup.css',
@@ -36,7 +39,8 @@ const CONFIG = {
     'styles.css',
     'icons/',
     'README.md',
-    'CHANGELOG.md'
+    'CHANGELOG.md',
+    'LICENSE'
   ],
   browsers: {
     chrome: {

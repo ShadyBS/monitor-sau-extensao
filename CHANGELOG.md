@@ -3,6 +3,17 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Scripts de Build - Arquivos Essenciais**: Corrigido problema crítico onde arquivos essenciais estavam sendo deixados de fora dos ZIPs de distribuição. Adicionados ao script de build:
+  - `sigss-tab-renamer.js` - Funcionalidade de renomeação de abas do SIGSS (7.7KB)
+  - `storage-validator.js` - Sistema de validação de limites de storage (12KB)
+  - `content-backup.js` - Script de backup do content script (32.8KB)
+  - `LICENSE` - Arquivo de licença MIT (1KB)
+- **Tamanho dos ZIPs**: Tamanho dos ZIPs de distribuição aumentou de 0.14MB para 0.16MB, confirmando inclusão dos arquivos faltantes
+- **Funcionalidade SIGSS**: Resolvido problema onde funcionalidade de renomeação de abas do SIGSS não funcionava em builds empacotados devido ao arquivo `sigss-tab-renamer.js` não estar incluído
+- **Validação de Storage**: Corrigido problema onde sistema de validação de limites de storage não estava disponível em builds de produção
+
 ### Security
 
 - **Vulnerabilidade XSS Crítica**: Corrigida vulnerabilidade crítica de XSS na função `injectNotificationUI()` do content.js que permitia execução de código malicioso através de dados de tarefas não sanitizados
