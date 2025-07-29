@@ -10,6 +10,8 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 ### Fixed
 
+- **Message Validation - Cross-World Communication**: Corrigido problema onde validação de segurança muito restritiva estava rejeitando mensagens legítimas entre interceptor.js (MAIN world) e content.js (ISOLATED world). Alterada validação de `event.source` para ser mais flexível, permitindo comunicação entre diferentes contextos de execução enquanto mantém segurança através de validação de origem
+- **Console Warnings Reduction**: Reduzidas mensagens de aviso "Mensagem de fonte não confiável rejeitada" no console, alterando nível de log de `warn` para `debug` para mensagens de fontes externas não relacionadas à extensão
 - **Scripts de Build - Arquivos Essenciais**: Corrigido problema crítico onde arquivos essenciais estavam sendo deixados de fora dos ZIPs de distribuição. Adicionados ao script de build:
   - `sigss-tab-renamer.js` - Funcionalidade de renomeação de abas do SIGSS (7.7KB)
   - `storage-validator.js` - Sistema de validação de limites de storage (12KB)

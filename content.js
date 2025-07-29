@@ -718,15 +718,20 @@
     window.addEventListener("message", (event) => {
       // Validação de segurança robusta contra injeção de dados maliciosos
       
-      // 1. Validação básica de fonte
-      if (event.source !== window) {
-        contentLogger.warn("Mensagem de fonte não confiável rejeitada");
+      // 1. Validação de origem (mais importante que source para segurança)
+      if (event.origin !== window.location.origin) {
+        contentLogger.warn("Mensagem de origem incorreta rejeitada:", event.origin);
         return;
       }
 
-      // 2. Validação rigorosa de origem
-      if (event.origin !== window.location.origin) {
-        contentLogger.warn("Mensagem de origem incorreta rejeitada:", event.origin);
+      // 2. Validação de fonte mais flexível (permite MAIN world e ISOLATED world)
+      if (event.source !== window && event.source !== window.parent && event.source !== window.top) {
+        contentLogger.debug("Mensagem de fonte externa ignorada", {
+          source: event.source,
+          expected: window,
+          origin: event.origin,
+          type: event.data?.type
+        });
         return;
       }
 
