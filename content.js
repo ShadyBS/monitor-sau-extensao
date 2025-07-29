@@ -705,38 +705,131 @@
     // Isso é importante para que o content script não notifique sobre tarefas já vistas na mesma sessão.
     const data = await browserAPI.storage.local.get("lastKnownTasks");
     
-    // Validação robusta para garantir que currentSessionTasks seja sempre um array
-    let rawTasks = data.lastKnownTasks;
-    
-    // Se os dados estão em formato comprimido, tenta descomprimir
-    if (rawTasks && typeof rawTasks === 'object' && rawTasks.__compressed) {
+    // Função auxiliar para descomprimir dados usando o mesmo algoritmo do data-compressor.js
+    function decompressTaskData(compressedData) {
       try {
-        // Simula descompressão básica - em produção seria importado do data-compressor.js
-        rawTasks = JSON.parse(rawTasks.data);
-        contentLogger.debug("Dados de tarefas descomprimidos no content script");
+        // Verifica se está no formato comprimido do data-compressor.js
+        if (compressedData && 
+            typeof compressedData === 'object' && 
+            compressedData.hasOwnProperty('compressed') &&
+            compressedData.hasOwnProperty('data')) {
+          
+          if (!compressedData.compressed) {
+            // Dados otimizados mas não comprimidos
+            return compressedData.data;
+          }
+          
+          // Dados comprimidos - implementa descompressão simples
+          const compressedString = compressedData.data;
+          if (typeof compressedString === 'string' && compressedString.includes('§')) {
+            // Descompressão básica para referências simples
+            let decompressed = compressedString;
+            // Remove marcadores de compressão simples se existirem
+            decompressed = decompressed.replace(/§\d+:\d+§/g, '');
+            try {
+              return JSON.parse(decompressed);
+            } catch (parseError) {
+              contentLogger.debug("Falha na descompressão, usando dados como string");
+              return compressedString;
+            }
+          } else {
+            // Tenta parsear diretamente se for string JSON
+            try {
+              return typeof compressedString === 'string' ? JSON.parse(compressedString) : compressedString;
+            } catch (parseError) {
+              return compressedString;
+            }
+          }
+        }
+        
+        // Formato legado ou não comprimido
+        return compressedData;
       } catch (error) {
-        contentLogger.warn("Erro ao descomprimir dados de tarefas:", error);
-        rawTasks = [];
+        contentLogger.warn("Erro na descompressão de dados:", error);
+        return compressedData;
       }
     }
     
-    // Garante que currentSessionTasks seja sempre um array válido
-    if (Array.isArray(rawTasks)) {
-      currentSessionTasks = rawTasks;
-    } else if (rawTasks && typeof rawTasks === 'object') {
-      // Se for um objeto, tenta extrair array de uma propriedade conhecida
-      currentSessionTasks = rawTasks.tasks || rawTasks.data || [];
-      contentLogger.warn("Dados de tarefas em formato inesperado, tentando extrair array");
-    } else {
-      currentSessionTasks = [];
-      contentLogger.warn("Dados de tarefas inválidos, inicializando array vazio");
+    // Função auxiliar para extrair array de tarefas de diferentes formatos
+    function extractTasksArray(rawData) {
+      // Se já é um array, retorna diretamente
+      if (Array.isArray(rawData)) {
+        return rawData;
+      }
+      
+      // Se é null ou undefined, retorna array vazio
+      if (!rawData) {
+        return [];
+      }
+      
+      // Se é um objeto, tenta extrair de propriedades conhecidas
+      if (typeof rawData === 'object') {
+        // Formatos conhecidos de dados de tarefas
+        const possibleArrays = [
+          rawData.tasks,           // Formato padrão
+          rawData.data,            // Formato de dados comprimidos
+          rawData.lastKnownTasks,  // Formato aninhado
+          rawData.items,           // Formato alternativo
+          rawData.taskList         // Outro formato possível
+        ];
+        
+        for (const possibleArray of possibleArrays) {
+          if (Array.isArray(possibleArray)) {
+            contentLogger.debug(`Tarefas extraídas de propriedade do objeto (${possibleArray.length} itens)`);
+            return possibleArray;
+          }
+        }
+        
+        // Se o objeto tem propriedades que parecem tarefas, converte para array
+        const objectKeys = Object.keys(rawData);
+        if (objectKeys.length > 0) {
+          // Verifica se as propriedades parecem IDs de tarefas
+          const taskLikeObjects = objectKeys
+            .map(key => rawData[key])
+            .filter(value => 
+              value && 
+              typeof value === 'object' && 
+              (value.id || value.numero || value.titulo)
+            );
+          
+          if (taskLikeObjects.length > 0) {
+            contentLogger.debug(`Convertendo objeto com ${taskLikeObjects.length} tarefas para array`);
+            return taskLikeObjects;
+          }
+        }
+        
+        contentLogger.info("Objeto não contém array de tarefas reconhecível, retornando array vazio");
+        return [];
+      }
+      
+      // Para outros tipos, retorna array vazio
+      contentLogger.info(`Tipo de dados não reconhecido (${typeof rawData}), retornando array vazio`);
+      return [];
     }
     
-    // Validação final para garantir que é um array
+    // Processamento principal dos dados de tarefas
+    let rawTasks = data.lastKnownTasks;
+    
+    // Primeiro, tenta descomprimir se necessário
+    const decompressedTasks = decompressTaskData(rawTasks);
+    
+    // Depois, extrai o array de tarefas do formato descomprimido
+    currentSessionTasks = extractTasksArray(decompressedTasks);
+    
+    // Validação final robusta
     if (!Array.isArray(currentSessionTasks)) {
-      contentLogger.error("Falha na validação final: currentSessionTasks não é um array, forçando array vazio");
+      contentLogger.error("Falha crítica: currentSessionTasks não é um array após processamento, forçando array vazio");
       currentSessionTasks = [];
     }
+    
+    // Sanitiza cada tarefa no array para garantir integridade
+    currentSessionTasks = currentSessionTasks.filter(task => {
+      if (!task || typeof task !== 'object') {
+        contentLogger.debug("Removendo item inválido do array de tarefas");
+        return false;
+      }
+      return true;
+    });
     
     contentLogger.info("Tarefas conhecidas na sessão:", currentSessionTasks.length);
 
