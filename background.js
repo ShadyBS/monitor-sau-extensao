@@ -383,9 +383,10 @@ browserAPI.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 /**
- * Timeout para operações de injeção de script (10 segundos)
+ * Timeout para operações de injeção de script (30 segundos)
+ * Aumentado para melhor compatibilidade com conexões lentas
  */
-const SCRIPT_INJECTION_TIMEOUT = 10000;
+const SCRIPT_INJECTION_TIMEOUT = 30000;
 
 /**
  * Verifica se uma aba está responsiva tentando enviar uma mensagem simples
