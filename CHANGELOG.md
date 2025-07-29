@@ -7,6 +7,13 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 - **Verificação Inicial Automática**: Implementada verificação imediata de tarefas na inicialização da extensão. Agora o monitoramento inicia automaticamente após instalação, reinício do navegador ou recarregamento da extensão, sem necessidade de interação manual
 - **Feedback Instantâneo**: Badge e notificações aparecem imediatamente se houver tarefas pendentes, melhorando significativamente a experiência do usuário
+- **Script de Verificação de Integridade**: Novo script `npm run integrity` que verifica se todos os arquivos necessários estão incluídos no build, valida imports, sincronização de manifests e scripts do package.json. Garante que o projeto esteja íntegro antes de builds e releases
+
+### Changed
+
+- **Scripts de Build - Arquivo data-compressor.js**: Adicionado `data-compressor.js` à lista de arquivos do build.js que estava faltando, garantindo que o sistema de compressão seja incluído nos ZIPs de distribuição
+- **Scripts de Validação - Arquivos Novos**: Atualizados scripts de validação para incluir verificação de todos os novos arquivos críticos: `content-sigss.js`, `storage-validator.js`, `data-compressor.js`, `help.html/js/css` e outros módulos essenciais
+- **Documentação agents.md - Estrutura Atualizada**: Atualizada estrutura do projeto no `agents.md` para refletir todos os novos arquivos incluindo `data-compressor.js`, `storage-validator.js`, `content-backup.js` e outros módulos implementados recentemente
 
 ### Fixed
 
@@ -20,17 +27,6 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - **Tamanho dos ZIPs**: Tamanho dos ZIPs de distribuição aumentou de 0.14MB para 0.16MB, confirmando inclusão dos arquivos faltantes
 - **Funcionalidade SIGSS**: Resolvido problema onde funcionalidade de renomeação de abas do SIGSS não funcionava em builds empacotados devido ao arquivo `sigss-tab-renamer.js` não estar incluído
 - **Validação de Storage**: Corrigido problema onde sistema de validação de limites de storage não estava disponível em builds de produção
-
-### Security
-
-- **Vulnerabilidade XSS Crítica**: Corrigida vulnerabilidade crítica de XSS na função `injectNotificationUI()` do content.js que permitia execução de código malicioso através de dados de tarefas não sanitizados
-- **DOM Manipulation Segura**: Substituído uso inseguro de `innerHTML` por manipulação DOM segura usando `textContent`, `createElement` e `appendChild`
-- **Sanitização de Dados**: Implementado sistema robusto de sanitização de dados de tarefas com validação de tipos, limitação de tamanho e validação de URLs
-- **Prevenção de Injeção**: Adicionadas funções `sanitizeTaskData()`, `createSafeElement()` e `createSafeTaskItem()` para construção segura de elementos DOM
-- **Validação de Mensagens Cross-Frame**: Implementada validação robusta contra injeção de dados maliciosos via mensagens cross-frame com 10 camadas de segurança incluindo validação de timestamp, padrões suspeitos e prevenção de replay attacks
-
-### Fixed
-
 - **Memory Leak - MutationObserver (SAU + SIGSS)**: Corrigido vazamento de memória crítico onde MutationObserver não era desconectado quando páginas eram fechadas, causando acúmulo de recursos em sessões longas com múltiplas abas
 - **Cleanup Automático Dual**: Implementado sistema automático de limpeza de recursos em ambos content scripts (`content.js` para SAU e `content-sigss.js` para SIGSS) com listeners para `beforeunload` e `visibilitychange`
 - **Gestão de Recursos Cross-Page**: Adicionadas variáveis globais (`globalMutationObserver` para SAU e `sigssTabRenamerObserver` para SIGSS) para rastreamento e cleanup adequado das instâncias dos observers
@@ -45,6 +41,14 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - **Retry Logic para Login Automático**: Implementado sistema robusto de retry com backoff exponencial para operações críticas do login automático, incluindo obtenção de credenciais, criação de abas, injeção de scripts e notificações. Sistema realiza até 3 tentativas com delays crescentes (1s, 2s, 4s) para melhorar confiabilidade em conexões instáveis e falhas temporárias de rede
 - **Compressão de Dados de Storage (TASK-A-008)**: Implementado sistema avançado de compressão de dados para otimizar uso de storage e evitar atingir limites do navegador. Criado módulo `data-compressor.js` com algoritmo LZ personalizado que comprime dados grandes (>1KB) e otimiza estruturas de dados através de truncamento inteligente de campos, remoção de campos vazios e conversão de datas para timestamps. Sistema inclui migração automática de dados existentes, descompressão transparente no carregamento, estatísticas detalhadas de compressão e fallbacks seguros. Compressão típica de 20-40% em arrays grandes de tarefas, com preservação total de funcionalidade e compatibilidade com dados existentes
 - **Validação Robusta de Configurações de Usuário (TASK-A-007)**: Implementado sistema abrangente de validação de entrada na página de opções para prevenir corrupção de dados e comportamento inesperado. Adicionadas validações para: formato de usuário (3-50 caracteres, apenas alfanuméricos, pontos, hífens e underscores), senha (4-100 caracteres), intervalos numéricos (verificação 10-3600s, renotificação 1-1440min), opções de snooze (0-23h, 0-59min, máximo 24h total), detecção de duplicatas, sanitização automática de entrada, mensagens de erro específicas e contextuais, logging de segurança e estilização visual aprimorada para feedback de validação
+
+### Security
+
+- **Vulnerabilidade XSS Crítica**: Corrigida vulnerabilidade crítica de XSS na função `injectNotificationUI()` do content.js que permitia execução de código malicioso através de dados de tarefas não sanitizados
+- **DOM Manipulation Segura**: Substituído uso inseguro de `innerHTML` por manipulação DOM segura usando `textContent`, `createElement` e `appendChild`
+- **Sanitização de Dados**: Implementado sistema robusto de sanitização de dados de tarefas com validação de tipos, limitação de tamanho e validação de URLs
+- **Prevenção de Injeção**: Adicionadas funções `sanitizeTaskData()`, `createSafeElement()` e `createSafeTaskItem()` para construção segura de elementos DOM
+- **Validação de Mensagens Cross-Frame**: Implementada validação robusta contra injeção de dados maliciosos via mensagens cross-frame com 10 camadas de segurança incluindo validação de timestamp, padrões suspeitos e prevenção de replay attacks
 
 ## [2.1.0] - 2025-07-28
 
@@ -227,7 +231,7 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - **Event Listeners**: Corrigido problema crítico onde event listeners dos botões principais não eram configurados corretamente
 - **Inicialização do DOM**: Reorganizada inicialização do popup para garantir que DOM esteja carregado antes de configurar event listeners
 - **Tarefas no Popup**: Corrigido problema onde tarefas não apareciam no popup apesar da badge mostrar contador
-- **Build da Extensão**: Corrigido script de build que não incluía arquivos críticos no ZIP (sanitizer.js, tooltip-system.js, help.\*)
+- **Build da Extensão**: Corrigido script de build que não incluía arquivos críticos no ZIP (sanitizer.js, tooltip-system.js, help.*)
 - **Arquivos Essenciais**: Adicionados arquivos essenciais à lista de sourceFiles no script de build
 - **Instalação via ZIP**: Resolvido problema onde extensão funcionava "sem pacote" mas falhava quando instalada via ZIP
 
@@ -281,14 +285,3 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - Implementados estilos responsivos para botões de ajuda em options.css
 - Integrado sistema de tooltips existente para fornecer ajuda contextual
 - Expandida documentação sobre funcionalidade SIGSS no help.html
-
-### Added
-
-- **Script de Verificação de Integridade**: Novo script \
-pm run integrity\ que verifica se todos os arquivos necessários estão incluídos no build, valida imports, sincronização de manifests e scripts do package.json. Garante que o projeto esteja íntegro antes de builds e releases
-
-### Changed
-
-- **Scripts de Build - Arquivo data-compressor.js**: Adicionado \data-compressor.js\ à lista de arquivos do build.js que estava faltando, garantindo que o sistema de compressão seja incluído nos ZIPs de distribuição
-- **Scripts de Validação - Arquivos Novos**: Atualizados scripts de validação para incluir verificação de todos os novos arquivos críticos: \content-sigss.js\, \storage-validator.js\, \data-compressor.js\, \help.html/js/css\ e outros módulos essenciais
-- **Documentação agents.md - Estrutura Atualizada**: Atualizada estrutura do projeto no \gents.md\ para refletir todos os novos arquivos incluindo \data-compressor.js\, \storage-validator.js\, \content-backup.js\ e outros módulos implementados recentemente
