@@ -37,7 +37,7 @@
   // Variáveis para funcionalidade de renomear abas do SIGSS
   let sigssTabRenamerEnabled = true; // Habilitado por padrão
   let sigssTabRenamerPreviousTitle = '';
-  let sigssTabRenamerObserver = null;
+  let sigssTabRenamerObserver = null; // Variável global para rastreamento e cleanup adequado
 
   // Configuração do MutationObserver
   const observerConfig = {
@@ -112,9 +112,10 @@
       return;
     }
 
-    // Para o observer anterior se existir
+    // Desconecta observer anterior se existir (previne vazamentos de memória)
     if (sigssTabRenamerObserver) {
       sigssTabRenamerObserver.disconnect();
+      sigssLogger.debug("MutationObserver SIGSS anterior desconectado.");
     }
 
     // Callback do MutationObserver para SIGSS com throttling
@@ -133,13 +134,23 @@
 
   /**
    * Para o sistema de observação do SIGSS Tab Renamer
+   * Limpa recursos do MutationObserver para prevenir vazamentos de memória.
    */
   function stopSigssTabRenamerObserver() {
     if (sigssTabRenamerObserver) {
       sigssTabRenamerObserver.disconnect();
       sigssTabRenamerObserver = null;
-      sigssLogger.info('Observer SIGSS Tab Renamer parado');
+      sigssLogger.info('Observer SIGSS Tab Renamer parado e limpo com sucesso');
     }
+  }
+
+  /**
+   * Limpa completamente os recursos do SIGSS Tab Renamer para prevenir vazamentos de memória.
+   * Deve ser chamado quando a página é descarregada ou o script é finalizado.
+   */
+  function cleanupSigssTabRenamer() {
+    stopSigssTabRenamerObserver();
+    sigssLogger.info('Cleanup completo do SIGSS Tab Renamer executado');
   }
 
   /**
@@ -213,9 +224,30 @@
     // Configura listener para mudanças nas configurações
     setupStorageListener();
 
-    // Cleanup quando a página é descarregada
+    // Adiciona listeners para cleanup quando a página é descarregada (previne vazamentos de memória)
+    window.addEventListener('beforeunload', () => {
+      sigssLogger.info("Página SIGSS sendo descarregada. Executando cleanup do MutationObserver...");
+      cleanupSigssTabRenamer();
+    });
+
+    // Adiciona listener para visibilitychange como backup para cleanup
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') {
+        sigssLogger.debug("Página SIGSS ficou oculta. Executando cleanup preventivo...");
+        cleanupSigssTabRenamer();
+      } else if (document.visibilityState === 'visible') {
+        // Reconfigura o observer quando a página volta a ficar visível
+        sigssLogger.debug("Página SIGSS ficou visível. Reconfigurando MutationObserver...");
+        if (sigssTabRenamerEnabled && isSigssPage()) {
+          startSigssTabRenamerObserver();
+          safeSigssTabUpdate();
+        }
+      }
+    });
+
+    // Cleanup quando a página é descarregada (mantido como fallback)
     window.addEventListener('unload', () => {
-      stopSigssTabRenamerObserver();
+      cleanupSigssTabRenamer();
     }, { once: true });
 
     sigssLogger.info("SIGSS Content Script inicializado com sucesso");

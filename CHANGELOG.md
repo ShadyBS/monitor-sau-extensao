@@ -375,3 +375,6 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 - Implementados estilos responsivos para botões de ajuda em options.css
 - Integrado sistema de tooltips existente para fornecer ajuda contextual
 - Expandida documentação sobre funcionalidade SIGSS no help.html
+- **Memory Leak - MutationObserver (SIGSS)**: Corrigido vazamento de memória crítico no content-sigss.js onde MutationObserver não era desconectado adequadamente em múltiplas abas SIGSS
+- **Cleanup Cross-Page**: Implementado sistema de cleanup robusto em ambos content scripts (SAU e SIGSS) com listeners beforeunload e visibilitychange
+- **Multi-Tab SIGSS Support**: Garantido que múltiplas abas SIGSS mantêm funcionalidade de renomeação sem vazamentos de memória
