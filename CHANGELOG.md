@@ -3,10 +3,10 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 ## [Unreleased]
 
-## [2.1.2] - 2025-07-30
-
 ### Fixed
-- **Feedback Visual Padronizado nas Configurações**: Todas as seções da página de opções agora exibem feedback visual claro e consistente ao salvar configurações, garantindo mensagem visual destacada e breve para o usuário em qualquer ajuste realizado. Isso corrige a inconsistência relatada por usuários na última versão.## [2.1.1] - 2025-01-29
+- **Feedback Visual Corrigido nas Configurações**: Corrigido problema crítico onde o feedback visual ao salvar configurações não aparecia na interface, mesmo com o JavaScript executando corretamente. Adicionadas variáveis CSS faltantes (--success-bg, --success-text, --danger-bg, --danger-text) e modificado JavaScript para usar classes CSS (.success/.error) em vez de estilos inline, garantindo que o feedback visual seja exibido corretamente em todas as seções da página de opções.
+
+## [2.1.1] - 2025-01-29
 
 ### Added
 

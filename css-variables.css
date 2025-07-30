@@ -8,10 +8,16 @@
   /* Cores secundárias */
   --success-color: #2ecc71;
   --success-hover: #27ae60;
+  --success-bg: #d4edda;
+  --success-text: #155724;
   --warning-color: #f39c12;
   --warning-hover: #e67e22;
+  --warning-bg: #fff3cd;
+  --warning-text: #856404;
   --danger-color: #e74c3c;
   --danger-hover: #c0392b;
+  --danger-bg: #f8d7da;
+  --danger-text: #721c24;
   
   /* Cores de texto */
   --text-primary: #333;

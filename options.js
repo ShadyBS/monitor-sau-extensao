@@ -240,12 +240,16 @@ async function showValidationStatus(elementId, message, isError = false) {
   // Sanitize the message before displaying
   const sanitizedMessage = await sanitizeHTML(message);
   element.textContent = sanitizedMessage;
-  element.style.color = isError ? "#d32f2f" : "#2e7d32";
-  element.style.fontWeight = "bold";
-  element.style.padding = "8px";
-  element.style.borderRadius = "4px";
-  element.style.backgroundColor = isError ? "#ffebee" : "#e8f5e9";
-  element.style.border = isError ? "1px solid #ffcdd2" : "1px solid #c8e6c9";
+  
+  // Remove existing status classes
+  element.classList.remove('success', 'error');
+  
+  // Add appropriate status class
+  if (isError) {
+    element.classList.add('error');
+  } else {
+    element.classList.add('success');
+  }
   
   // Log the validation result
   if (isError) {
@@ -254,11 +258,10 @@ async function showValidationStatus(elementId, message, isError = false) {
     await optionsLogger.info(`Validation success in ${elementId}: ${message}`);
   }
   
+  // Clear the message and hide after 5 seconds
   setTimeout(() => {
     element.textContent = "";
-    element.style.backgroundColor = "";
-    element.style.border = "";
-    element.style.padding = "";
+    element.classList.remove('success', 'error');
   }, 5000);
 }
 
