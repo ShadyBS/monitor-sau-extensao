@@ -3,10 +3,10 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 ## [Unreleased]
 
-### Fixed
-- **Feedback Visual Corrigido nas Configurações**: Corrigido problema crítico onde o feedback visual ao salvar configurações não aparecia na interface, mesmo com o JavaScript executando corretamente. Adicionadas variáveis CSS faltantes (--success-bg, --success-text, --danger-bg, --danger-text) e modificado JavaScript para usar classes CSS (.success/.error) em vez de estilos inline, garantindo que o feedback visual seja exibido corretamente em todas as seções da página de opções.
+## [2.1.3] - 2025-07-30
 
-## [2.1.1] - 2025-01-29
+### Fixed
+- **Feedback Visual Corrigido nas Configurações**: Corrigido problema crítico onde o feedback visual ao salvar configurações não aparecia na interface, mesmo com o JavaScript executando corretamente. Adicionadas variáveis CSS faltantes (--success-bg, --success-text, --danger-bg, --danger-text) e modificado JavaScript para usar classes CSS (.success/.error) em vez de estilos inline, garantindo que o feedback visual seja exibido corretamente em todas as seções da página de opções.## [2.1.1] - 2025-01-29
 
 ### Added
 
