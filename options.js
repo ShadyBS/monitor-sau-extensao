@@ -587,7 +587,7 @@ async function saveDisplaySettings() {
 
     await setConfig("taskDisplaySettings", displaySettings);
 
-    showStatus(
+    await showValidationStatus(
       "displayStatus",
       "Configurações de exibição salvas com sucesso!"
     );
@@ -600,7 +600,7 @@ async function saveDisplaySettings() {
       "Erro ao salvar configurações de exibição:",
       error
     );
-    showStatus(
+    await showValidationStatus(
       "displayStatus",
       "Erro ao salvar configurações de exibição.",
       true
@@ -740,13 +740,13 @@ async function saveLogLevel() {
 
   try {
     await optionsLogger.setLogLevel(selectedLevelName); // Usa o método do logger para atualizar e salvar
-    showStatus("logLevelStatus", "Nível de log salvo com sucesso!");
+    await showValidationStatus("logLevelStatus", "Nível de log salvo com sucesso!");
     await optionsLogger.info(
       `Nível de log definido para: ${selectedLevelName}`
     );
   } catch (error) {
     await optionsLogger.error("Erro ao salvar nível de log:", error);
-    showStatus("logLevelStatus", "Erro ao salvar nível de log.", true);
+    await showValidationStatus("logLevelStatus", "Erro ao salvar nível de log.", true);
   }
 }
 
@@ -787,17 +787,17 @@ async function exportLogs() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url); // Libera o URL do objeto
 
-      showStatus("logLevelStatus", "Logs exportados com sucesso!");
+      await showValidationStatus("logLevelStatus", "Logs exportados com sucesso!");
       await optionsLogger.info("Logs exportados com sucesso.");
     } else {
-      showStatus("logLevelStatus", "Nenhum log para exportar.", false);
+      await showValidationStatus("logLevelStatus", "Nenhum log para exportar.", false);
       await optionsLogger.warn(
         "Tentativa de exportar logs, mas o buffer está vazio."
       );
     }
   } catch (error) {
     await optionsLogger.error("Erro ao exportar logs:", error);
-    showStatus("logLevelStatus", "Erro ao exportar logs.", true);
+    await showValidationStatus("logLevelStatus", "Erro ao exportar logs.", true);
   }
 }
 
@@ -816,7 +816,7 @@ function resetTaskMemory() {
       { action: "resetTaskMemory" },
       async (response) => {
         if (response && response.status) {
-          showStatus("resetStatus", response.status);
+          await showValidationStatus("resetStatus", response.status);
           await optionsLogger.info("Memória de tarefas resetada com sucesso.");
         }
       }

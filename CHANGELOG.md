@@ -3,6 +3,9 @@ Todas as mudanças notáveis neste projeto serão documentadas neste arquivo.
 
 ## [Unreleased]
 
+### Fixed
+- **Feedback Visual Padronizado nas Configurações**: Todas as seções da página de opções agora exibem feedback visual claro e consistente ao salvar configurações, garantindo mensagem visual destacada e breve para o usuário em qualquer ajuste realizado. Isso corrige a inconsistência relatada por usuários na última versão.
+
 ## [2.1.1] - 2025-01-29
 
 ### Added
